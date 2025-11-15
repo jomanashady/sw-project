@@ -23,6 +23,7 @@ import { RecruitmentModule } from './recruitment/recruitment.module';
 
     // Feature modules
     RecruitmentModule
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
