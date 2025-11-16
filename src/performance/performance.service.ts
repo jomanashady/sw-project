@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -34,13 +36,13 @@ export class PerformanceService {
 
       // 2. Get department from Organization Structure Module
       const department = await this.orgService.findDepartmentById(
-        employee.departmentId?.toString(),
+        (employee.departmentId as any)?._id?.toString(),
       );
       console.log('✅ Department found:', department?.departmentName || 'N/A');
 
       // 3. Get position from Organization Structure Module
       const position = await this.orgService.findPositionById(
-        employee.positionId?.toString(),
+        (employee.positionId as any)?._id?.toString(),
       );
       console.log('✅ Position found:', position?.positionTitle || 'N/A');
 
