@@ -4,12 +4,14 @@ import { Document, Types } from 'mongoose';
 export type ApplicationDocument = Application & Document;
 
 @Schema({ timestamps: true })
+
 export class Application {
 
 //reference (internal)
   @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
   candidateId: Types.ObjectId;
 
+  //reference (internal)
   @Prop({ type: Types.ObjectId, ref: 'Job', required: true })
   jobId: Types.ObjectId;
 

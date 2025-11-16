@@ -4,8 +4,10 @@ import { Document } from 'mongoose';
 export type OffboardingRequestDocument = OffboardingRequest & Document;
 
 @Schema({ timestamps: true })
+
 export class OffboardingRequest {
-  // DEPENDENCY: Employee Profile subsystem (employee ID)
+
+  // DEPENDENCY: Employee Profile subsystem (employee ID) bas no reference
   @Prop({ required: true })
   employeeProfileId: string;
 
@@ -33,7 +35,8 @@ export class OffboardingRequest {
   @Prop({ default: 'Requested' })
   status: string;
 
-  // DEPENDENCY: Performance subsystem
+  // DEPENDENCY: Performance subsystem bas no reference
+  //Performance subsystem (external) – performance record ID as string
   @Prop()
   performanceRecordId?: string;
 }

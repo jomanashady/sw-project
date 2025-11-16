@@ -5,9 +5,12 @@ export type InterviewFeedbackDocument = InterviewFeedback & Document;
 
 @Schema({ timestamps: true })
 export class InterviewFeedback {
+
+  //internal reference le Interview
   @Prop({ type: Types.ObjectId, ref: 'Interview', required: true })
   interviewId: Types.ObjectId;
 
+  //internal reference le Application
   @Prop({ type: Types.ObjectId, ref: 'Application', required: true })
   applicationId: Types.ObjectId;
 

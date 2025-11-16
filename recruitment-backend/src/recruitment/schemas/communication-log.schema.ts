@@ -4,10 +4,16 @@ import { Document, Types } from 'mongoose';
 export type CommunicationLogDocument = CommunicationLog & Document;
 
 @Schema({ timestamps: true })
+
 export class CommunicationLog {
+
+    // Which application this communication belongs to
+    //internal reference
   @Prop({ type: Types.ObjectId, ref: 'Application', required: true })
   applicationId: Types.ObjectId;
 
+  // Which candidate this communication was sent to
+  //internal reference
   @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
   candidateId: Types.ObjectId;
 

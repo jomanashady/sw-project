@@ -12,6 +12,9 @@ export class OffboardingInstance {
    * - Same MongoDB database (shared between subsystems)
    * - `ref` must match OffboardingRequest model name
    */
+
+
+   //internal reference le OffboardingRequest
   @Prop({
     type: Types.ObjectId,
     ref: 'OffboardingRequest',
@@ -19,11 +22,8 @@ export class OffboardingInstance {
   })
   offboardingRequestId: Types.ObjectId;
 
-  /**
-   * DEPENDENCY: Employee Profile subsystem
-   * - Same employee as in the request (redundant but makes queries easier)
-   * - _id of Employee document
-   */
+ 
+  //external reference le Employee
   @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   employeeId: Types.ObjectId;
 
@@ -32,6 +32,7 @@ export class OffboardingInstance {
    * - Points to a checklist/template describing standard tasks (IT, HR, Finance, Facilities...)
    * - When your team creates an OffboardingChecklistTemplate model, use its model name as `ref`
    */
+  //menna na2sek el schema di heya fein??????
   @Prop({ type: Types.ObjectId, ref: 'OffboardingChecklistTemplate' })
   checklistTemplateId?: Types.ObjectId;
 

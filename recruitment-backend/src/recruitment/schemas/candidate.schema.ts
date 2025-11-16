@@ -3,6 +3,7 @@ import { Document } from 'mongoose';
 
 
 //no reference internal 
+//Employee subsystem references the Candidate
 
 export type CandidateDocument = Candidate & Document;
 
@@ -41,7 +42,7 @@ export class Candidate {
   @Prop({ default: false })
   blacklisted: boolean;
 
-  // Link to Employee Profile subsystem when hired
+  // Link to Employee Profile subsystem when hired howa el by3mely reference msh ana
   @Prop()
   employeeProfileId?: string;
 }

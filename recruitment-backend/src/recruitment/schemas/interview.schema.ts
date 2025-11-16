@@ -5,12 +5,18 @@ export type InterviewDocument = Interview & Document;
 
 @Schema({ timestamps: true })
 export class Interview {
+  
+  // Which application this interview belongs to
+  //internal reference
   @Prop({ type: Types.ObjectId, ref: 'Application', required: true })
   applicationId: Types.ObjectId;
 
   @Prop()
   stageName: string; // e.g. Technical Interview, HR Interview
 
+
+  //note: panel members are employee IDs from Employee subsystem
+  //Employee subsystem will depend on Recruitment
   @Prop({ type: [String], default: [] })
   panelMemberIds: string[]; // employee IDs
 

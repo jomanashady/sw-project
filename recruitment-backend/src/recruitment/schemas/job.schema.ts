@@ -4,6 +4,7 @@ import { Document } from 'mongoose';
 export type JobDocument = Job & Document;
 
 @Schema({ timestamps: true })
+
 export class Job {
   @Prop({ required: true })
   title: string; 
@@ -35,6 +36,7 @@ export class Job {
   @Prop({ default: 'Draft' })
   status: string; // Draft, Approved, Posted, Closed
 
+  // Employee IDs from Employee subsystem (creator/approver)
   @Prop()
   createdBy?: string; // employee id
 

@@ -5,12 +5,16 @@ export type OfferDocument = Offer & Document;
 
 @Schema({ timestamps: true })
 export class Offer {
+
+  //internal reference le Application
   @Prop({ type: Types.ObjectId, ref: 'Application', required: true })
   applicationId: Types.ObjectId;
 
+  //internal reference le Candidate
   @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
   candidateId: Types.ObjectId;
 
+  //internal reference le Job
   @Prop({ type: Types.ObjectId, ref: 'Job', required: true })
   jobId: Types.ObjectId;
 

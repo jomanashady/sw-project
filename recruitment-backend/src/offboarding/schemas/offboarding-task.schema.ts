@@ -6,17 +6,20 @@ import { Document, Types } from 'mongoose';
 export type OffboardingTaskDocument = OffboardingTask & Document;
 
 @Schema({ timestamps: true })
+
 export class OffboardingTask {
   /**
    * DEPENDENCY: OffboardingInstance (same DB)
    * - Every task belongs to one offboarding process
    */
+  //internal reference le OffboardingInstance 
   @Prop({
     type: Types.ObjectId,
     ref: 'OffboardingInstance',
     required: true,
   })
   offboardingId: Types.ObjectId;
+  
 
   /**
    * Which department/role is responsible for this task:
@@ -46,12 +49,14 @@ export class OffboardingTask {
    * DEPENDENCY: Employee Profile / User subsystem
    * - _id of the user/employee actually responsible for this specific task
    */
+  // external reference le Employee Module
   @Prop({ type: Types.ObjectId, ref: 'Employee' })
   assignedToUserId?: Types.ObjectId;
 
   /**
    * Who approved/completed this task (user id from Employee/User subsystem)
    */
+  // external reference le Employee Module
   @Prop({ type: Types.ObjectId, ref: 'Employee' })
   approvedBy?: Types.ObjectId;
 
@@ -61,12 +66,7 @@ export class OffboardingTask {
   @Prop()
   notes?: string;
 
-  /**
-   * DEPENDENCY: IT / Access systems (OFF-007)
-   * - For tasks that revoke system access:
-   *   revocationType: 'Email' | 'SSO' | 'VPN' | 'BuildingAccess' | ...
-   *   externalTicketId: id of the ticket in the IT/helpdesk system (e.g. ServiceNow)
-   */
+   // IT / Access systems integration
   @Prop()
   revocationType?: string;
 
@@ -74,14 +74,10 @@ export class OffboardingTask {
   externalTicketId?: string;
 
   /**
-   * DEPENDENCY: Payroll + Leaves modules (OFF-013)
+   * DEPENDENCY: Payroll + Leaves modules bas msh ba reference
    * - includesFinalSettlement: task that triggers final pay & benefits settlement
    * - leavesBalanceDays: value fetched from Leaves module (unused leave days)
    * - encashmentAmount: amount calculated in Payroll based on balance & policy
-   *
-   * NOTE: in Case B (shared DB), you can:
-   * - store just the numeric snapshot here
-   * - or add another field like `payrollSettlementId` referencing a Payroll record
    */
   @Prop({ default: false })
   includesFinalSettlement?: boolean;
