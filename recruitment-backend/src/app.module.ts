@@ -5,7 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { RecruitmentModule } from './recruitment/recruitment.module';
-
+import { OffboardingModule } from './offboarding/offboarding.module';
 @Module({
   imports: [
     // Read .env variables globally (MONGODB_URI, PORT, etc.)
@@ -21,6 +21,9 @@ import { RecruitmentModule } from './recruitment/recruitment.module';
     // Feature modules
     OnboardingModule,
     RecruitmentModule,
+
+    // Feature module
+    OffboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
