@@ -5,7 +5,10 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 
 // Import your feature modules
-import { EmployeeOrganizationPerformanceModule } from './employee-organization-performance/employee-organization-performance.module';
+import { EmployeeProfileModule } from './employee-profile/employee-profile.module';
+import { OrganizationStructureModule } from './organization-structure/organization-structure.module';
+import { PerformanceModule } from './performance/performance.module';
+
 import { RecruitmentModule } from './recruitment/recruitment.module';
 import { TimeManagementModule } from './time-management/time-management.module';
 import { LeavesModule } from './leaves-management/leaves-management.module';
@@ -21,12 +24,21 @@ import { PayrollTrackingModule } from './payroll-tracking/payroll-tracking.modul
     }),
 
     // Connect to MongoDB Atlas using MONGO_URI from .env
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/', {
-      // optional: you can add options here if needed
-    }),
+    MongooseModule.forRoot(
+      process.env.MONGODB_URI ||
+        'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/hr_system', //zawedt esm el db
+      {
+        // optional: you can add options here if needed
+      },
+    ),
 
     // Your business modules (subsystems)
-    EmployeeOrganizationPerformanceModule,
+
+    //subsystem 1
+    EmployeeProfileModule,
+    OrganizationStructureModule,
+    PerformanceModule,
+
     RecruitmentModule,
     TimeManagementModule,
     LeavesModule,
