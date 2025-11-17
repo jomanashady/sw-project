@@ -1,3 +1,13 @@
+// ----------------------------
+// External subsystems:
+// - Employee Profile: 'Employee' (employeeId)
+// - Leaves: 'LeaveRequest' (leaveRequestId)
+// - Payroll Processing: 'PayrollPeriod' (payrollPeriodId)
+// Internal (Time Management subsystem):
+// - ShiftAssignment (from './shift-assignment.schema')
+// - ShiftType (from './shift-type.schema')
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ShiftAssignment } from './shift-assignment.schema';

@@ -1,3 +1,13 @@
+// External subsystems:
+// - Employee Profile: 'Employee' (employeeId)
+// - Organizational Structure: 'Department', 'Position' (departmentId, positionId)
+// - User/Auth: 'User' (createdById, lastUpdatedById)
+// Internal:
+// - ShiftType (from './shift-type.schema')
+// - SchedulingRule (from './scheduling-rule.schema')
+// - Used by AttendanceRecord (shiftAssignmentId)
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ShiftType } from './shift-type.schema';

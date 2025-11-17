@@ -1,3 +1,15 @@
+// External subsystems:
+// - Employee Profile: 'Employee' (employeeId, managerId)
+// - User/Auth/HR Admin: 'User' (hrReviewerId)
+// Internal (Time Management subsystem):
+// - AttendanceRecord (from './attendance-record.schema')
+// - OvertimeRule (from './overtime-rule.schema')
+// - PermissionRule (from './permission-rule.schema')
+// - IntegrationSyncLog may reference these as sourceRecordId (sourceType = 'time_exception')
+// ============================
+
+
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { AttendanceRecord } from './attendance-record.schema';

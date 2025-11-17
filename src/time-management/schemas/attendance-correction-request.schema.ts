@@ -1,3 +1,10 @@
+// External subsystems:
+// - Employee Profile: 'Employee' (employeeId, managerId)
+// - Auth/User Management (or HR Admin module): 'User' (hrReviewerId)
+// Internal (Time Management subsystem):
+// - AttendanceRecord (from './attendance-record.schema')
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { AttendanceRecord } from './attendance-record.schema';
