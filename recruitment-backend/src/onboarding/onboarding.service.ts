@@ -3,7 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Candidate, CandidateDocument } from './schemas/candidate.schema';
+import { Candidate, CandidateDocument } from '../recruitment/schemas/candidate.schema';
 import { OnboardingChecklist, OnboardingChecklistDocument } from './schemas/onboarding-checklist.schema';
 import { OnboardingProcess, OnboardingProcessDocument } from './schemas/onboarding-process.schema';
 import { OnboardingDocument, OnboardingDocumentDocument } from './schemas/onboarding-document.schema';
