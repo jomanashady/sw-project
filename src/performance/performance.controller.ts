@@ -10,4 +10,9 @@ export class PerformanceController {
   async testIntegration(@Param('employeeId') employeeId: string) {
     return this.performanceService.testIntegration(employeeId);
   }
+
+  @Get('test-schemas/:employeeId')
+  async testSchemas(@Param('employeeId') employeeId: string) {
+    return this.performanceService.testPerformanceSchemas(employeeId);
+  }
 }

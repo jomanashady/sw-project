@@ -11,6 +11,10 @@ import {
   AppraisalRecord,
   AppraisalRecordDocument,
 } from './schemas/appraisal-record.schema';
+import {
+  AppraisalTemplate,
+  AppraisalTemplateDocument,
+} from './schemas/appraisal-template.schema';
 import { EmployeeProfileService } from '../employee-profile/employee-profile.service';
 import { OrganizationStructureService } from '../organization-structure/organization-structure.service';
 
@@ -19,6 +23,9 @@ export class PerformanceService {
   constructor(
     @InjectModel('AppraisalRecord')
     private appraisalModel: Model<AppraisalRecordDocument>,
+
+    @InjectModel('AppraisalTemplate')
+    private appraisalTemplateModel: Model<AppraisalTemplateDocument>,
     private readonly employeeService: EmployeeProfileService,
     private readonly orgService: OrganizationStructureService,
   ) {}
@@ -72,5 +79,36 @@ export class PerformanceService {
         details: error.message,
       };
     }
+  }
+
+  async testPerformanceSchemas(employeeId: string) {
+    console.log('\n🎯 Testing Performance Module Schemas...\n');
+
+    // 1. Create Appraisal Template
+    const template = new this.appraisalTemplateModel({
+      templateId: `TPL-${Date.now()}`,
+      templateName: 'Annual Review 2025',
+      appraisalType: 'Annual',
+      ratingScale: {
+        type: 'Numeric',
+        min: 1,
+        max: 5,
+        labels: ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'],
+      },
+      evaluationCriteria: [
+        { criteriaId: 'C1', criteriaName: 'Technical Skills', weight: 40 },
+        { criteriaId: 'C2', criteriaName: 'Communication', weight: 30 },
+        { criteriaId: 'C3', criteriaName: 'Teamwork', weight: 30 },
+      ],
+      isActive: true,
+      createdBy: employeeId,
+    });
+    await template.save();
+    console.log('✅ AppraisalTemplate created:', template.templateId);
+
+    return {
+      message: 'Performance schemas working!',
+      templateId: template.templateId,
+    };
   }
 }
