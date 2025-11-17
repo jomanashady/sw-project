@@ -1,3 +1,11 @@
+// External subsystems:
+// - Payroll: may use flags like countsAsPaidTime / impactsOvertimeCalculation
+// Internal:
+// - TimeExceptionRequest (permissionRuleId ref)
+// No direct external refs.
+// ============================
+
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 

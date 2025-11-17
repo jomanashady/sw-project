@@ -1,3 +1,12 @@
+// External subsystems (targets, NOT direct Mongoose refs):
+// - Payroll
+// - Leaves
+// Internal (Time Management subsystem):
+// - AttendanceRecord (for sourceType = 'attendance')
+// - TimeExceptionRequest / AttendanceCorrectionRequest (for 'time_exception')
+// NOTE: sourceRecordId is a generic ObjectId; no direct ref here.
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 

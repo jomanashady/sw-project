@@ -1,3 +1,10 @@
+// External subsystems:
+// - Employee Profile: 'Employee' (employeeId)
+// - Organizational Structure: 'Department' (departmentId)
+// Internal:
+// - Used by AttendanceRecord calculations and Scheduling
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 

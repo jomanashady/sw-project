@@ -1,3 +1,10 @@
+// External subsystems:
+// - None directly
+// Internal:
+// - ShiftType (from './shift-type.schema') via weeklyPattern.shiftTypeId
+// - Used by ShiftAssignment (schedulingRuleId)
+// ============================
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ShiftType } from './shift-type.schema';
