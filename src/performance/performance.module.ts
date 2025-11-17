@@ -18,6 +18,10 @@ import {
   AppraisalRecord,
   AppraisalRecordSchema,
 } from './schemas/appraisal-record.schema';
+import {
+  AppraisalAssignment,
+  AppraisalAssignmentSchema,
+} from './schemas/appraisal-assignment.schema';
 import { Dispute, DisputeSchema } from './schemas/dispute.schemas';
 
 // ✅ ADD - Import dependencies
@@ -33,6 +37,7 @@ import { forwardRef } from '@nestjs/common';
       { name: 'AppraisalCycle', schema: AppraisalCycleSchema },
       { name: 'AppraisalRecord', schema: AppraisalRecordSchema },
       { name: 'Dispute', schema: DisputeSchema },
+      { name: 'AppraisalAssignment', schema: AppraisalAssignmentSchema },
     ]),
 
     // ✅ ADD - Import other modules for integration

@@ -35,6 +35,10 @@ export class Department {
 
   @Prop({ type: Date })
   updatedAt: Date;
+
+  // Add to Department Schema:
+  @Prop({ type: String })
+  costCenter: string;
 }
 
 export const DepartmentSchema = SchemaFactory.createForClass(Department);
