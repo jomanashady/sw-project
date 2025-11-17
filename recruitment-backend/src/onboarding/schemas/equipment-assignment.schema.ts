@@ -2,6 +2,9 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Candidate } from '../../recruitment/schemas/candidate.schema';
+//add import le employee 
+//import { Employee } from '../../employee-profile/schemas/employee.schema';
 
 export type EquipmentAssignmentDocument = EquipmentAssignment & Document;
 
@@ -25,16 +28,22 @@ export class EquipmentItem {
 
 @Schema({ timestamps: true })
 export class EquipmentAssignment {
-  @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
+
+  //internal reference le Candidate mn recruitment folder
+  @Prop({ type: Types.ObjectId, ref: Candidate.name, required: true })
   candidateId: Types.ObjectId;
 
+  //internal reference le OnboardingProcess
   @Prop({ type: Types.ObjectId, ref: 'OnboardingProcess', required: true })
   onboardingProcessId: Types.ObjectId;
 
+//
   @Prop({ type: [EquipmentItem], default: [] })
   items: EquipmentItem[];
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name', required: true })
   assignedBy: Types.ObjectId;
 
   @Prop()

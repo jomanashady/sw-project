@@ -6,7 +6,8 @@ import { OnboardingController } from './onboarding.controller';
 import { OnboardingService } from './onboarding.service';
 
 // Import schemas
-import { Candidate, CandidateSchema } from './schemas/candidate.schema';
+//import { Candidate, CandidateSchema } from './schemas/candidate.schema';
+import { Candidate, CandidateSchema } from '../recruitment/schemas/candidate.schema';
 import { OnboardingChecklist, OnboardingChecklistSchema } from './schemas/onboarding-checklist.schema';
 import { OnboardingProcess, OnboardingProcessSchema } from './schemas/onboarding-process.schema';
 import { OnboardingDocument, OnboardingDocumentSchema } from './schemas/onboarding-document.schema';

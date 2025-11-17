@@ -2,15 +2,20 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Candidate } from '../../recruitment/schemas/candidate.schema';
+//import { Employee } from '../../employee-profile/schemas/employee.schema';
 
 export type OnboardingDocumentDocument = OnboardingDocument & Document;
 
 @Schema({ timestamps: true })
 export class OnboardingDocument {
+
+  //internal reference le OnboardingProcess
   @Prop({ type: Types.ObjectId, ref: 'OnboardingProcess', required: true })
   onboardingProcessId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
+  //internal reference le Candidate mn recruitment schemas folder
+  @Prop({ type: Types.ObjectId, ref: Candidate.name, required: true })
   candidateId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -22,13 +27,17 @@ export class OnboardingDocument {
   @Prop({ required: true })
   documentUrl: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+    //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name', required: true })
   uploadedBy: Types.ObjectId;
 
   @Prop({ type: String, enum: ['pending_review', 'approved', 'rejected'], default: 'pending_review' })
   verificationStatus: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name' })
   verifiedBy: Types.ObjectId;
 
   @Prop({ type: Date })

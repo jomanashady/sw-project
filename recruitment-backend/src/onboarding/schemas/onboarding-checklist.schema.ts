@@ -2,6 +2,7 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+//import { Employee } from '../../employee-profile/schemas/employee.schema';
 
 export type OnboardingChecklistDocument = OnboardingChecklist & Document;
 
@@ -31,6 +32,7 @@ export class OnboardingTask {
 
 @Schema({ timestamps: true })
 export class OnboardingChecklist {
+
   @Prop({ required: true })
   checklistName: string;
 
@@ -46,7 +48,9 @@ export class OnboardingChecklist {
   @Prop({ type: Boolean, default: true })
   isActive: boolean;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name', required: true })
   createdBy: Types.ObjectId;
 }
 

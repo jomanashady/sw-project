@@ -2,6 +2,8 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Candidate } from '../../recruitment/schemas/candidate.schema';
+//import { Employee } from '../../employee-profile/schemas/employee.schema';
 
 export type OnboardingProcessDocument = OnboardingProcess & Document;
 
@@ -24,16 +26,21 @@ export class TaskProgress {
 
   @Prop([String])
   uploadedDocuments: string[];
-
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  
+   //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name' })
   completedBy: Types.ObjectId;
 }
 
 @Schema({ timestamps: true })
 export class OnboardingProcess {
-  @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true, unique: true })
+
+  //internal reference le Candidate mn recruitment folder
+  @Prop({ type: Types.ObjectId, ref: Candidate.name, required: true, unique: true })
   candidateId: Types.ObjectId;
 
+  //internal reference le OnboardingChecklist
   @Prop({ type: Types.ObjectId, ref: 'OnboardingChecklist', required: true })
   checklistId: Types.ObjectId;
 
@@ -52,7 +59,9 @@ export class OnboardingProcess {
   @Prop({ type: Number, default: 0 })
   completionPercentage: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  //external reference le Employee mn employee profile folder
+  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
+  @Prop({ type: Types.ObjectId, ref: 'Employee.name' })
   assignedHR: Types.ObjectId;
 
   @Prop({ type: Boolean, default: false })

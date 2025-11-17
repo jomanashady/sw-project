@@ -2,15 +2,18 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Candidate } from '../../recruitment/schemas/candidate.schema';
 
 export type OnboardingNotificationDocument = OnboardingNotification & Document;
 
 @Schema({ timestamps: true })
 export class OnboardingNotification {
+  //internal reference le OnboardingProcess
   @Prop({ type: Types.ObjectId, ref: 'OnboardingProcess', required: true })
   onboardingProcessId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true })
+  //internal reference le Candidate mn recruitment schemas folder
+  @Prop({ type: Types.ObjectId, ref: Candidate.name, required: true })
   candidateId: Types.ObjectId;
 
   @Prop({ required: true })
