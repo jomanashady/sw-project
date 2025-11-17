@@ -1,0 +1,47 @@
+// External subsystems (targets, NOT direct Mongoose refs):
+// - Payroll
+// - Leaves
+// Internal (Time Management subsystem):
+// - AttendanceRecord (for sourceType = 'attendance')
+// - TimeExceptionRequest / AttendanceCorrectionRequest (for 'time_exception')
+// NOTE: sourceRecordId is a generic ObjectId; no direct ref here.
+// ============================
+
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
+
+export type IntegrationSyncLogDocument = IntegrationSyncLog & Document;
+
+@Schema({ timestamps: true })
+export class IntegrationSyncLog {
+  @Prop({
+    required: true,
+    enum: ['attendance', 'time_exception'],
+  })
+  sourceType: 'attendance' | 'time_exception';
+
+  @Prop({ type: Types.ObjectId, required: true })
+  sourceRecordId: Types.ObjectId;
+
+  @Prop({
+    required: true,
+    enum: ['payroll', 'leaves'],
+  })
+  targetSystem: 'payroll' | 'leaves';
+
+  @Prop({
+    required: true,
+    enum: ['pending', 'success', 'failed'],
+    default: 'pending',
+  })
+  status: 'pending' | 'success' | 'failed';
+
+  @Prop()
+  lastErrorMessage?: string;
+
+  @Prop({ default: 0 })
+  retryCount: number;
+}
+
+export const IntegrationSyncLogSchema =
+  SchemaFactory.createForClass(IntegrationSyncLog);
