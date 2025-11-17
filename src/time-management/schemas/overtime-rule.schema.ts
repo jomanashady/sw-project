@@ -1,5 +1,4 @@
-// External subsystems:
-// - Payroll: uses the multiplier and contextType when calculating overtime
+
 // Internal:
 // - TimeExceptionRequest (overtimeRuleId ref)
 // No direct external refs here.

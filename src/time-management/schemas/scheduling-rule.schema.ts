@@ -1,5 +1,4 @@
-// External subsystems:
-// - None directly
+
 // Internal:
 // - ShiftType (from './shift-type.schema') via weeklyPattern.shiftTypeId
 // - Used by ShiftAssignment (schedulingRuleId)
