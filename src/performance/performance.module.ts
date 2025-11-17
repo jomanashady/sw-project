@@ -23,6 +23,7 @@ import { Dispute, DisputeSchema } from './schemas/dispute.schemas';
 // ✅ ADD - Import dependencies
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { OrganizationStructureModule } from '../organization-structure/organizat
     ]),
 
     // ✅ ADD - Import other modules for integration
-    EmployeeProfileModule, // To get employee data
+    forwardRef(() => EmployeeProfileModule), // To get employee data
     OrganizationStructureModule, // To get department/position data
   ],
   controllers: [PerformanceController],

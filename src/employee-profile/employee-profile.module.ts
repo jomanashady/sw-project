@@ -12,6 +12,7 @@ import {
   ChangeRequestSchema,
 } from './schemas/change-request.schema';
 import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
       { name: ChangeRequest.name, schema: ChangeRequestSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
     ]),
-    PerformanceModule,
+    forwardRef(() => PerformanceModule),
   ],
   controllers: [EmployeeProfileController],
   providers: [EmployeeProfileService],
