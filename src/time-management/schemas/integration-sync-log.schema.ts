@@ -1,6 +1,4 @@
-// External subsystems (targets, NOT direct Mongoose refs):
-// - Payroll
-// - Leaves
+
 // Internal (Time Management subsystem):
 // - AttendanceRecord (for sourceType = 'attendance')
 // - TimeExceptionRequest / AttendanceCorrectionRequest (for 'time_exception')

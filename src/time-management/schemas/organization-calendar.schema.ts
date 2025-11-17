@@ -1,6 +1,3 @@
-// External subsystems:
-// - Leaves: uses these days to suppress deductions
-// - Payroll: uses isPaidHoliday for pay logic
 // Internal:
 // - RestDayConfig / Scheduling logic in Time Management
 // No direct Mongoose refs.

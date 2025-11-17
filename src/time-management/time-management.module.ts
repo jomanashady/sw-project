@@ -26,6 +26,9 @@ import {
   IntegrationSyncLogSchema,
 } from './schemas/integration-sync-log.schema';
 
+import { TimeManagementService } from './time-management.service';
+import { TimeManagementController } from './time-management.controller';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -43,8 +46,8 @@ import {
       { name: IntegrationSyncLog.name, schema: IntegrationSyncLogSchema },
     ]),
   ],
-  controllers: [],
-  providers: [],
-  exports: [],
+  controllers: [TimeManagementController],
+  providers: [TimeManagementService],
+  exports: [TimeManagementService],   // <-- this is what LeavesModule will use
 })
 export class TimeManagementModule {}

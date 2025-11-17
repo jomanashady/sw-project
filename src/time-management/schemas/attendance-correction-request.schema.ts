@@ -4,8 +4,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { AttendanceRecord } from './attendance-record.schema';
-import { Employee } from '../../employee-profile/schemas/employee.schema'; 
-import { ChangeRequest } from '../../employee-profile/schemas/change-request.schema';
 export type AttendanceCorrectionRequestDocument =
   AttendanceCorrectionRequest & Document;
 

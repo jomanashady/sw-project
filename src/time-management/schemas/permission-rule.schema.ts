@@ -1,5 +1,4 @@
-// External subsystems:
-// - Payroll: may use flags like countsAsPaidTime / impactsOvertimeCalculation
+
 // Internal:
 // - TimeExceptionRequest (permissionRuleId ref)
 // No direct external refs.

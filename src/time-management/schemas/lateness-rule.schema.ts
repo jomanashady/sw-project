@@ -1,5 +1,4 @@
-// External subsystems:
-// - Payroll (uses results of this rule but does not require direct ref)
+
 // Internal (Time Management subsystem):
 // - AttendanceRecord / calculations can reference LatenessRule by id
 // No direct Mongoose refs in this schema.

@@ -1,6 +1,6 @@
 // ----------------------------
 // External subsystems:
-// - Leaves: 'LeaveRequest' (leaveRequestId)
+// - Leaves: 'LeaveRequest' (leaveRequestId) 
 // - Payroll Processing: 'PayrollPeriod' (payrollPeriodId)
 // Internal (Time Management subsystem):
 // - ShiftAssignment (from './shift-assignment.schema')
@@ -12,7 +12,8 @@ import { Document, Types } from 'mongoose';
 import { ShiftAssignment } from './shift-assignment.schema';
 import { ShiftType } from './shift-type.schema';
 import { Employee } from '../../employee-profile/schemas/employee.schema';
-
+import {LeaveRequestHistory} from "../../leaves-management/schemas/leave-request-history.schema";
+import {PayrollRun} from "../../payroll-processing-and-execution/schemas/payroll-run.schema";
 
 export type AttendanceRecordDocument = AttendanceRecord & Document;
 
