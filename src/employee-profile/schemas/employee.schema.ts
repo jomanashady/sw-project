@@ -97,6 +97,25 @@ export class Employee {
   @Prop({ default: true })
   isActive: boolean;
 
+  @Prop({
+    type: [
+      {
+        cycleId: { type: Types.ObjectId, ref: 'AppraisalCycle' },
+        templateId: { type: Types.ObjectId, ref: 'AppraisalTemplate' },
+        score: Number,
+        rating: String,
+        appraisalDate: Date,
+      },
+    ],
+  })
+  appraisalHistory: {
+    cycleId: Types.ObjectId;
+    templateId: Types.ObjectId;
+    score: number;
+    rating: string;
+    appraisalDate: Date;
+  }[];
+
   // Timestamps (automatically added by { timestamps: true })
   createdAt: Date;
   updatedAt: Date;

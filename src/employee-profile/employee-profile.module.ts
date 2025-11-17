@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { EmployeeProfileService } from './employee-profile.service';
 import { EmployeeProfileController } from './employee-profile.controller';
 import { Employee, EmployeeSchema } from './schemas/employee.schema';
+import { PerformanceModule } from '../performance/performance.module';
 import {
   ChangeRequest,
   ChangeRequestSchema,
@@ -19,6 +20,7 @@ import { AuditLog, AuditLogSchema } from './schemas/audit-log.schema';
       { name: ChangeRequest.name, schema: ChangeRequestSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
     ]),
+    PerformanceModule,
   ],
   controllers: [EmployeeProfileController],
   providers: [EmployeeProfileService],

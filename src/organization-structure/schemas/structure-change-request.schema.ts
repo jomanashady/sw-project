@@ -19,10 +19,10 @@ export enum RequestStatus {
 
 @Schema({ timestamps: true })
 export class StructureChangeRequest extends Document {
-  @Prop({ 
-    type: String, 
-    enum: Object.values(ChangeType), 
-    required: true 
+  @Prop({
+    type: String,
+    enum: Object.values(ChangeType),
+    required: true,
   })
   changeType: ChangeType;
 
@@ -35,10 +35,10 @@ export class StructureChangeRequest extends Document {
   @Prop({ type: String, required: true, trim: true })
   justification: string;
 
-  @Prop({ 
-    type: String, 
-    enum: Object.values(RequestStatus), 
-    default: RequestStatus.PENDING 
+  @Prop({
+    type: String,
+    enum: Object.values(RequestStatus),
+    default: RequestStatus.PENDING,
   })
   status: RequestStatus;
 
@@ -61,7 +61,9 @@ export class StructureChangeRequest extends Document {
   updatedAt: Date;
 }
 
-export const StructureChangeRequestSchema = SchemaFactory.createForClass(StructureChangeRequest);
+export const StructureChangeRequestSchema = SchemaFactory.createForClass(
+  StructureChangeRequest,
+);
 
 // Add indexes
 StructureChangeRequestSchema.index({ requestedBy: 1 });

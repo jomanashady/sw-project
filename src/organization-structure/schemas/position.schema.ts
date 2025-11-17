@@ -53,4 +53,4 @@ export const PositionSchema = SchemaFactory.createForClass(Position);
 // Add indexes
 PositionSchema.index({ departmentId: 1 });
 PositionSchema.index({ isActive: 1 });
-PositionSchema.index({ reportsToPositionId: 1 });
+PositionSchema.index({ reportsTo: 1 });
