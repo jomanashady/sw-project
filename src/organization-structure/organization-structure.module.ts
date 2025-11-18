@@ -14,15 +14,17 @@ import {
 
 @Module({
   imports: [
-    // ✅ ADD THIS - Register schemas with MongoDB
     MongooseModule.forFeature([
-      { name: 'Department', schema: DepartmentSchema },
-      { name: 'Position', schema: PositionSchema },
-      { name: 'StructureChangeRequest', schema: StructureChangeRequestSchema },
+      { name: Department.name, schema: DepartmentSchema },
+      { name: Position.name, schema: PositionSchema },
+      {
+        name: StructureChangeRequest.name,
+        schema: StructureChangeRequestSchema,
+      },
     ]),
   ],
   controllers: [OrganizationStructureController],
   providers: [OrganizationStructureService],
-  exports: [OrganizationStructureService], // ✅ ADD THIS - Other modules need it!
+  exports: [OrganizationStructureService],
 })
 export class OrganizationStructureModule {}

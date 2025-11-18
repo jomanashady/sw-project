@@ -1,51 +1,52 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/performance/performance.module.ts
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose'; // ✅ ADD THIS
+import { Module, forwardRef } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
 import { PerformanceService } from './performance.service';
 import { PerformanceController } from './performance.controller';
 
-// ✅ ADD - Import schemas
+// Schemas
 import {
   AppraisalTemplate,
   AppraisalTemplateSchema,
 } from './schemas/appraisal-template.schema';
+
 import {
   AppraisalCycle,
   AppraisalCycleSchema,
 } from './schemas/appraisal-cycle.schema';
+
 import {
   AppraisalRecord,
   AppraisalRecordSchema,
 } from './schemas/appraisal-record.schema';
+
 import {
   AppraisalAssignment,
   AppraisalAssignmentSchema,
 } from './schemas/appraisal-assignment.schema';
+
 import { Dispute, DisputeSchema } from './schemas/dispute.schemas';
 
-// ✅ ADD - Import dependencies
+// Modules
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
-import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
-    // ✅ ADD - Register schemas with MongoDB
     MongooseModule.forFeature([
-      { name: 'AppraisalTemplate', schema: AppraisalTemplateSchema },
-      { name: 'AppraisalCycle', schema: AppraisalCycleSchema },
-      { name: 'AppraisalRecord', schema: AppraisalRecordSchema },
-      { name: 'Dispute', schema: DisputeSchema },
-      { name: 'AppraisalAssignment', schema: AppraisalAssignmentSchema },
+      { name: AppraisalTemplate.name, schema: AppraisalTemplateSchema },
+      { name: AppraisalCycle.name, schema: AppraisalCycleSchema },
+      { name: AppraisalRecord.name, schema: AppraisalRecordSchema },
+      { name: Dispute.name, schema: DisputeSchema },
+      { name: AppraisalAssignment.name, schema: AppraisalAssignmentSchema },
     ]),
 
-    // ✅ ADD - Import other modules for integration
-    forwardRef(() => EmployeeProfileModule), // To get employee data
-    OrganizationStructureModule, // To get department/position data
+    forwardRef(() => EmployeeProfileModule), // circular dependency fixed
+    OrganizationStructureModule, // direct import OK
   ],
   controllers: [PerformanceController],
   providers: [PerformanceService],
-  exports: [PerformanceService], // ✅ ADD - Other modules might need this
+  exports: [PerformanceService],
 })
 export class PerformanceModule {}
