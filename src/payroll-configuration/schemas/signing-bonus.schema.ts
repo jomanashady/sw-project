@@ -1,8 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-// TEMPORARY: Import placeholder types until integration with Organization Structure Module
-// TODO: Replace with: import { Position, PositionDocument } from '@org-structure-module/schemas/position.schema'
+import * as mongoose from 'mongoose';
+// INTEGRATION: Signing bonus eligibility ties into
+// - Recruitment subsystem (offer → acceptance events) to trigger new records.
+// - Onboarding tasks to ensure payout once employee status becomes Active.
+// - Employee Profile to confirm the employee's position/grade still matches the eligible positions.
 import { EmployeeDocument } from '../../employee-profile/schemas/employee.schema';
+import {
+  Position,
+  PositionDocument,
+} from '../../organization-structure/schemas/position.schema';
 
 export type SigningBonusDocument = SigningBonus & Document;
 
@@ -20,15 +27,15 @@ export class SigningBonus {
   @Prop({ type: String })
   eligibility: 'all' | 'specific_roles';
 
-  // INTEGRATION: From Organization Structure Module
-  // These role codes should reference Position/Role entities from Org Structure
-  // Integration method:
-  // 1. When creating/editing: Validate roles exist via PositionService.validateRoles(roleCodes[])
-  // 2. When processing signing bonus for employee: Check employee.position matches eligibleRoles
-  // 3. Use EmployeeService.getEmployeePosition(employeeId) to check eligibility
-  // 4. Or keep as string array and validate via API call to Org Structure service
-  @Prop({ type: [String] })
-  eligibleRoles: string[]; // TODO: Validate against Organization Structure Position/Role entities
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: Position.name,
+    default: [],
+  })
+  eligibleRoles: (
+    | mongoose.Types.ObjectId
+    | PositionDocument
+  )[];
 
   @Prop({ default: true })
   isActive: boolean;
