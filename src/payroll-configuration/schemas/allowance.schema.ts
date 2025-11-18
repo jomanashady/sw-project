@@ -1,5 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import * as mongoose from 'mongoose';
+
+// Missing imports:
+import {
+  PayrollPolicy,
+  PayrollPolicyDocument,
+} from './payroll-policy.schema';
+
+import {
+  PayGrade,
+  PayGradeDocument
+} from './pay-grade.schema';
 
 export type AllowanceDocument = Allowance & Document;
 
@@ -29,17 +41,41 @@ export class Allowance {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ required: true, enum: ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'], default: 'DRAFT' })
+  @Prop({
+    required: true,
+    enum: ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED'],
+    default: 'DRAFT'
+  })
   status: string;
 
-  @Prop({ required: true, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' })
+  @Prop({
+    required: true,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'PENDING'
+  })
   approvalStatus: string;
 
   @Prop()
-  approvedBy: string; // Payroll Manager
+  approvedBy: string;
 
   @Prop()
-  createdBy: string; // System Admin
+  createdBy: string;
+
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: PayrollPolicy.name,
+  })
+  payrollPolicy?: mongoose.Types.ObjectId | PayrollPolicyDocument;
+
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: PayGrade.name,
+    default: [],
+  })
+  applicablePayGrades?: (
+    | mongoose.Types.ObjectId
+    | PayGradeDocument
+  )[];
 }
 
 export const AllowanceSchema = SchemaFactory.createForClass(Allowance);

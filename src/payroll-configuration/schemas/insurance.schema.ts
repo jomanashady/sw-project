@@ -1,5 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import * as mongoose from 'mongoose';
+import {
+  PayrollPolicy,
+  PayrollPolicyDocument,
+} from './payroll-policy.schema';
+// INTEGRATION: Insurance brackets depend on data from
+// - Employee Profile (contract type, hire date) to determine eligibility and contribution percentages.
+// - Organization Structure pay grades/salary ranges to keep salaryBrackets aligned.
+// - Payroll Processing to fetch these configs when generating statutory deductions, and Payroll Tracking so employees see the breakdown.
 
 export type InsuranceDocument = Insurance & Document;
 
@@ -42,6 +51,13 @@ export class Insurance {
 
   @Prop()
   createdBy: string; // System Admin
+
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: PayrollPolicy.name,
+    required: true,
+  })
+  payrollPolicy: mongoose.Types.ObjectId | PayrollPolicyDocument;
 }
 
 export const InsuranceSchema = SchemaFactory.createForClass(Insurance);
