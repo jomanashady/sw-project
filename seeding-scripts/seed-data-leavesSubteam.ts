@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-// src/leaves-management/seed-leaves.ts
+// seeding-scripts/seed-data-leavesSubteam.ts  (for example)
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 /* -------- Leaves schemas (this subsystem) -------- */
 import { LeaveType } from '../src/leaves-management/schemas/leave-type.schema';
@@ -42,10 +42,21 @@ import {
 } from '../src/leaves-management/schemas/leaves.enums';
 
 async function seedLeaves() {
-  console.log('🌱 Starting Leaves subsystem dummy seed (no external refs)...\n');
+  console.log('🌱 Starting Leaves subsystem seed WITH cross-subsystem refs...\n');
 
   const app = await NestFactory.createApplicationContext(AppModule);
 
+  // ---- External models from other subsystems ----
+  const employeeModel = app.get<Model<any>>(getModelToken('Employee')); // employees collection
+  // Optional: time management attendance records (if they exist)
+  let attendanceModel: Model<any> | null = null;
+  try {
+    attendanceModel = app.get<Model<any>>(getModelToken('AttendanceRecord'));
+  } catch {
+    attendanceModel = null;
+  }
+
+  // ---- Leaves models ----
   const leaveTypeModel = app.get<Model<LeaveType>>(getModelToken(LeaveType.name));
   const leavePackageModel = app.get<Model<LeavePackage>>(getModelToken(LeavePackage.name));
   const leaveBalanceModel = app.get<Model<LeaveBalance>>(getModelToken(LeaveBalance.name));
@@ -65,6 +76,42 @@ async function seedLeaves() {
   );
 
   try {
+    /* ========= 1. Load existing employees from Employee subsystem ========= */
+    console.log('👤 Fetching employees from Employee subsystem...');
+
+    const employees = await employeeModel.find().limit(3).exec();
+    if (!employees.length) {
+      throw new Error(
+        'No employees found in DB. Seed Employee/Org-Structure subsystem first.',
+      );
+    }
+
+    const emp1 = employees[0]; // main employee
+    const emp2 = employees[1] ?? emp1; // manager
+    const emp3 = employees[2] ?? emp1; // HR/admin
+
+    const emp1DeptId = emp1.departmentId;
+    const emp1PosId = emp1.positionId;
+
+    console.log(
+      `✅ Using employees: ${employees
+        .map((e) => e.employeeId || e._id.toString())
+        .join(', ')}`,
+    );
+
+    // Optional: real AttendanceRecord
+    let attendanceRecordId: any = undefined;
+    if (attendanceModel) {
+      const att = await attendanceModel.findOne().exec();
+      if (att) {
+        attendanceRecordId = att._id;
+        console.log('✅ Using existing AttendanceRecord for timeManagementEventId');
+      } else {
+        console.log('ℹ No AttendanceRecord found, timeManagementEventId will be empty.');
+      }
+    }
+
+    /* ========= 2. Clear leaves collections ========= */
     console.log('🧹 Clearing leaves collections...');
 
     await Promise.all([
@@ -83,7 +130,7 @@ async function seedLeaves() {
       requestHistoryModel.deleteMany({}),
     ]);
 
-    console.log('🌱 Seeding leaves dummy data...\n');
+    console.log('✅ Collections cleared.\n');
 
     /* ===============================
            LEAVE TYPES
@@ -101,9 +148,9 @@ async function seedLeaves() {
       approvalWorkflow: ApprovalWorkflow.MANAGER_THEN_HR,
       requiresDocument: false,
       isActive: true,
-      // required ObjectIds – dummy only
-      contractType: new Types.ObjectId(),
-      hireDate: new Types.ObjectId(),
+      // schema requires ObjectId refs to Employee
+      contractType: emp1._id,
+      hireDate: emp1._id,
     });
 
     const type2 = await leaveTypeModel.create({
@@ -117,8 +164,8 @@ async function seedLeaves() {
       requiresDocument: true,
       requiresDocumentAfterDays: 2,
       isActive: true,
-      contractType: new Types.ObjectId(),
-      hireDate: new Types.ObjectId(),
+      contractType: emp1._id,
+      hireDate: emp1._id,
     });
 
     console.log('✅ LeaveType: ANL, SL created.\n');
@@ -131,7 +178,7 @@ async function seedLeaves() {
     const leavePackage = await leavePackageModel.create({
       code: 'BASIC',
       name: 'Basic Leave Package',
-      description: 'Minimal dummy package for testing.',
+      description: 'Minimal package for demo (annual + sick).',
       country: 'EG',
       entitlements: [
         {
@@ -208,10 +255,10 @@ async function seedLeaves() {
        ===============================*/
     console.log('📊 Creating LeaveBalance...');
 
-    const dummyEmployeeId = new Types.ObjectId();
-
     await leaveBalanceModel.create({
-      employeeId: dummyEmployeeId,
+      employeeId: emp1._id,
+      departmentId: emp1DeptId,
+      positionId: emp1PosId,
       leaveType: type1._id,
       leavePackage: leavePackage._id,
       leaveYear: 2025,
@@ -224,17 +271,17 @@ async function seedLeaves() {
       lockedForYearEnd: false,
     });
 
-    console.log('✅ LeaveBalance created.\n');
+    console.log('✅ LeaveBalance created for main employee.\n');
 
     /* ===============================
            LEAVE REQUEST
        ===============================*/
     console.log('📝 Creating LeaveRequest...');
 
-    const dummyEmploymentStatus = new Types.ObjectId();
-
     const req = await leaveReqModel.create({
-      employeeId: dummyEmployeeId,
+      employeeId: emp1._id,
+      departmentId: emp1DeptId,
+      positionId: emp1PosId,
       leaveType: type1._id,
       startDate: new Date('2025-03-10'),
       endDate: new Date('2025-03-12'),
@@ -244,13 +291,15 @@ async function seedLeaves() {
       justification: 'Dummy annual leave for testing.',
       attachmentUrls: [],
       status: LeaveRequestStatus.PENDING_MANAGER,
+      managerId: emp2._id,
+      hrAdminId: emp3._id,
       escalated: false,
       cancelledByEmployee: false,
       overlapsWithExistingApproved: false,
       convertedExcessToUnpaid: false,
       excessDaysConvertedToUnpaid: 0,
-      timeManagementEventId: new Types.ObjectId(),
-      employmentStatus: dummyEmploymentStatus,
+      timeManagementEventId: attendanceRecordId, // real AttendanceRecord or undefined
+      employmentStatus: emp1._id,
       requiresDocumentVerification: false,
       documentVerified: false,
       version: 1,
@@ -267,7 +316,7 @@ async function seedLeaves() {
     await requestHistoryModel.create({
       requestId: req._id,
       version: 1,
-      modifiedBy: 'system',
+      modifiedBy: emp2.employeeId || emp2._id.toString(),
       changes: [
         {
           field: 'status',
@@ -288,7 +337,7 @@ async function seedLeaves() {
     console.log('📘 Creating LeaveAdjustmentLog...');
 
     await adjustLogModel.create({
-      employeeId: dummyEmployeeId,
+      employeeId: emp1._id,
       leaveType: type1._id,
       source: AdjustmentSource.MANUAL,
       leaveYear: 2025,
@@ -296,6 +345,8 @@ async function seedLeaves() {
       amountRounded: -1,
       balanceAfterActual: 4,
       balanceAfterRounded: 4,
+      relatedRequestId: req._id,
+      performedByUserId: emp3._id,
       reason: 'Dummy manual adjustment for testing.',
     });
 
@@ -307,8 +358,8 @@ async function seedLeaves() {
     console.log('👥 Creating ApprovalDelegation...');
 
     await delegationModel.create({
-      managerId: new Types.ObjectId(),
-      delegateId: new Types.ObjectId(),
+      managerId: emp2._id,
+      delegateId: emp3._id,
       startDate: new Date('2025-02-01'),
       endDate: new Date('2025-02-28'),
       active: true,
@@ -322,13 +373,13 @@ async function seedLeaves() {
     console.log('🎯 Creating EmployeeEntitlementOverride...');
 
     await overrideModel.create({
-      employeeId: dummyEmployeeId,
+      employeeId: emp1._id,
       leaveType: type1._id,
       leavePackage: leavePackage._id,
       daysPerYearOverride: 25,
       effectiveFrom: new Date('2025-01-01'),
       reason: 'Dummy override for testing.',
-      createdByUserId: new Types.ObjectId(),
+      createdByUserId: emp3._id,
     });
 
     console.log('✅ EmployeeEntitlementOverride created.\n');
@@ -339,10 +390,10 @@ async function seedLeaves() {
     console.log('🚩 Creating LeavePatternFlag...');
 
     await patternFlagModel.create({
-      employeeId: dummyEmployeeId,
-      managerId: new Types.ObjectId(),
-      departmentId: new Types.ObjectId(),
-      positionId: new Types.ObjectId(),
+      employeeId: emp1._id,
+      managerId: emp2._id,
+      departmentId: emp1DeptId,
+      positionId: emp1PosId,
       relatedRequests: [req._id],
       patternType: IrregularPatternType.FREQUENT_SHORT_LEAVES,
       reason: 'Dummy flag – frequent short leaves.',
@@ -358,7 +409,7 @@ async function seedLeaves() {
     console.log('📦 Creating LeaveBulkOperation...');
 
     await bulkOpModel.create({
-      initiatedByUserId: new Types.ObjectId(),
+      initiatedByUserId: emp3._id,
       type: BulkOperationType.APPROVE,
       requestIds: [req._id],
       status: BulkOperationStatus.PENDING,
@@ -372,10 +423,10 @@ async function seedLeaves() {
     console.log('✅ LeaveBulkOperation created.\n');
 
     console.log(
-      '🎉 Leaves subsystem dummy seeding completed (schemas only, no real cross-subsystem refs).',
+      '🎉 Leaves subsystem seeding completed WITH real cross-subsystem references.',
     );
   } catch (err) {
-    console.error('❌ Error seeding leaves dummy data:', err);
+    console.error('❌ Error seeding leaves data:', err);
   } finally {
     await app.close();
   }
