@@ -3,7 +3,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Candidate } from '../../rec/schemas/candidate.schema';
-import { Employee } from '../../../employee-profile/schemas/employee.schema';
+//import { Employee } from '../../../employee-profile/schemas/employee.schema';
 
 export type OnboardingProcessDocument = OnboardingProcess & Document;
 
@@ -28,9 +28,8 @@ export class TaskProgress {
   uploadedDocuments: string[];
   
    //external reference le Employee mn employee profile folder
-  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
-  @Prop({ type: Types.ObjectId, ref: Employee.name })
-  completedBy: Types.ObjectId;
+   @Prop()
+  completedByEmployeeId?: string;
 }
 
 @Schema({ timestamps: true })
@@ -60,9 +59,8 @@ export class OnboardingProcess {
   completionPercentage: number;
 
   //external reference le Employee mn employee profile folder
-  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
-  @Prop({ type: Types.ObjectId, ref: Employee.name })
-  assignedHR: Types.ObjectId;
+   @Prop()
+  assignedHREmployeeId?: string;
 
   @Prop({ type: Boolean, default: false })
   payrollInitiated: boolean;

@@ -1,25 +1,9 @@
-/*From the project requirements, it’s nice (but not absolutely mandatory) to distinguish:
-
-configured deductions (tax, insurance, social, etc.)
-
-“penalties” (late, missing hours, unpaid leave)
-/*  
-
-/*@Prop({ default: 0 })
-taxAmount: number;
-
-@Prop({ default: 0 })
-insuranceAmount: number;
-*/
-
-// src/payroll-processing/schemas/payroll-run-item.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import * as mongoose from 'mongoose';
 
 import { PayGradeDocument } from '../../payroll-configuration/schemas/pay-grade.schema';
 import { PayrollRunDocument } from './payroll-run.schema';
-// If you have EmployeeDocument / DepartmentDocument / PositionDocument in other modules:
 import { EmployeeDocument } from '../../employee-profile/schemas/employee.schema';
 import { DepartmentDocument } from '../../organization-structure/schemas/department.schema';
 import { PositionDocument } from '../../organization-structure/schemas/position.schema';
@@ -28,53 +12,40 @@ export type PayrollRunItemDocument = PayrollRunItem & Document;
 
 @Schema({ timestamps: true })
 export class PayrollRunItem {
-  // ------- REFERENCES AS ObjectId | Document -------
-
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'PayrollRun',
     required: true,
   })
-  payrollRunId:
-    | mongoose.Types.ObjectId
-    | PayrollRunDocument; // Payroll Processing & Execution
+  payrollRunId: mongoose.Types.ObjectId | PayrollRunDocument;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Employee',
     required: true,
   })
-  employeeId:
-    | mongoose.Types.ObjectId
-    | EmployeeDocument; // EmployeeDocument if you have it (from Employee Profile subsystem)
+  employeeId: mongoose.Types.ObjectId | EmployeeDocument;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'PayGrade',
     required: true,
   })
-  payGradeId:
-    | mongoose.Types.ObjectId
-    | PayGradeDocument; // from Payroll Configuration & Policy Setup
+  payGradeId: mongoose.Types.ObjectId | PayGradeDocument;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Department',
   })
-  departmentId:
-    | mongoose.Types.ObjectId
-    | DepartmentDocument; // DepartmentDocument from Org Structure subsystem
+  departmentId: mongoose.Types.ObjectId | DepartmentDocument;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Position',
   })
-  positionId:
-    | mongoose.Types.ObjectId
-    | PositionDocument; // PositionDocument from Org Structure subsystem
+  positionId: mongoose.Types.ObjectId | PositionDocument;
 
   // ------- SNAPSHOTTED NUMBERS (not refs) -------
-
   @Prop({ required: true })
   grossSalary: number;
 
@@ -93,15 +64,10 @@ export class PayrollRunItem {
   @Prop({ required: true })
   finalNetSalary: number;
 
-  // ------- ARRAY OF REFERENCES INSIDE SUBDOCUMENTS -------
-
+  // ------- ARRAY OF PAY COMPONENTS -------
   @Prop({
     type: [
       {
-        componentId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'PayComponentDefinition',
-        },
         code: String,
         name: String,
         type: String,
@@ -111,10 +77,6 @@ export class PayrollRunItem {
     default: [],
   })
   lineItems: {
-    componentId:
-      | mongoose.Types.ObjectId
-      | any; // PayComponentDefinitionDocument if you import it
-
     code: string;
     name: string;
     type: string;
@@ -122,22 +84,21 @@ export class PayrollRunItem {
   }[];
 
   // ------- OTHER EMBEDDED OBJECTS -------
-
   @Prop({
     type: {
-      totalOvertimeHours: Number,
-      totalOvertimeAmount: Number,
-      totalLatePenalties: Number,
-      totalUnpaidLeaveDays: Number,
-      totalUnpaidLeaveAmount: Number,
+      totalOvertimeHours: { type: Number, default: 0 },
+      totalOvertimeAmount: { type: Number, default: 0 },
+      totalLatePenalties: { type: Number, default: 0 },
+      totalUnpaidLeaveDays: { type: Number, default: 0 },
+      totalUnpaidLeaveAmount: { type: Number, default: 0 },
     },
   })
   timeAndLeaveSummary?: {
-    totalOvertimeHours: number;
-    totalOvertimeAmount: number;
-    totalLatePenalties: number;
-    totalUnpaidLeaveDays: number;
-    totalUnpaidLeaveAmount: number;
+    totalOvertimeHours?: number;
+    totalOvertimeAmount?: number;
+    totalLatePenalties?: number;
+    totalUnpaidLeaveDays?: number;
+    totalUnpaidLeaveAmount?: number;
   };
 
   @Prop({
@@ -151,20 +112,28 @@ export class PayrollRunItem {
     },
   })
   hrEventSummary?: {
-    isNewHire: boolean;
-    isResignation: boolean;
-    isTermination: boolean;
-    signingBonusAmount: number;
-    terminationBenefitAmount: number;
-    resignationBenefitAmount: number;
+    isNewHire?: boolean;
+    isResignation?: boolean;
+    isTermination?: boolean;
+    signingBonusAmount?: number;
+    terminationBenefitAmount?: number;
+    resignationBenefitAmount?: number;
   };
 
   @Prop({ default: false })
   hasAnomalies: boolean;
 
-  @Prop({ type: [String], default: [] })
-  anomalyMessages: string[];
+  @Prop({
+    type: [
+      {
+        anomalyType: { type: String, required: true },
+        message: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  anomalyMessages: { anomalyType: string; message: string; timestamp: Date }[];
 }
 
-export const PayrollRunItemSchema =
-  SchemaFactory.createForClass(PayrollRunItem);
+export const PayrollRunItemSchema = SchemaFactory.createForClass(PayrollRunItem);

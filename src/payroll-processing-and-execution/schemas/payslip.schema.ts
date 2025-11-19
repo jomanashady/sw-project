@@ -136,10 +136,8 @@ export class Payslip {
     required: true,
     enum: ['generated', 'visible_to_employee', 'locked'],
   })
-  visibilityStatus:
-    | 'generated'
-    | 'visible_to_employee'
-    | 'locked';
+  visibilityStatus: string
+    
 }
 
 export const PayslipSchema = SchemaFactory.createForClass(Payslip);

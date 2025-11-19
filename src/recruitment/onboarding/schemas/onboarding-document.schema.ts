@@ -3,7 +3,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Candidate } from '../../rec/schemas/candidate.schema';
-import { Employee } from '../../../employee-profile/schemas/employee.schema';
+//import { Employee } from '../../../employee-profile/schemas/employee.schema';
 
 export type OnboardingDocumentDocument = OnboardingDocument & Document;
 
@@ -28,17 +28,15 @@ export class OnboardingDocument {
   documentUrl: string;
 
     //external reference le Employee mn employee profile folder
-  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
-  @Prop({ type: Types.ObjectId, ref: Employee.name, required: true })
-  uploadedBy: Types.ObjectId;
+    @Prop({ required: true })
+  uploadedByEmployeeId: string;
 
   @Prop({ type: String, enum: ['pending_review', 'approved', 'rejected'], default: 'pending_review' })
   verificationStatus: string;
 
   //external reference le Employee mn employee profile folder
-  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
-  @Prop({ type: Types.ObjectId, ref: Employee.name })
-  verifiedBy: Types.ObjectId;
+    @Prop()
+  verifiedByEmployeeId?: string;
 
   @Prop({ type: Date })
   verifiedDate: Date;

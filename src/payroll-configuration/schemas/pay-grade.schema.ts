@@ -12,7 +12,7 @@ export type PayGradeDocument = PayGrade & Document;
 @Schema({ timestamps: true })
 export class PayGrade {
   @Prop({ required: true, unique: true })
-  name: string;
+  name: string; 
 
   @Prop({ required: true, unique: true })
   code: string;

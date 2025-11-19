@@ -16,10 +16,10 @@ export class PayrollPeriod {
   @Prop({ required: true })
   endDate: Date;
 
-  //el line el ta7t da me7tag yetghayar (zawedt bas 'under review')
-
+ 
+//sala7to
   @Prop({ required: true, enum: ['draft', 'open', 'under_review', 'closed'] })
-  status: 'draft' | 'open' | 'under_review' | 'closed';
+  status: string;
 
   @Prop()
   description?: string;
