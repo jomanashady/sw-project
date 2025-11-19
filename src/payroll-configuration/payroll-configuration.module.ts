@@ -47,6 +47,6 @@ import { PayrollConfigurationController } from './payroll-configuration.controll
   ],
   controllers: [PayrollConfigurationController],
   providers: [PayrollConfigurationService],
-  exports: [PayrollConfigurationService],
+  exports: [PayrollConfigurationService, MongooseModule],
 })
 export class PayrollConfigurationModule {}

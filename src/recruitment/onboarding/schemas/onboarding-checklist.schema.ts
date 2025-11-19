@@ -2,7 +2,7 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Employee } from '../../../employee-profile/schemas/employee.schema';
+//import { Employee } from '../../../employee-profile/schemas/employee.schema';
 
 export type OnboardingChecklistDocument = OnboardingChecklist & Document;
 
@@ -49,9 +49,8 @@ export class OnboardingChecklist {
   isActive: boolean;
 
   //external reference le Employee mn employee profile folder
-  //el mfrood f ref akteb ref:Employee.name w asheel el quotes
-  @Prop({ type: Types.ObjectId, ref: Employee.name, required: true })
-  createdBy: Types.ObjectId;
+  @Prop({ required: true })
+  createdByEmployeeId: string; //
 }
 
 export const OnboardingChecklistSchema = SchemaFactory.createForClass(OnboardingChecklist);

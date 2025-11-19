@@ -25,6 +25,6 @@ import { forwardRef } from '@nestjs/common';
   ],
   controllers: [EmployeeProfileController],
   providers: [EmployeeProfileService],
-  exports: [EmployeeProfileService],
+  exports: [EmployeeProfileService, MongooseModule] //zawedt mongoosemodule export karma
 })
 export class EmployeeProfileModule {}

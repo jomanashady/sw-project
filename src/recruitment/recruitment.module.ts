@@ -8,6 +8,7 @@ import { OffboardingModule } from './offboarding/offboarding.module';
 @Module({
   providers: [RecruitmentService],
   controllers: [RecruitmentController],
-  imports: [RecruitmentModule, RecModule, OnboardingModule, OffboardingModule]
+  imports: [RecModule, OnboardingModule, OffboardingModule],
+  exports: [RecruitmentService], // <– add this if any other module needs it
 })
 export class RecruitmentModule {}
