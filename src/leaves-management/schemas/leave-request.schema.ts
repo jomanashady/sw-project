@@ -122,8 +122,8 @@ export class LeaveRequest extends Document {
   @Prop({ type: Types.ObjectId, ref: 'AttendanceRecord' })
   timeManagementEventId?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
-  employmentStatus: Types.ObjectId;
+  // @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
+  // employmentStatus: Types.ObjectId;
 
   //@Prop()
   //payrollImpactRef?: string; // link to payroll adjustment/encashment
