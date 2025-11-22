@@ -82,7 +82,7 @@ export async function seedPayrollExecution(connection: mongoose.Connection, empl
       recruitmentData && recruitmentData.terminations && recruitmentData.terminations.terminationRequest) {
     await EmployeeTerminationResignationModel.create({
       employeeId: employees.charlie._id,
-      allowanceId: payrollConfig.benefits.endOfService._id,
+      benefitId: payrollConfig.benefits.endOfService._id,
       terminationId: recruitmentData.terminations.terminationRequest._id,
       status: BenefitStatus.PENDING,
     });
