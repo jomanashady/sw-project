@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 
+import { SeedModule } from './seeds/seed.module';
+import { SeedService } from './seeds/seed.service';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 5000);
-  console.log(`Application is running`);
+  const app = await NestFactory.createApplicationContext(SeedModule);
+  const seedService = app.get(SeedService);
+  await seedService.run();
+  await app.close();
 }
-bootstrap();
+
+void bootstrap();
