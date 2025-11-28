@@ -15,6 +15,7 @@ import { Document,DocumentSchema } from './models/document.schema';
 import { TerminationRequest,TerminationRequestSchema } from './models/termination-request.schema';
 import { ClearanceChecklist,ClearanceChecklistSchema } from './models/clearance-checklist.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
+import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
 @Module({
   imports:[MongooseModule.forFeature([
       { name: JobTemplate.name, schema: JobTemplateSchema },
@@ -29,6 +30,9 @@ import { EmployeeProfileModule } from '../employee-profile/employee-profile.modu
       { name: Document.name, schema: DocumentSchema },
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
+      //new
+      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+
     ]),EmployeeProfileModule
   ],
   controllers: [RecruitmentController],
