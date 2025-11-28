@@ -1,18 +1,105 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PayrollConfigurationController } from './payroll-configuration.controller';
+import { PayrollConfigurationService } from './payroll-configuration.service';
+import { ConfigStatus } from './enums/payroll-configuration-enums';
 
 describe('PayrollConfigurationController', () => {
   let controller: PayrollConfigurationController;
+  let service: PayrollConfigurationService;
+
+  const mockPayrollConfigurationService = {
+    findAllPayGrades: jest.fn(),
+    findOnePayGrade: jest.fn(),
+    createPayGrade: jest.fn(),
+    updatePayGrade: jest.fn(),
+    deletePayGrade: jest.fn(),
+    approvePayGrade: jest.fn(),
+    rejectPayGrade: jest.fn(),
+    findAllAllowances: jest.fn(),
+    findOneAllowance: jest.fn(),
+    createAllowance: jest.fn(),
+    updateAllowance: jest.fn(),
+    deleteAllowance: jest.fn(),
+    approveAllowance: jest.fn(),
+    rejectAllowance: jest.fn(),
+    findAllPayTypes: jest.fn(),
+    findOnePayType: jest.fn(),
+    createPayType: jest.fn(),
+    updatePayType: jest.fn(),
+    deletePayType: jest.fn(),
+    approvePayType: jest.fn(),
+    rejectPayType: jest.fn(),
+    getConfigurationStats: jest.fn(),
+    getPendingApprovals: jest.fn(),
+    getCompanySettings: jest.fn(),
+    createCompanySettings: jest.fn(),
+    updateCompanySettings: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PayrollConfigurationController],
+      providers: [
+        {
+          provide: PayrollConfigurationService,
+          useValue: mockPayrollConfigurationService,
+        },
+      ],
     }).compile();
 
     controller = module.get<PayrollConfigurationController>(PayrollConfigurationController);
+    service = module.get<PayrollConfigurationService>(PayrollConfigurationService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('getPayGrades', () => {
+    it('should return pay grades with pagination', async () => {
+      const result = {
+        data: [{ id: '1', grade: 'A', baseSalary: 6000, grossSalary: 8000 }],
+        pagination: { total: 1, page: 1, limit: 10, totalPages: 1 }
+      };
+      mockPayrollConfigurationService.findAllPayGrades.mockResolvedValue(result);
+
+      expect(await controller.getPayGrades({})).toBe(result);
+      expect(service.findAllPayGrades).toHaveBeenCalled();
+    });
+  });
+
+  describe('createPayGrade', () => {
+    it('should create a pay grade', async () => {
+      const createDto = { grade: 'B', baseSalary: 7000, grossSalary: 9000 };
+      const result = { id: '1', ...createDto, status: ConfigStatus.DRAFT };
+      mockPayrollConfigurationService.createPayGrade.mockResolvedValue(result);
+
+      expect(await controller.createPayGrade(createDto)).toBe(result);
+    });
+  });
+
+  describe('getConfigurationStats', () => {
+    it('should return configuration statistics', async () => {
+      const result = {
+        payGrades: { total: 5, draft: 2, approved: 3, rejected: 0 },
+        allowances: { total: 3, draft: 1, approved: 2, rejected: 0 }
+      };
+      mockPayrollConfigurationService.getConfigurationStats.mockResolvedValue(result);
+
+      expect(await controller.getConfigurationStats()).toBe(result);
+    });
+  });
+
+  describe('getPendingApprovals', () => {
+    it('should return pending approvals', async () => {
+      const result = {
+        payGrades: [],
+        allowances: [],
+        totalPending: 0
+      };
+      mockPayrollConfigurationService.getPendingApprovals.mockResolvedValue(result);
+
+      expect(await controller.getPendingApprovals()).toBe(result);
+    });
   });
 });
