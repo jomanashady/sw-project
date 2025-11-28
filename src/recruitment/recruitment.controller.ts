@@ -4,16 +4,19 @@ import {
   Post,
   Get,
   Patch,
+  Put,
+  Delete,
   Body,
   Param,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 
 import { RecruitmentService } from './recruitment.service';
-import {CreateJobRequisitionDto,} from './dto/job-requisition.dto';
-import {CreateApplicationDto,UpdateApplicationStatusDto,} from './dto/application.dto';
-import { ScheduleInterviewDto,UpdateInterviewStatusDto,} from './dto/interview.dto';
-import { CreateOfferDto, RespondToOfferDto,FinalizeOfferDto,} from './dto/offer.dto';
-
+import { CreateJobRequisitionDto } from './dto/job-requisition.dto';
+import { CreateApplicationDto, UpdateApplicationStatusDto } from './dto/application.dto';
+import { ScheduleInterviewDto, UpdateInterviewStatusDto } from './dto/interview.dto';
+import { CreateOfferDto, RespondToOfferDto, FinalizeOfferDto } from './dto/offer.dto';
 
 import { CreateOnboardingDto } from './dto/create-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
@@ -92,9 +95,6 @@ export class RecruitmentController {
   ) {
     return this.service.finalizeOffer(id, dto);
   }
-}
-
-
 
   // ============= ONBOARDING ENDPOINTS =============
 
@@ -104,7 +104,7 @@ export class RecruitmentController {
    */
   @Post('onboarding')
   async createOnboarding(@Body() createOnboardingDto: CreateOnboardingDto) {
-    return this.recruitmentService.createOnboarding(createOnboardingDto);
+    return this.service.createOnboarding(createOnboardingDto);
   }
 
   /**
@@ -113,7 +113,7 @@ export class RecruitmentController {
    */
   @Get('onboarding')
   async getAllOnboardings() {
-    return this.recruitmentService.getAllOnboardings();
+    return this.service.getAllOnboardings();
   }
 
   /**
@@ -122,7 +122,7 @@ export class RecruitmentController {
    */
   @Get('onboarding/stats')
   async getOnboardingStats() {
-    return this.recruitmentService.getOnboardingStats();
+    return this.service.getOnboardingStats();
   }
 
   /**
@@ -131,7 +131,7 @@ export class RecruitmentController {
    */
   @Get('onboarding/:id')
   async getOnboardingById(@Param('id') id: string) {
-    return this.recruitmentService.getOnboardingById(id);
+    return this.service.getOnboardingById(id);
   }
 
   /**
@@ -140,7 +140,7 @@ export class RecruitmentController {
    */
   @Get('onboarding/employee/:employeeId')
   async getOnboardingByEmployeeId(@Param('employeeId') employeeId: string) {
-    return this.recruitmentService.getOnboardingByEmployeeId(employeeId);
+    return this.service.getOnboardingByEmployeeId(employeeId);
   }
 
   /**
@@ -152,7 +152,7 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Body() updateOnboardingDto: UpdateOnboardingDto,
   ) {
-    return this.recruitmentService.updateOnboarding(id, updateOnboardingDto);
+    return this.service.updateOnboarding(id, updateOnboardingDto);
   }
 
   /**
@@ -165,7 +165,7 @@ export class RecruitmentController {
     @Param('taskIndex') taskIndex: string,
     @Body() updateTaskDto: UpdateOnboardingTaskDto,
   ) {
-    return this.recruitmentService.updateOnboardingTask(
+    return this.service.updateOnboardingTask(
       id,
       parseInt(taskIndex),
       updateTaskDto,
@@ -181,7 +181,7 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Body() taskDto: any,
   ) {
-    return this.recruitmentService.addTaskToOnboarding(id, taskDto);
+    return this.service.addTaskToOnboarding(id, taskDto);
   }
 
   /**
@@ -194,7 +194,7 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Param('taskIndex') taskIndex: string,
   ) {
-    return this.recruitmentService.removeTaskFromOnboarding(id, parseInt(taskIndex));
+    return this.service.removeTaskFromOnboarding(id, parseInt(taskIndex, 10));
   }
 
   /**
@@ -204,7 +204,8 @@ export class RecruitmentController {
   @Delete('onboarding/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteOnboarding(@Param('id') id: string) {
-    return this.recruitmentService.deleteOnboarding(id);
+    return this.service.deleteOnboarding(id);
   }
 }
+
 
