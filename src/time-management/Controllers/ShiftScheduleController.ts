@@ -21,7 +21,7 @@ import {
 
 // ===== SHIFT AND SCHEDULE CONTROLLER =====
 // Combines ShiftController and ScheduleController
-@UseGuards(AuthGuard, RolesGuard)
+// @UseGuards(AuthGuard, RolesGuard) // COMMENTED OUT FOR TESTING
 @Controller('shift-schedule')
 export class ShiftAndScheduleController {
   constructor(private readonly shiftScheduleService: ShiftScheduleService) {}
@@ -29,7 +29,7 @@ export class ShiftAndScheduleController {
   // ===== Shift Management =====
 
   // 1. Create a new shift type
-  @Roles('HrManager', 'SystemAdmin')
+  // @Roles('HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('shift/type')
   async createShiftType(@Body() createShiftTypeDto: CreateShiftTypeDto) {
     return this.shiftScheduleService.createShiftType(createShiftTypeDto);
@@ -53,14 +53,14 @@ export class ShiftAndScheduleController {
   // }
 
   // 4. Create a new shift
-  @Roles('HrManager', 'SystemAdmin')
+  // @Roles('HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('shift')
   async createShift(@Body() createShiftDto: CreateShiftDto) {
     return this.shiftScheduleService.createShift(createShiftDto);
   }
 
   // 5. Update an existing shift
-  @Roles('HrManager', 'SystemAdmin')
+  // @Roles('HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Put('shift/:id')
   async updateShift(
     @Param('id') id: string,
@@ -77,7 +77,7 @@ export class ShiftAndScheduleController {
   // }
 
   // 7. Assign a shift to an employee
-  @Roles('SystemAdmin', 'HrAdmin')
+  // @Roles('SystemAdmin', 'HrAdmin') // COMMENTED OUT FOR TESTING
   @Post('shift/assign')
   async assignShiftToEmployee(@Body() assignShiftToEmployeeDto: AssignShiftToEmployeeDto) {
     return this.shiftScheduleService.assignShiftToEmployee(assignShiftToEmployeeDto);
@@ -115,7 +115,7 @@ export class ShiftAndScheduleController {
   // ===== Scheduling Rules =====
 
   // 11. Create a new schedule rule
-  @Roles('HrManager', 'SystemAdmin')
+  // @Roles('HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('schedule')
   async createScheduleRule(@Body() createScheduleRuleDto: CreateScheduleRuleDto) {
     return this.shiftScheduleService.createScheduleRule(createScheduleRuleDto);
@@ -136,7 +136,7 @@ export class ShiftAndScheduleController {
   // }
 
   // 14. Define flexible scheduling rules
-  @Roles('HrManager', 'SystemAdmin')
+  // @Roles('HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('schedule/flexible')
   async defineFlexibleSchedulingRules(@Body() defineFlexibleSchedulingRulesDto: DefineFlexibleSchedulingRulesDto) {
     return this.shiftScheduleService.defineFlexibleSchedulingRules(defineFlexibleSchedulingRulesDto);

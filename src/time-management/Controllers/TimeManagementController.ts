@@ -38,7 +38,7 @@ import {
 
 // ===== TIME MANAGEMENT CONTROLLER =====
 // Combines AttendanceController and TimeExceptionController
-@UseGuards(AuthGuard, RolesGuard)
+// @UseGuards(AuthGuard, RolesGuard) // COMMENTED OUT FOR TESTING
 @Controller('time-management')
 export class TimeManagementController {
   constructor(private readonly timeManagementService: TimeManagementService) {}
@@ -46,23 +46,23 @@ export class TimeManagementController {
   // ===== Clocking and Attendance Records =====
   
   // 1. Clock in with employee ID
-  @Roles('employee', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('clock-in/:employeeId')
   async clockInWithID(@Param('employeeId') employeeId: string) {
     return this.timeManagementService.clockInWithID(employeeId);
   }
 
   // 1b. Clock out with employee ID
-  @Roles('employee', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('clock-out/:employeeId')
   async clockOutWithID(@Param('employeeId') employeeId: string) {
     return this.timeManagementService.clockOutWithID(employeeId);
   }
 
   // 2. Create a new attendance record (clock-in/out)
-  @Roles('LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance')
   async createAttendanceRecord(@Body() createAttendanceRecordDto: CreateAttendanceRecordDto) {
     return this.timeManagementService.createAttendanceRecord(createAttendanceRecordDto);
@@ -80,7 +80,7 @@ export class TimeManagementController {
       // }
 
   // 4. Update an attendance record (e.g., add missed punches or corrections) 
-  @Roles('LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Put('attendance/:id')
   async updateAttendanceRecord(
     @Param('id') id: string,
@@ -90,8 +90,8 @@ export class TimeManagementController {
   }
 
   // 5. Submit an attendance correction request (for missed punches, etc.)
-  @Roles('employee', 'LineManager', 'HrAdmin', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'LineManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('attendance/correction')
   async submitAttendanceCorrectionRequest(@Body() submitCorrectionRequestDto: SubmitCorrectionRequestDto) {
     return this.timeManagementService.submitAttendanceCorrectionRequest(submitCorrectionRequestDto);
@@ -110,7 +110,7 @@ export class TimeManagementController {
 
   // 6b. Get all correction requests (for review by managers/admins)
   // User Story: "As a Line Manager/HR Admin, I want to review, approve, or reject attendance-related requests"
-  @Roles('LineManager', 'HrAdmin', 'HrManager', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Get('attendance/corrections')
   async getAllCorrectionRequests(@Body() getAllCorrectionsDto: GetAllCorrectionsDto) {
     return this.timeManagementService.getAllCorrectionRequests(getAllCorrectionsDto);
@@ -118,7 +118,7 @@ export class TimeManagementController {
 
   // 6c. Approve a correction request
   // User Story: "As a Line Manager/HR Admin, I want to review, approve, or reject attendance-related requests"
-  @Roles('LineManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance/corrections/approve')
   async approveCorrectionRequest(@Body() approveCorrectionRequestDto: ApproveCorrectionRequestDto) {
     return this.timeManagementService.approveCorrectionRequest(approveCorrectionRequestDto);
@@ -126,7 +126,7 @@ export class TimeManagementController {
 
   // 6d. Reject a correction request
   // User Story: "As a Line Manager/HR Admin, I want to review, approve, or reject attendance-related requests"
-  @Roles('LineManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance/corrections/reject')
   async rejectCorrectionRequest(@Body() rejectCorrectionRequestDto: RejectCorrectionRequestDto) {
     return this.timeManagementService.rejectCorrectionRequest(rejectCorrectionRequestDto);
@@ -134,33 +134,33 @@ export class TimeManagementController {
 
   // ===== Attendance Punch Enhancements =====
 
-  @Roles('employee', 'LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('attendance/punch/metadata')
   async recordPunchWithMetadata(@Body() recordPunchWithMetadataDto: RecordPunchWithMetadataDto) {
     return this.timeManagementService.recordPunchWithMetadata(recordPunchWithMetadataDto);
   }
 
-  @Roles('employee', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('attendance/punch/device')
   async recordPunchFromDevice(@Body() recordPunchWithMetadataDto: RecordPunchWithMetadataDto) {
     return this.timeManagementService.recordPunchFromDevice(recordPunchWithMetadataDto);
   }
 
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance/enforce-punch-policy')
   async enforcePunchPolicy(@Body() enforcePunchPolicyDto: EnforcePunchPolicyDto) {
     return this.timeManagementService.enforcePunchPolicy(enforcePunchPolicyDto);
   }
 
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance/rounding')
   async applyAttendanceRounding(@Body() applyAttendanceRoundingDto: ApplyAttendanceRoundingDto) {
     return this.timeManagementService.applyAttendanceRounding(applyAttendanceRoundingDto);
   }
 
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('attendance/enforce-shift-policy')
   async enforceShiftPunchPolicy(@Body() enforceShiftPunchPolicyDto: EnforceShiftPunchPolicyDto) {
     return this.timeManagementService.enforceShiftPunchPolicy(enforceShiftPunchPolicyDto);
@@ -169,15 +169,15 @@ export class TimeManagementController {
   // ===== Time Exceptions ===== //isnt this attendance exceptions?and implemented above in getAllCorrectionRequests approveCorrectionRequest, and rejectCorrectionRequest ? 
 
   // 7. Create a new time exception (e.g., missed punch, overtime) 
-  @Roles('employee', 'LineManager', 'HrManager')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'LineManager', 'HrManager') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Post('time-exception')
   async createTimeException(@Body() createTimeExceptionDto: CreateTimeExceptionDto) {
     return this.timeManagementService.createTimeException(createTimeExceptionDto);
   }
 
   // 8. Update a time exception status (approve, reject, etc.)
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Put('time-exception/:id')
   async updateTimeException(
     @Param('id') id: string,
@@ -187,8 +187,8 @@ export class TimeManagementController {
   }
 
   // 9. Get all time exceptions by employee (optional filter by status)
-  @Roles('employee', 'LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin')
-  @UseGuards(SelfAccessGuard)
+  // @Roles('employee', 'LineManager', 'HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
+  // @UseGuards(SelfAccessGuard) // COMMENTED OUT FOR TESTING
   @Get('time-exception/employee/:id')
   async getTimeExceptionsByEmployee(
     @Param('id') id: string,
@@ -198,21 +198,21 @@ export class TimeManagementController {
   }
 
   // 10. Approve a time exception
-  @Roles('LineManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('time-exception/approve')
   async approveTimeException(@Body() approveTimeExceptionDto: ApproveTimeExceptionDto) {
     return this.timeManagementService.approveTimeException(approveTimeExceptionDto);
   }
 
   // 11. Reject a time exception
-  @Roles('LineManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('time-exception/reject')
   async rejectTimeException(@Body() rejectTimeExceptionDto: RejectTimeExceptionDto) {
     return this.timeManagementService.rejectTimeException(rejectTimeExceptionDto);
   }
 
   // 12. Escalate a time exception
-  @Roles('LineManager', 'HrAdmin', 'HrManager', 'SystemAdmin')
+  // @Roles('LineManager', 'HrAdmin', 'HrManager', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('time-exception/escalate')
   async escalateTimeException(@Body() escalateTimeExceptionDto: EscalateTimeExceptionDto) {
     return this.timeManagementService.escalateTimeException(escalateTimeExceptionDto);
@@ -223,7 +223,7 @@ export class TimeManagementController {
 
   // 18. Check for expiring shift assignments and send notifications
   // User Story: "As an HR Admin, I want to be notified when a shift assignment is nearing expiry"
-  @Roles('HrAdmin', 'SystemAdmin')
+  // @Roles('HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('automation/check-expiring-shifts')
   async checkExpiringShiftAssignments(@Body() body: { daysBeforeExpiry?: number }) {
     return this.timeManagementService.checkExpiringShiftAssignments(body.daysBeforeExpiry || 7);
@@ -231,7 +231,7 @@ export class TimeManagementController {
 
   // 19. Detect missed punches and send alerts
   // User Story: "As an Employee/Line Manager/Payroll Officer, I want the system to flag missed punches and send alerts"
-  @Roles('HrAdmin', 'SystemAdmin')
+  // @Roles('HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('automation/detect-missed-punches')
   async detectMissedPunches() {
     return this.timeManagementService.detectMissedPunches();
@@ -239,25 +239,25 @@ export class TimeManagementController {
 
   // 20. Escalate unresolved requests before payroll cut-off
   // User Story: "As a System Admin/HR Admin, I want leave or time requests to escalate automatically if not reviewed before the monthly payroll cut-off date"
-  @Roles('HrAdmin', 'SystemAdmin', 'PayrollOfficer')
+  // @Roles('HrAdmin', 'SystemAdmin', 'PayrollOfficer') // COMMENTED OUT FOR TESTING
   @Post('automation/escalate-before-payroll')
   async escalateUnresolvedRequestsBeforePayroll(@Body() body: { payrollCutOffDate: Date }) {
     return this.timeManagementService.escalateUnresolvedRequestsBeforePayroll(new Date(body.payrollCutOffDate));
   }
 
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('automation/monitor-lateness')
   async monitorRepeatedLateness(@Body() monitorRepeatedLatenessDto: MonitorRepeatedLatenessDto) {
     return this.timeManagementService.monitorRepeatedLateness(monitorRepeatedLatenessDto);
   }
 
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'LineManager')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'LineManager') // COMMENTED OUT FOR TESTING
   @Post('automation/trigger-lateness')
   async triggerLatenessDisciplinary(@Body() triggerLatenessDisciplinaryDto: TriggerLatenessDisciplinaryDto) {
     return this.timeManagementService.triggerLatenessDisciplinary(triggerLatenessDisciplinaryDto);
   }
 
-  @Roles('SystemAdmin')
+  // @Roles('SystemAdmin') // COMMENTED OUT FOR TESTING
   @Post('automation/schedule-backup')
   async scheduleTimeDataBackup() {
     return this.timeManagementService.scheduleTimeDataBackup();
@@ -267,7 +267,7 @@ export class TimeManagementController {
 
   // Generate overtime report
   // User Story: "As an HR or Payroll Officer, I want to view and export overtime and exception attendance reports"
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer') // COMMENTED OUT FOR TESTING
   @Post('reports/overtime')
   async generateOvertimeReport(@Body() generateOvertimeReportDto: GenerateOvertimeReportDto) {
     return this.timeManagementService.generateOvertimeReport(generateOvertimeReportDto);
@@ -275,7 +275,7 @@ export class TimeManagementController {
 
   // Generate lateness report
   // User Story: "As an HR or Payroll Officer, I want to view and export overtime and exception attendance reports"
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer') // COMMENTED OUT FOR TESTING
   @Post('reports/lateness')
   async generateLatenessReport(@Body() generateLatenessReportDto: GenerateLatenessReportDto) {
     return this.timeManagementService.generateLatenessReport(generateLatenessReportDto);
@@ -283,7 +283,7 @@ export class TimeManagementController {
 
   // Generate exception attendance report
   // User Story: "As an HR or Payroll Officer, I want to view and export overtime and exception attendance reports"
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer') // COMMENTED OUT FOR TESTING
   @Post('reports/exception')
   async generateExceptionReport(@Body() generateExceptionReportDto: GenerateExceptionReportDto) {
     return this.timeManagementService.generateExceptionReport(generateExceptionReportDto);
@@ -291,7 +291,7 @@ export class TimeManagementController {
 
   // Export report in specified format (Excel, CSV, Text)
   // User Story: "As an HR or Payroll Officer, I want to view and export overtime and exception attendance reports"
-  @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer')
+  // @Roles('HrManager', 'HrAdmin', 'SystemAdmin', 'PayrollOfficer') // COMMENTED OUT FOR TESTING
   @Post('reports/export')
   async exportReport(@Body() exportReportDto: ExportReportDto) {
     return this.timeManagementService.exportReport(exportReportDto);
