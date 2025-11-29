@@ -21,7 +21,7 @@ import {
   GenerateLatenessReportDto,
   GenerateExceptionReportDto,
   ExportReportDto,
-} from '../DTOs/Reporting.dtos';
+} from '../DTOs/reporting.dtos';
 
 @Injectable()
 export class TimeManagementService {
