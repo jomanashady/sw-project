@@ -23,7 +23,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     // This MongooseModule.forRoot() is required for all Mongoose models to work
     // Using MongoDB Atlas connection string (can also use environment variable: process.env.MONGODB_URI)
     // This was added to fix the dependency injection error and needs TA approval
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/time-management'),
+    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/hr_system'),
     
     TimeManagementModule, RecruitmentModule, LeavesModule,
      PayrollExecutionModule, PayrollConfigurationModule, PayrollTrackingModule, 

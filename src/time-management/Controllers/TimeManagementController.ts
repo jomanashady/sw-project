@@ -34,7 +34,7 @@ import {
   GenerateLatenessReportDto,
   GenerateExceptionReportDto,
   ExportReportDto,
-} from '../DTOs/Reporting.dtos';
+} from '../DTOs/reporting.dtos';
 
 // ===== TIME MANAGEMENT CONTROLLER =====
 // Combines AttendanceController and TimeExceptionController
