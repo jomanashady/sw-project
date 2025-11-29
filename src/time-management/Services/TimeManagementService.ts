@@ -1,0 +1,774 @@
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+// Import schemas
+import { AttendanceRecord } from '../models/attendance-record.schema';
+import { AttendanceCorrectionRequest } from '../models/attendance-correction-request.schema';
+import { TimeException } from '../models/time-exception.schema';
+import { ShiftAssignment } from '../models/shift-assignment.schema';
+// Import enums
+import { TimeExceptionStatus, TimeExceptionType, PunchType, CorrectionRequestStatus } from '../models/enums';
+import {
+  ApplyAttendanceRoundingDto,
+  EnforcePunchPolicyDto,
+  EnforceShiftPunchPolicyDto,
+  MonitorRepeatedLatenessDto,
+  RecordPunchWithMetadataDto,
+  TriggerLatenessDisciplinaryDto,
+} from '../DTOs/time-permission.dtos';
+import {
+  GenerateOvertimeReportDto,
+  GenerateLatenessReportDto,
+  GenerateExceptionReportDto,
+  ExportReportDto,
+} from '../DTOs/Reporting.dtos';
+
+@Injectable()
+export class TimeManagementService {
+  private readonly auditLogs: Array<{
+    entity: string;
+    changeSet: Record<string, unknown>;
+    actorId?: string;
+    timestamp: Date;
+  }> = [];
+
+  constructor(
+    @InjectModel(AttendanceRecord.name) private attendanceRecordModel: Model<AttendanceRecord>,
+    @InjectModel(AttendanceCorrectionRequest.name) private correctionRequestModel: Model<AttendanceCorrectionRequest>,
+    @InjectModel(TimeException.name) private timeExceptionModel: Model<TimeException>,
+    @InjectModel(ShiftAssignment.name) private shiftAssignmentModel: Model<ShiftAssignment>,
+  ) {}
+
+  // ===== ATTENDANCE SERVICE METHODS =====
+
+  // 1. Clock in with employee ID
+  async clockInWithID(employeeId: string) {
+    const now = new Date();
+    
+    // Create new attendance record with clock-in punch
+    const attendanceRecord = new this.attendanceRecordModel({
+      employeeId,
+      punches: [{
+        type: PunchType.IN,
+        time: now,
+      }],
+      totalWorkMinutes: 0,
+      hasMissedPunch: false,
+      finalisedForPayroll: false,
+    });
+
+    return attendanceRecord.save();
+  }
+
+  // 1b. Clock out with employee ID
+  async clockOutWithID(employeeId: string) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Find today's attendance record (most recent one created today)
+    const attendanceRecord = await this.attendanceRecordModel.findOne({
+      employeeId,
+      createdAt: { $gte: today, $lt: tomorrow },
+    }).sort({ createdAt: -1 }).exec();
+
+    if (!attendanceRecord) {
+      throw new Error('No attendance record found for today. Please clock in first.');
+    }
+
+    // Check if last punch is already OUT (can't clock out twice)
+    const lastPunch = attendanceRecord.punches[attendanceRecord.punches.length - 1];
+    if (lastPunch && lastPunch.type === PunchType.OUT) {
+      throw new Error('You have already clocked out. Please clock in first.');
+    }
+
+    // Add clock-out punch
+    attendanceRecord.punches.push({
+      type: PunchType.OUT,
+      time: now,
+    });
+
+    // Calculate total work minutes
+    let totalMinutes = 0;
+    for (let i = 0; i < attendanceRecord.punches.length; i += 2) {
+      if (i + 1 < attendanceRecord.punches.length) {
+        const inTime = attendanceRecord.punches[i].time.getTime();
+        const outTime = attendanceRecord.punches[i + 1].time.getTime();
+        totalMinutes += (outTime - inTime) / 60000;
+      }
+    }
+    attendanceRecord.totalWorkMinutes = totalMinutes;
+
+    return attendanceRecord.save();
+  }
+
+  // 2. Create a new attendance record
+  async createAttendanceRecord(createAttendanceRecordDto: any) {
+    const newAttendanceRecord = new this.attendanceRecordModel(createAttendanceRecordDto);
+    return newAttendanceRecord.save();
+  }
+
+  // // 3. Get attendance record by employee (optional filter by date)
+  // async getAttendanceRecordByEmployee(employeeId: string, getAttendanceRecordDto: any) {
+  //   const { startDate, endDate } = getAttendanceRecordDto;
+  //   const query: any = { employeeId };
+
+  //   if (startDate && endDate) {
+  //     query.date = { $gte: startDate, $lte: endDate };
+  //   }
+
+  //   return this.attendanceRecordModel.find(query).exec();
+  // }
+
+  // 4. Update an attendance record (add missed punches or corrections)
+  async updateAttendanceRecord(id: string, updateAttendanceRecordDto: any) {
+    return this.attendanceRecordModel.findByIdAndUpdate(id, updateAttendanceRecordDto, { new: true });
+  }
+
+  // 5. Submit a correction request for an attendance record
+  async submitAttendanceCorrectionRequest(submitCorrectionRequestDto: any) {
+    const newCorrectionRequest = new this.correctionRequestModel(submitCorrectionRequestDto);
+    return newCorrectionRequest.save();
+  }
+
+  // // 6. Get all correction requests by employee (filter by status if needed)
+  // async getAttendanceCorrectionRequestsByEmployee(employeeId: string, getCorrectionsDto: any) {
+  //   const { status } = getCorrectionsDto;
+  //   const query: any = { employeeId };
+
+  //   if (status) {
+  //     query.status = status;
+  //   }
+
+  //   return this.correctionRequestModel.find(query).exec();
+  // }
+
+  // 7. Get all correction requests (for review by managers/admins)
+  async getAllCorrectionRequests(getAllCorrectionsDto: any) {
+    const { status, employeeId } = getAllCorrectionsDto;
+    const query: any = {};
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    return this.correctionRequestModel.find(query).populate('attendanceRecord').populate('employeeId').exec();
+  }
+
+  // 8. Approve a correction request
+  async approveCorrectionRequest(approveCorrectionRequestDto: any) {
+    const { correctionRequestId, reason } = approveCorrectionRequestDto;
+    const correctionRequest = await this.correctionRequestModel.findByIdAndUpdate(
+      correctionRequestId,
+      {
+        status: CorrectionRequestStatus.APPROVED,
+        ...(reason && { reason }),
+      },
+      { new: true },
+    ).exec();
+
+    if (!correctionRequest) {
+      throw new Error('Correction request not found');
+    }
+
+    return correctionRequest;
+  }
+
+  // 9. Reject a correction request
+  async rejectCorrectionRequest(rejectCorrectionRequestDto: any) {
+    const { correctionRequestId, reason } = rejectCorrectionRequestDto;
+    const correctionRequest = await this.correctionRequestModel.findByIdAndUpdate(
+      correctionRequestId,
+      {
+        status: CorrectionRequestStatus.REJECTED,
+        ...(reason && { reason }),
+      },
+      { new: true },
+    ).exec();
+
+    if (!correctionRequest) {
+      throw new Error('Correction request not found');
+    }
+
+    return correctionRequest;
+  }
+
+  // ===== TIME EXCEPTION SERVICE METHODS =====
+
+  // 10. Create a new time exception (e.g., missed punch, overtime)
+  async createTimeException(createTimeExceptionDto: any) {
+    const newTimeException = new this.timeExceptionModel(createTimeExceptionDto);
+    return newTimeException.save();
+  }
+
+  // 11. Update a time exception status (approve, reject, etc.)
+  async updateTimeException(id: string, updateTimeExceptionDto: any) {
+    return this.timeExceptionModel.findByIdAndUpdate(id, updateTimeExceptionDto, { new: true });
+  }
+
+  // 12. Get all time exceptions by employee (optional filter by status)
+  async getTimeExceptionsByEmployee(employeeId: string, getTimeExceptionsDto: any) {
+    const { status } = getTimeExceptionsDto;
+    const query: any = { employeeId };
+
+    if (status) {
+      query.status = status;
+    }
+
+    return this.timeExceptionModel.find(query).exec();
+  }
+
+  // 13. Approve a time exception
+  async approveTimeException(approveTimeExceptionDto: any) {
+    const { timeExceptionId } = approveTimeExceptionDto;
+    return this.timeExceptionModel.findByIdAndUpdate(timeExceptionId, { status: 'APPROVED' }, { new: true });
+  }
+
+  // 14. Reject a time exception
+  async rejectTimeException(rejectTimeExceptionDto: any) {
+    const { timeExceptionId } = rejectTimeExceptionDto;
+    return this.timeExceptionModel.findByIdAndUpdate(timeExceptionId, { status: 'REJECTED' }, { new: true });
+  }
+
+  // 15. Escalate a time exception
+  async escalateTimeException(escalateTimeExceptionDto: any) {
+    const { timeExceptionId } = escalateTimeExceptionDto;
+    return this.timeExceptionModel.findByIdAndUpdate(timeExceptionId, { status: 'ESCALATED' }, { new: true });
+  }
+
+  // ===== TIME PERMISSION & ATTENDANCE ENHANCEMENTS =====
+
+  async recordPunchWithMetadata(recordPunchWithMetadataDto: RecordPunchWithMetadataDto) {
+    const attendanceRecord = new this.attendanceRecordModel({
+      employeeId: recordPunchWithMetadataDto.employeeId,
+      punches: recordPunchWithMetadataDto.punches.map((punch) => ({
+        type: punch.type as PunchType,
+        time: punch.time,
+      })),
+      totalWorkMinutes: this.calculateWorkMinutesFromPunches(recordPunchWithMetadataDto.punches),
+      hasMissedPunch: recordPunchWithMetadataDto.punches.length % 2 !== 0,
+      finalisedForPayroll: false,
+    });
+
+    await attendanceRecord.save();
+    await this.logAttendanceChange(recordPunchWithMetadataDto.employeeId, 'PUNCH_RECORDED', {
+      attendanceRecordId: attendanceRecord._id,
+      deviceId: recordPunchWithMetadataDto.deviceId,
+      location: recordPunchWithMetadataDto.location,
+      source: recordPunchWithMetadataDto.source ?? 'manual',
+    });
+
+    return attendanceRecord;
+  }
+
+  async recordPunchFromDevice(recordPunchWithMetadataDto: RecordPunchWithMetadataDto) {
+    return this.recordPunchWithMetadata({
+      ...recordPunchWithMetadataDto,
+      source: recordPunchWithMetadataDto.source ?? 'device',
+    });
+  }
+
+  async enforcePunchPolicy(enforcePunchPolicyDto: EnforcePunchPolicyDto) {
+    if (enforcePunchPolicyDto.policy === 'FIRST_LAST' && enforcePunchPolicyDto.punches.length > 2) {
+      throw new Error('First/Last policy allows only two punches per period.');
+    }
+
+    const alternatingTypes = enforcePunchPolicyDto.punches.every((punch, index, arr) => {
+      if (index === 0) {
+        return true;
+      }
+      return arr[index - 1].type !== punch.type;
+    });
+
+    if (!alternatingTypes) {
+      throw new Error('Punch sequence must alternate between IN and OUT.');
+    }
+
+    return { valid: true, policy: enforcePunchPolicyDto.policy };
+  }
+
+  async applyAttendanceRounding(applyAttendanceRoundingDto: ApplyAttendanceRoundingDto) {
+    const attendanceRecord = await this.attendanceRecordModel.findById(applyAttendanceRoundingDto.attendanceRecordId);
+    if (!attendanceRecord) {
+      throw new Error('Attendance record not found');
+    }
+
+    const roundedMinutes = this.roundMinutes(
+      attendanceRecord.totalWorkMinutes,
+      applyAttendanceRoundingDto.intervalMinutes,
+      applyAttendanceRoundingDto.strategy,
+    );
+    attendanceRecord.totalWorkMinutes = roundedMinutes;
+    await attendanceRecord.save();
+    await this.logAttendanceChange(attendanceRecord.employeeId.toString(), 'ATTENDANCE_ROUNDED', {
+      strategy: applyAttendanceRoundingDto.strategy,
+      interval: applyAttendanceRoundingDto.intervalMinutes,
+    });
+
+    return attendanceRecord;
+  }
+
+  async enforceShiftPunchPolicy(enforceShiftPunchPolicyDto: EnforceShiftPunchPolicyDto) {
+    const startMinutes = this.timeStringToMinutes(enforceShiftPunchPolicyDto.shiftStart);
+    const endMinutes = this.timeStringToMinutes(enforceShiftPunchPolicyDto.shiftEnd);
+    const allowEarly = enforceShiftPunchPolicyDto.allowEarlyMinutes ?? 0;
+    const allowLate = enforceShiftPunchPolicyDto.allowLateMinutes ?? 0;
+
+    enforceShiftPunchPolicyDto.punches.forEach((punch) => {
+      const punchMinutes = this.dateToMinutes(punch.time);
+      if (punchMinutes < startMinutes - allowEarly) {
+        throw new Error('Punch occurs before the allowed start window.');
+      }
+      if (punchMinutes > endMinutes + allowLate) {
+        throw new Error('Punch occurs after the allowed end window.');
+      }
+    });
+
+    return { valid: true };
+  }
+
+  async monitorRepeatedLateness(monitorRepeatedLatenessDto: MonitorRepeatedLatenessDto) {
+    const latenessCount = await this.timeExceptionModel.countDocuments({
+      employeeId: monitorRepeatedLatenessDto.employeeId,
+      type: TimeExceptionType.LATE,
+    });
+    const exceeded = latenessCount >= monitorRepeatedLatenessDto.threshold;
+
+    if (exceeded) {
+      await this.triggerLatenessDisciplinary({
+        employeeId: monitorRepeatedLatenessDto.employeeId,
+        action: 'AUTO_ESCALATION',
+      });
+    }
+
+    return {
+      employeeId: monitorRepeatedLatenessDto.employeeId,
+      count: latenessCount,
+      threshold: monitorRepeatedLatenessDto.threshold,
+      exceeded,
+    };
+  }
+
+  async triggerLatenessDisciplinary(triggerLatenessDisciplinaryDto: TriggerLatenessDisciplinaryDto) {
+    await this.logTimeManagementChange('LATENESS_DISCIPLINARY', {
+      employeeId: triggerLatenessDisciplinaryDto.employeeId,
+      action: triggerLatenessDisciplinaryDto.action ?? 'MANUAL_TRIGGER',
+    });
+
+    return { message: 'Disciplinary action logged.' };
+  }
+
+  async scheduleTimeDataBackup() {
+    await this.logTimeManagementChange('BACKUP', { action: 'SCHEDULED' });
+    return { message: 'Time management backup scheduled.' };
+  }
+
+  // ===== AUTOMATIC DETECTION METHODS =====
+
+  // Check for expiring shift assignments and send notifications
+  async checkExpiringShiftAssignments(daysBeforeExpiry: number = 7) {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + daysBeforeExpiry);
+
+    const expiringAssignments = await this.shiftAssignmentModel.find({
+      endDate: { $lte: expiryDate, $gte: new Date() },
+      status: 'APPROVED',
+    }).populate('employeeId').exec();
+
+    const expiring = expiringAssignments.map((assignment) => ({
+      employeeId: assignment.employeeId?._id?.toString() || '',
+      shiftId: assignment._id,
+      endDate: assignment.endDate,
+    }));
+
+    await this.logTimeManagementChange('SHIFT_EXPIRY_SCAN', { count: expiring.length });
+
+    return { count: expiring.length, assignments: expiring };
+  }
+
+  // Detect missed punches and send alerts
+  async detectMissedPunches() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Find attendance records for today
+    const attendanceRecords = await this.attendanceRecordModel.find({
+      createdAt: { $gte: today, $lt: tomorrow },
+    }).exec();
+
+    const missedPunchRecords: any[] = [];
+    for (const record of attendanceRecords) {
+      // Check if there's an odd number of punches (missing clock-out)
+      // or if there are no punches at all
+      if (record.punches.length === 0 || record.punches.length % 2 !== 0) {
+        record.hasMissedPunch = true;
+        await record.save();
+
+        missedPunchRecords.push(record);
+      }
+    }
+
+    return { count: missedPunchRecords.length, records: missedPunchRecords };
+  }
+
+  // Escalate unresolved requests before payroll cut-off
+  async escalateUnresolvedRequestsBeforePayroll(payrollCutOffDate: Date) {
+    const now = new Date();
+    if (now >= payrollCutOffDate) {
+      // Find all pending correction requests
+      const pendingCorrections = await this.correctionRequestModel.find({
+        status: { $in: ['SUBMITTED', 'IN_REVIEW'] },
+      }).exec();
+
+      // Find all pending time exceptions
+      const pendingExceptions = await this.timeExceptionModel.find({
+        status: { $in: ['PENDING', 'OPEN'] },
+      }).exec();
+
+      const escalated: Array<{ type: string; id: any }> = [];
+
+      // Escalate correction requests
+      for (const correction of pendingCorrections) {
+        await this.correctionRequestModel.findByIdAndUpdate(correction._id, {
+          status: CorrectionRequestStatus.ESCALATED,
+        });
+        escalated.push({ type: 'CORRECTION_REQUEST', id: correction._id });
+      }
+
+      // Escalate time exceptions
+      for (const exception of pendingExceptions) {
+        await this.timeExceptionModel.findByIdAndUpdate(exception._id, {
+          status: 'ESCALATED',
+        });
+        escalated.push({ type: 'TIME_EXCEPTION', id: exception._id });
+      }
+
+      return { count: escalated.length, escalated };
+    }
+
+    return { count: 0, escalated: [] };
+  }
+
+  // ===== REPORTING METHODS =====
+
+  // Generate overtime report
+  async generateOvertimeReport(generateOvertimeReportDto: GenerateOvertimeReportDto) {
+    const { employeeId, startDate, endDate } = generateOvertimeReportDto;
+    const query: any = {
+      type: TimeExceptionType.OVERTIME_REQUEST,
+    };
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    if (startDate && endDate) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const overtimeExceptions = await this.timeExceptionModel.find(query)
+      .populate('employeeId', 'name email')
+      .populate('attendanceRecordId')
+      .exec();
+
+    // Calculate total overtime hours
+    const totalOvertimeMinutes = overtimeExceptions.reduce((total, exception) => {
+      const record = exception.attendanceRecordId as any;
+      if (record && record.totalWorkMinutes) {
+        // Assuming standard work day is 8 hours (480 minutes)
+        const standardMinutes = 480;
+        const overtime = Math.max(0, record.totalWorkMinutes - standardMinutes);
+        return total + overtime;
+      }
+      return total;
+    }, 0);
+
+    await this.logTimeManagementChange('OVERTIME_REPORT_GENERATED', {
+      employeeId,
+      startDate,
+      endDate,
+      count: overtimeExceptions.length,
+      totalOvertimeMinutes,
+    });
+
+    return {
+      employeeId,
+      startDate,
+      endDate,
+      records: overtimeExceptions,
+      summary: {
+        totalRecords: overtimeExceptions.length,
+        totalOvertimeMinutes,
+        totalOvertimeHours: Math.round((totalOvertimeMinutes / 60) * 100) / 100,
+      },
+    };
+  }
+
+  // Generate lateness report
+  async generateLatenessReport(generateLatenessReportDto: GenerateLatenessReportDto) {
+    const { employeeId, startDate, endDate } = generateLatenessReportDto;
+    const query: any = {
+      type: TimeExceptionType.LATE,
+    };
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    if (startDate && endDate) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const latenessExceptions = await this.timeExceptionModel.find(query)
+      .populate('employeeId', 'name email')
+      .populate('attendanceRecordId')
+      .exec();
+
+    await this.logTimeManagementChange('LATENESS_REPORT_GENERATED', {
+      employeeId,
+      startDate,
+      endDate,
+      count: latenessExceptions.length,
+    });
+
+    return {
+      employeeId,
+      startDate,
+      endDate,
+      records: latenessExceptions,
+      summary: {
+        totalRecords: latenessExceptions.length,
+        employees: [...new Set(latenessExceptions.map((e: any) => e.employeeId?._id?.toString()))].length,
+      },
+    };
+  }
+
+  // Generate exception attendance report
+  async generateExceptionReport(generateExceptionReportDto: GenerateExceptionReportDto) {
+    const { employeeId, startDate, endDate } = generateExceptionReportDto;
+    const query: any = {};
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    if (startDate && endDate) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const exceptions = await this.timeExceptionModel.find(query)
+      .populate('employeeId', 'name email')
+      .populate('attendanceRecordId')
+      .exec();
+
+    // Group by type
+    const byType: Record<string, any[]> = {};
+    exceptions.forEach((exception: any) => {
+      const type = exception.type;
+      if (!byType[type]) {
+        byType[type] = [];
+      }
+      byType[type].push(exception);
+    });
+
+    await this.logTimeManagementChange('EXCEPTION_REPORT_GENERATED', {
+      employeeId,
+      startDate,
+      endDate,
+      count: exceptions.length,
+    });
+
+    return {
+      employeeId,
+      startDate,
+      endDate,
+      records: exceptions,
+      summary: {
+        totalRecords: exceptions.length,
+        byType: Object.keys(byType).map((type) => ({
+          type,
+          count: byType[type].length,
+        })),
+      },
+    };
+  }
+
+  // Export report in specified format
+  async exportReport(exportReportDto: ExportReportDto) {
+    let reportData: any;
+
+    // Generate the appropriate report
+    if (exportReportDto.reportType === 'overtime') {
+      reportData = await this.generateOvertimeReport({
+        employeeId: exportReportDto.employeeId,
+        startDate: exportReportDto.startDate,
+        endDate: exportReportDto.endDate,
+      });
+    } else if (exportReportDto.reportType === 'lateness') {
+      reportData = await this.generateLatenessReport({
+        employeeId: exportReportDto.employeeId,
+        startDate: exportReportDto.startDate,
+        endDate: exportReportDto.endDate,
+      });
+    } else if (exportReportDto.reportType === 'exception') {
+      reportData = await this.generateExceptionReport({
+        employeeId: exportReportDto.employeeId,
+        startDate: exportReportDto.startDate,
+        endDate: exportReportDto.endDate,
+      });
+    } else {
+      throw new Error('Invalid report type');
+    }
+
+    // Format based on export format
+    let formattedData: string;
+    if (exportReportDto.format === 'csv') {
+      formattedData = this.formatAsCSV(reportData);
+    } else if (exportReportDto.format === 'text') {
+      formattedData = this.formatAsText(reportData);
+    } else {
+      // Excel format - return JSON structure that can be converted to Excel
+      formattedData = JSON.stringify(reportData, null, 2);
+    }
+
+    await this.logTimeManagementChange('REPORT_EXPORTED', {
+      reportType: exportReportDto.reportType,
+      format: exportReportDto.format,
+      employeeId: exportReportDto.employeeId,
+    });
+
+    return {
+      format: exportReportDto.format,
+      data: formattedData,
+      reportType: exportReportDto.reportType,
+      generatedAt: new Date(),
+    };
+  }
+
+  // ===== PRIVATE HELPER METHODS =====
+
+  private async logTimeManagementChange(entity: string, changeSet: Record<string, unknown>, actorId?: string) {
+    this.auditLogs.push({
+      entity,
+      changeSet,
+      actorId,
+      timestamp: new Date(),
+    });
+  }
+
+  private async logAttendanceChange(employeeId: string, action: string, payload: Record<string, unknown>) {
+    await this.logTimeManagementChange('ATTENDANCE', { employeeId, action, ...payload }, employeeId);
+  }
+
+  private calculateWorkMinutesFromPunches(punches: { time: Date }[]) {
+    let totalMinutes = 0;
+    for (let i = 0; i < punches.length; i += 2) {
+      const inPunch = punches[i];
+      const outPunch = punches[i + 1];
+      if (inPunch && outPunch) {
+        totalMinutes += (outPunch.time.getTime() - inPunch.time.getTime()) / 60000;
+      }
+    }
+    return totalMinutes;
+  }
+
+  private roundMinutes(value: number, interval: number, strategy: 'NEAREST' | 'CEILING' | 'FLOOR') {
+    if (interval <= 0) {
+      return value;
+    }
+    if (strategy === 'NEAREST') {
+      return Math.round(value / interval) * interval;
+    }
+    if (strategy === 'CEILING') {
+      return Math.ceil(value / interval) * interval;
+    }
+    return Math.floor(value / interval) * interval;
+  }
+
+  private timeStringToMinutes(time: string) {
+    const [hours, minutes] = time.split(':').map((value) => parseInt(value, 10));
+    return hours * 60 + minutes;
+  }
+
+  private dateToMinutes(date: Date) {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+
+  private formatAsCSV(data: any): string {
+    const lines: string[] = [];
+    
+    // Add summary
+    if (data.summary) {
+      lines.push('Summary');
+      Object.keys(data.summary).forEach((key) => {
+        lines.push(`${key},${data.summary[key]}`);
+      });
+      lines.push('');
+    }
+
+    // Add records header
+    if (data.records && data.records.length > 0) {
+      lines.push('Records');
+      const firstRecord = data.records[0];
+      const headers = Object.keys(firstRecord).join(',');
+      lines.push(headers);
+
+      // Add record rows
+      data.records.forEach((record: any) => {
+        const values = Object.values(record).map((v: any) => {
+          if (v && typeof v === 'object') {
+            return JSON.stringify(v);
+          }
+          return v || '';
+        });
+        lines.push(values.join(','));
+      });
+    }
+
+    return lines.join('\n');
+  }
+
+  private formatAsText(data: any): string {
+    const lines: string[] = [];
+    
+    lines.push(`Report Type: ${data.reportType || 'N/A'}`);
+    lines.push(`Generated: ${new Date().toISOString()}`);
+    if (data.startDate) lines.push(`Start Date: ${data.startDate}`);
+    if (data.endDate) lines.push(`End Date: ${data.endDate}`);
+    lines.push('');
+
+    if (data.summary) {
+      lines.push('Summary:');
+      Object.keys(data.summary).forEach((key) => {
+        lines.push(`  ${key}: ${data.summary[key]}`);
+      });
+      lines.push('');
+    }
+
+    if (data.records && data.records.length > 0) {
+      lines.push(`Records (${data.records.length}):`);
+      data.records.forEach((record: any, index: number) => {
+        lines.push(`  Record ${index + 1}:`);
+        Object.keys(record).forEach((key) => {
+          const value = record[key];
+          if (value && typeof value === 'object') {
+            lines.push(`    ${key}: ${JSON.stringify(value)}`);
+          } else {
+            lines.push(`    ${key}: ${value || 'N/A'}`);
+          }
+        });
+        lines.push('');
+      });
+    }
+
+    return lines.join('\n');
+  }
+}
+
