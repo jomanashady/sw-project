@@ -162,8 +162,6 @@ interface FilterDto {
   limit?: number;
 }
 
-
-
 // ============================================================================
 // SERVICE IMPLEMENTATION
 // ============================================================================
@@ -172,18 +170,20 @@ interface FilterDto {
 export class PayrollConfigurationService {
   constructor(
     @InjectModel(payGrade.name) private payGradeModel: Model<payGrade>,
-    @InjectModel(payrollPolicies.name) private payrollPoliciesModel: Model<payrollPolicies>,
+    @InjectModel(payrollPolicies.name)
+    private payrollPoliciesModel: Model<payrollPolicies>,
     @InjectModel(allowance.name) private allowanceModel: Model<allowance>,
     @InjectModel(payType.name) private payTypeModel: Model<payType>,
     @InjectModel(taxRules.name) private taxRulesModel: Model<taxRules>,
-    @InjectModel(insuranceBrackets.name) private insuranceBracketsModel: Model<insuranceBrackets>,
-    @InjectModel(signingBonus.name) private signingBonusModel: Model<signingBonus>,
+    @InjectModel(insuranceBrackets.name)
+    private insuranceBracketsModel: Model<insuranceBrackets>,
+    @InjectModel(signingBonus.name)
+    private signingBonusModel: Model<signingBonus>,
     @InjectModel(terminationAndResignationBenefits.name)
     private terminationBenefitsModel: Model<terminationAndResignationBenefits>,
     @InjectModel(CompanyWideSettings.name)
     private companySettingsModel: Model<CompanyWideSettings>,
   ) {}
-
 
   // ============================================================================
   // PAY GRADE OPERATIONS
@@ -219,7 +219,11 @@ export class PayrollConfigurationService {
   /**
    * Update a pay grade - only allowed in DRAFT status
    */
-  async updatePayGrade(id: string, updateDto: UpdatePayGradeDto, userId: string) {
+  async updatePayGrade(
+    id: string,
+    updateDto: UpdatePayGradeDto,
+    userId: string,
+  ) {
     const payGrade = await this.payGradeModel.findById(id);
 
     if (!payGrade) {
@@ -372,8 +376,6 @@ export class PayrollConfigurationService {
     return { message: 'Pay grade deleted successfully' };
   }
 
-
-
   // ============================================================================
   // ALLOWANCE OPERATIONS
   // ============================================================================
@@ -392,7 +394,11 @@ export class PayrollConfigurationService {
     return await allowance.save();
   }
 
-  async updateAllowance(id: string, updateDto: UpdateAllowanceDto, userId: string) {
+  async updateAllowance(
+    id: string,
+    updateDto: UpdateAllowanceDto,
+    userId: string,
+  ) {
     const allowance = await this.allowanceModel.findById(id);
 
     if (!allowance) {
@@ -515,7 +521,6 @@ export class PayrollConfigurationService {
     await this.allowanceModel.findByIdAndDelete(id);
     return { message: 'Allowance deleted successfully' };
   }
-
 
   // ============================================================================
   // PAY TYPE OPERATIONS
@@ -659,8 +664,6 @@ export class PayrollConfigurationService {
     return { message: 'Pay type deleted successfully' };
   }
 
-
-
   // ============================================================================
   // TAX RULES OPERATIONS
   // ============================================================================
@@ -803,13 +806,14 @@ export class PayrollConfigurationService {
     return { message: 'Tax rule deleted successfully' };
   }
 
-
-
   // ============================================================================
   // INSURANCE BRACKETS OPERATIONS
   // ============================================================================
 
-  async createInsuranceBracket(createDto: CreateInsuranceBracketDto, userId: string) {
+  async createInsuranceBracket(
+    createDto: CreateInsuranceBracketDto,
+    userId: string,
+  ) {
     // Validation
     if (createDto.amount < 0) {
       throw new BadRequestException('Insurance amount must be non-negative');
@@ -867,13 +871,17 @@ export class PayrollConfigurationService {
 
     if (updateDto.employeeRate !== undefined) {
       if (updateDto.employeeRate < 0 || updateDto.employeeRate > 100) {
-        throw new BadRequestException('Employee rate must be between 0 and 100');
+        throw new BadRequestException(
+          'Employee rate must be between 0 and 100',
+        );
       }
     }
 
     if (updateDto.employerRate !== undefined) {
       if (updateDto.employerRate < 0 || updateDto.employerRate > 100) {
-        throw new BadRequestException('Employer rate must be between 0 and 100');
+        throw new BadRequestException(
+          'Employer rate must be between 0 and 100',
+        );
       }
     }
 
@@ -987,14 +995,15 @@ export class PayrollConfigurationService {
     return { message: 'Insurance bracket deleted successfully' };
   }
 
-
   // ============================================================================
   // SIGNING BONUS OPERATIONS
   // ============================================================================
 
   async createSigningBonus(createDto: CreateSigningBonusDto, userId: string) {
     if (createDto.amount < 0) {
-      throw new BadRequestException('Signing bonus amount must be non-negative');
+      throw new BadRequestException(
+        'Signing bonus amount must be non-negative',
+      );
     }
 
     const signingBonus = new this.signingBonusModel({
@@ -1024,7 +1033,9 @@ export class PayrollConfigurationService {
     }
 
     if (updateDto.amount !== undefined && updateDto.amount < 0) {
-      throw new BadRequestException('Signing bonus amount must be non-negative');
+      throw new BadRequestException(
+        'Signing bonus amount must be non-negative',
+      );
     }
 
     Object.assign(signingBonus, updateDto);
@@ -1134,8 +1145,6 @@ export class PayrollConfigurationService {
     return { message: 'Signing bonus deleted successfully' };
   }
 
-
-
   // ============================================================================
   // TERMINATION BENEFITS OPERATIONS
   // ============================================================================
@@ -1145,7 +1154,9 @@ export class PayrollConfigurationService {
     userId: string,
   ) {
     if (createDto.amount < 0) {
-      throw new BadRequestException('Termination benefit amount must be non-negative');
+      throw new BadRequestException(
+        'Termination benefit amount must be non-negative',
+      );
     }
 
     const benefit = new this.terminationBenefitsModel({
@@ -1165,7 +1176,9 @@ export class PayrollConfigurationService {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
+      throw new NotFoundException(
+        `Termination benefit with ID ${id} not found`,
+      );
     }
 
     if (benefit.status !== ConfigStatus.DRAFT) {
@@ -1175,7 +1188,9 @@ export class PayrollConfigurationService {
     }
 
     if (updateDto.amount !== undefined && updateDto.amount < 0) {
-      throw new BadRequestException('Termination benefit amount must be non-negative');
+      throw new BadRequestException(
+        'Termination benefit amount must be non-negative',
+      );
     }
 
     Object.assign(benefit, updateDto);
@@ -1222,7 +1237,9 @@ export class PayrollConfigurationService {
       .exec();
 
     if (!benefit) {
-      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
+      throw new NotFoundException(
+        `Termination benefit with ID ${id} not found`,
+      );
     }
 
     return benefit;
@@ -1232,7 +1249,9 @@ export class PayrollConfigurationService {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
+      throw new NotFoundException(
+        `Termination benefit with ID ${id} not found`,
+      );
     }
 
     if (benefit.status !== ConfigStatus.DRAFT) {
@@ -1252,7 +1271,9 @@ export class PayrollConfigurationService {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
+      throw new NotFoundException(
+        `Termination benefit with ID ${id} not found`,
+      );
     }
 
     if (benefit.status !== ConfigStatus.DRAFT) {
@@ -1272,7 +1293,9 @@ export class PayrollConfigurationService {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
+      throw new NotFoundException(
+        `Termination benefit with ID ${id} not found`,
+      );
     }
 
     if (benefit.status !== ConfigStatus.DRAFT) {
@@ -1284,7 +1307,6 @@ export class PayrollConfigurationService {
     await this.terminationBenefitsModel.findByIdAndDelete(id);
     return { message: 'Termination benefit deleted successfully' };
   }
-
 
   // ============================================================================
   // PAYROLL POLICIES OPERATIONS
@@ -1334,7 +1356,8 @@ export class PayrollConfigurationService {
 
     // Validation for rule definition if provided
     if (updateDto.ruleDefinition) {
-      const { percentage, fixedAmount, thresholdAmount } = updateDto.ruleDefinition;
+      const { percentage, fixedAmount, thresholdAmount } =
+        updateDto.ruleDefinition;
 
       if (percentage !== undefined && (percentage < 0 || percentage > 100)) {
         throw new BadRequestException('Percentage must be between 0 and 100');
@@ -1456,7 +1479,6 @@ export class PayrollConfigurationService {
     return { message: 'Payroll policy deleted successfully' };
   }
 
-
   // ============================================================================
   // COMPANY WIDE SETTINGS OPERATIONS (No approval workflow needed)
   // ============================================================================
@@ -1466,7 +1488,9 @@ export class PayrollConfigurationService {
     const existingSettings = await this.companySettingsModel.findOne();
 
     if (existingSettings) {
-      throw new ConflictException('Company settings already exist. Use update instead.');
+      throw new ConflictException(
+        'Company settings already exist. Use update instead.',
+      );
     }
 
     // Validate currency is EGP
@@ -1482,7 +1506,9 @@ export class PayrollConfigurationService {
     const settings = await this.companySettingsModel.findOne();
 
     if (!settings) {
-      throw new NotFoundException('Company settings not found. Create them first.');
+      throw new NotFoundException(
+        'Company settings not found. Create them first.',
+      );
     }
 
     // Validate currency if provided
@@ -1582,10 +1608,18 @@ export class PayrollConfigurationService {
       terminationBenefits,
       policies,
     ] = await Promise.all([
-      this.payGradeModel.find(filter).populate('createdBy', 'firstName lastName email'),
-      this.allowanceModel.find(filter).populate('createdBy', 'firstName lastName email'),
-      this.payTypeModel.find(filter).populate('createdBy', 'firstName lastName email'),
-      this.taxRulesModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.payGradeModel
+        .find(filter)
+        .populate('createdBy', 'firstName lastName email'),
+      this.allowanceModel
+        .find(filter)
+        .populate('createdBy', 'firstName lastName email'),
+      this.payTypeModel
+        .find(filter)
+        .populate('createdBy', 'firstName lastName email'),
+      this.taxRulesModel
+        .find(filter)
+        .populate('createdBy', 'firstName lastName email'),
       this.insuranceBracketsModel
         .find(filter)
         .populate('createdBy', 'firstName lastName email'),
@@ -1621,5 +1655,3 @@ export class PayrollConfigurationService {
     };
   }
 }
-
-

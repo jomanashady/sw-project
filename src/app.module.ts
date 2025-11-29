@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose'; // Add this import
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TimeManagementModule } from './time-management/time-management.module';
@@ -14,19 +14,23 @@ import { PayrollExecutionModule } from './payroll-execution/payroll-execution.mo
 
 @Module({
   imports: [
-    // Add MongoDB connection - replace with your actual connection string
-    MongooseModule.forRoot('mongodb://localhost:27017/hr2-system'), 
-    
+    MongooseModule.forRootAsync({
+      useFactory: async () => ({
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hr2-system',
+        dbName: process.env.MONGODB_DB_NAME || undefined,
+      }),
+    }),
+
     // Your existing modules
-    TimeManagementModule, 
-    RecruitmentModule, 
-    LeavesModule, 
-    PayrollExecutionModule, 
-    PayrollConfigurationModule, 
-    PayrollTrackingModule, 
-    EmployeeProfileModule, 
-    OrganizationStructureModule, 
-    PerformanceModule
+    TimeManagementModule,
+    RecruitmentModule,
+    LeavesModule,
+    PayrollExecutionModule,
+    PayrollConfigurationModule,
+    PayrollTrackingModule,
+    EmployeeProfileModule,
+    OrganizationStructureModule,
+    PerformanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -23,13 +23,21 @@ export class UpdatePayGradeDto {
   @IsString()
   grade?: string;
 
-  @ApiProperty({ required: false, description: 'Base salary amount', minimum: 6000 })
+  @ApiProperty({
+    required: false,
+    description: 'Base salary amount',
+    minimum: 6000,
+  })
   @IsOptional()
   @IsNumber()
   @Min(6000)
   baseSalary?: number;
 
-  @ApiProperty({ required: false, description: 'Gross salary amount', minimum: 6000 })
+  @ApiProperty({
+    required: false,
+    description: 'Gross salary amount',
+    minimum: 6000,
+  })
   @IsOptional()
   @IsNumber()
   @Min(6000)

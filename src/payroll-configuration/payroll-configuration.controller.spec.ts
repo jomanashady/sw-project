@@ -47,8 +47,12 @@ describe('PayrollConfigurationController', () => {
       ],
     }).compile();
 
-    controller = module.get<PayrollConfigurationController>(PayrollConfigurationController);
-    service = module.get<PayrollConfigurationService>(PayrollConfigurationService);
+    controller = module.get<PayrollConfigurationController>(
+      PayrollConfigurationController,
+    );
+    service = module.get<PayrollConfigurationService>(
+      PayrollConfigurationService,
+    );
   });
 
   it('should be defined', () => {
@@ -59,9 +63,11 @@ describe('PayrollConfigurationController', () => {
     it('should return pay grades with pagination', async () => {
       const result = {
         data: [{ id: '1', grade: 'A', baseSalary: 6000, grossSalary: 8000 }],
-        pagination: { total: 1, page: 1, limit: 10, totalPages: 1 }
+        pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },
       };
-      mockPayrollConfigurationService.findAllPayGrades.mockResolvedValue(result);
+      mockPayrollConfigurationService.findAllPayGrades.mockResolvedValue(
+        result,
+      );
 
       expect(await controller.getPayGrades({})).toBe(result);
       expect(service.findAllPayGrades).toHaveBeenCalled();
@@ -82,9 +88,11 @@ describe('PayrollConfigurationController', () => {
     it('should return configuration statistics', async () => {
       const result = {
         payGrades: { total: 5, draft: 2, approved: 3, rejected: 0 },
-        allowances: { total: 3, draft: 1, approved: 2, rejected: 0 }
+        allowances: { total: 3, draft: 1, approved: 2, rejected: 0 },
       };
-      mockPayrollConfigurationService.getConfigurationStats.mockResolvedValue(result);
+      mockPayrollConfigurationService.getConfigurationStats.mockResolvedValue(
+        result,
+      );
 
       expect(await controller.getConfigurationStats()).toBe(result);
     });
@@ -95,11 +103,59 @@ describe('PayrollConfigurationController', () => {
       const result = {
         payGrades: [],
         allowances: [],
-        totalPending: 0
+        totalPending: 0,
       };
-      mockPayrollConfigurationService.getPendingApprovals.mockResolvedValue(result);
+      mockPayrollConfigurationService.getPendingApprovals.mockResolvedValue(
+        result,
+      );
 
       expect(await controller.getPendingApprovals()).toBe(result);
+    });
+  });
+
+  describe('getAllowances', () => {
+    it('should return allowances with pagination', async () => {
+      const result = {
+        data: [{ id: 'a1', name: 'Housing', amount: 1000 }],
+        pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      };
+      mockPayrollConfigurationService.findAllAllowances.mockResolvedValue(
+        result,
+      );
+
+      expect(await controller.getAllowances({} as any)).toBe(result);
+      expect(service.findAllAllowances).toHaveBeenCalled();
+    });
+  });
+
+  describe('createAllowance', () => {
+    it('should create an allowance', async () => {
+      const createDto = { name: 'Transport', amount: 500 };
+      const result = { id: 'a2', ...createDto };
+      mockPayrollConfigurationService.createAllowance.mockResolvedValue(result);
+
+      expect(await controller.createAllowance(createDto as any)).toBe(result);
+      expect(service.createAllowance).toHaveBeenCalled();
+    });
+  });
+
+  describe('approveAllowance', () => {
+    it('should approve an allowance', async () => {
+      const id = '665f1c2b5b88c3d9b3c3b1aa';
+      const approvalDto = { approvedBy: '665f1c2b5b88c3d9b3c3b1ab' };
+      const result = {
+        id,
+        status: 'approved',
+        approvedBy: approvalDto.approvedBy,
+      };
+      mockPayrollConfigurationService.approveAllowance.mockResolvedValue(
+        result,
+      );
+
+      expect(await controller.approveAllowance(id, approvalDto as any)).toBe(
+        result,
+      );
+      expect(service.approveAllowance).toHaveBeenCalledWith(id, approvalDto);
     });
   });
 });
