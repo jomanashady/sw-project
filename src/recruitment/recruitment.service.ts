@@ -144,7 +144,7 @@ export class RecruitmentService {
   constructor(
     @InjectModel(JobRequisition.name)
     private jobModel: Model<JobRequisition>,
-
+    
     @InjectModel(Application.name)
     private applicationModel: Model<Application>,
 
@@ -156,7 +156,7 @@ export class RecruitmentService {
 
     @InjectModel('JobTemplate') private jobTemplateModel: Model<any>,
 
-    @InjectModel(Onboarding.name)
+    @InjectModel(Onboarding.name) 
     private readonly onboardingModel: Model<OnboardingDocument>,
 
     @InjectModel(Document.name)
@@ -1020,7 +1020,7 @@ export class RecruitmentService {
     const updated = await this.offerModel.findByIdAndUpdate(id, { finalStatus: dto.finalStatus }, { new: true });
     if (!updated) {
       throw new NotFoundException('Offer not found');
-    }
+  }
 
     // BR: When offer is approved and accepted, it's ready for onboarding
     // Onboarding is triggered when employee profile is created from contract (REC-029)
@@ -1259,20 +1259,20 @@ export class RecruitmentService {
     }
 
     try {
-      let transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,  // Use environment variable
-          pass: process.env.EMAIL_PASS,   // Use environment variable
-        },
-      });
+    let transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,  // Use environment variable
+        pass: process.env.EMAIL_PASS,   // Use environment variable
+      },
+    });
 
-      await transporter.sendMail({
-        from: '"HR System" <your-email@gmail.com>',
+    await transporter.sendMail({
+      from: '"HR System" <your-email@gmail.com>',
         to: recipient.trim(),
         subject: subject.trim(),
         text: text.trim(),
-      });
+    });
     } catch (error) {
       // Log error but don't throw - email sending failures should not break the main flow
       console.error('Failed to send email:', error);
