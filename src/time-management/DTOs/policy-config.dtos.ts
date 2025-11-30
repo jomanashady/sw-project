@@ -12,142 +12,142 @@ import { HolidayType } from '../models/enums';  // Importing existing enums
 
 // ===== OVERTIME RULE DTOs =====
 
-// DTO for creating an overtime rule
+// DTO for creating an overtime rule - ALL FIELDS FROM SCHEMA
 export class CreateOvertimeRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the overtime rule
+  name: string;  // Name of the overtime rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  description?: string;  // Optional description of the rule
+  description: string;  // Description of the rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the rule is active (default true)
+  active: boolean;  // Whether the rule is active (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  approved?: boolean;  // Whether the rule is approved (default false)
+  approved: boolean;  // Whether the rule is approved (required)
 }
 
-// DTO for updating an overtime rule
+// DTO for updating an overtime rule - ALL FIELDS FROM SCHEMA
 export class UpdateOvertimeRuleDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Name of the overtime rule
+  name: string;  // Name of the overtime rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  description?: string;  // Description of the rule
+  description: string;  // Description of the rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the rule is active
+  active: boolean;  // Whether the rule is active (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  approved?: boolean;  // Whether the rule is approved
+  approved: boolean;  // Whether the rule is approved (required)
 }
 
 // ===== LATENESS RULE DTOs =====
 
-// DTO for creating a lateness rule
+// DTO for creating a lateness rule - ALL FIELDS FROM SCHEMA
 export class CreateLatenessRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the lateness rule
+  name: string;  // Name of the lateness rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  description?: string;  // Optional description of the rule
+  description: string;  // Description of the rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  gracePeriodMinutes?: number;  // Grace period in minutes before lateness is counted
+  gracePeriodMinutes: number;  // Grace period in minutes (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  deductionForEachMinute?: number;  // Deduction amount per minute late
+  deductionForEachMinute: number;  // Deduction amount per minute late (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the rule is active (default true)
+  active: boolean;  // Whether the rule is active (required)
 }
 
-// DTO for updating a lateness rule
+// DTO for updating a lateness rule - ALL FIELDS FROM SCHEMA
 export class UpdateLatenessRuleDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Name of the lateness rule
+  name: string;  // Name of the lateness rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  description?: string;  // Description of the rule
+  description: string;  // Description of the rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  gracePeriodMinutes?: number;  // Grace period in minutes
+  gracePeriodMinutes: number;  // Grace period in minutes (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  deductionForEachMinute?: number;  // Deduction amount per minute
+  deductionForEachMinute: number;  // Deduction amount per minute (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the rule is active
+  active: boolean;  // Whether the rule is active (required)
 }
 
 // ===== HOLIDAY DTOs =====
 
-// DTO for creating a holiday
+// DTO for creating a holiday - ALL FIELDS FROM SCHEMA
 export class CreateHolidayDto {
+  @IsNotEmpty()
   @IsEnum(HolidayType)
-  @IsNotEmpty()
-  type: HolidayType;  // Type of holiday (NATIONAL, ORGANIZATIONAL, WEEKLY_REST)
+  type: HolidayType;  // Type of holiday (required)
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  startDate: Date;  // Start date of the holiday
+  startDate: Date;  // Start date of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  endDate?: Date;  // End date of the holiday (if multi-day)
+  endDate: Date;  // End date of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Name of the holiday (e.g., "Christmas", "Eid")
+  name: string;  // Name of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the holiday is active (default true)
+  active: boolean;  // Whether the holiday is active (required)
 }
 
-// DTO for updating a holiday
+// DTO for updating a holiday - ALL FIELDS FROM SCHEMA
 export class UpdateHolidayDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsEnum(HolidayType)
-  type?: HolidayType;  // Type of holiday
+  type: HolidayType;  // Type of holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;  // Start date of the holiday
+  startDate: Date;  // Start date of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  endDate?: Date;  // End date of the holiday
+  endDate: Date;  // End date of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Name of the holiday
+  name: string;  // Name of the holiday (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the holiday is active
+  active: boolean;  // Whether the holiday is active (required)
 }
 
 // DTO for getting holidays with filters
