@@ -1,19 +1,19 @@
 import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDate, IsBoolean } from 'class-validator';
 
-// DTO for sending a notification
+// DTO for sending a notification - ALL FIELDS FROM SCHEMA
 export class SendNotificationDto {
   @IsNotEmpty()
   @IsString()
-  to: string;  // The employee ID or the recipient of the notification
+  to: string;  // The employee ID or the recipient of the notification (required)
 
   @IsNotEmpty()
   @IsString()
-  type: string;  // The type of the notification (e.g., missed punch, attendance correction)
+  type: string;  // The type of the notification (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  message?: string;  // Optional message to send along with the notification
+  message: string;  // Message to send along with the notification (required)
 }
 
 // DTO for getting notification logs by employee

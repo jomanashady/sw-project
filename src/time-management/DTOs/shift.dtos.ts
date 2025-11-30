@@ -11,87 +11,107 @@ import {
 import { Type } from 'class-transformer';
 import { PunchPolicy, ShiftAssignmentStatus } from '../models/enums';  // Importing existing enums
 
-// DTO for creating a shift type (no ShiftType enum used)
+// DTO for creating a shift type - ALL FIELDS FROM SCHEMA
 export class CreateShiftTypeDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the shift type (e.g., Normal, Rotational)
+  name: string;  // Name of the shift type (required)
 
-  @IsOptional()
-  @IsString()
-  description?: string;  // Optional description of the shift type
+  @IsNotEmpty()
+  @IsBoolean()
+  active: boolean;  // Whether the shift type is active (required)
 }
 
-// DTO for updating a shift type
+// DTO for updating a shift type - ALL FIELDS FROM SCHEMA
 export class UpdateShiftTypeDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Name of the shift type
+  name: string;  // Name of the shift type (required)
 
-  @IsOptional()
-  @IsString()
-  description?: string;  // Description of the shift type
+  @IsNotEmpty()
+  @IsBoolean()
+  active: boolean;  // Whether the shift type is active (required)
 }
 
 // DTO for getting shift types (no parameters needed)
 export class GetShiftTypesDto {}
 
-// DTO for creating a shift
+// DTO for creating a shift - ALL FIELDS FROM SCHEMA
 export class CreateShiftDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the shift (e.g., Morning, Evening)
+  name: string;  // Name of the shift (required)
 
+  @IsNotEmpty()
+  @IsString()
+  shiftType: string;  // ShiftType ID reference (required)
+
+  @IsNotEmpty()
+  @IsString()
+  startTime: string;  // Shift start time (required)
+
+  @IsNotEmpty()
+  @IsString()
+  endTime: string;  // Shift end time (required)
+
+  @IsNotEmpty()
   @IsEnum(PunchPolicy)
-  @IsNotEmpty()
-  punchPolicy: PunchPolicy;  // Punch policy (MULTIPLE, FIRST_LAST, etc.)
+  punchPolicy: PunchPolicy;  // Punch policy (required)
 
   @IsNotEmpty()
-  @IsString()
-  startTime: string;  // Shift start time (e.g., 09:00 AM)
-
-  @IsNotEmpty()
-  @IsString()
-  endTime: string;  // Shift end time (e.g., 05:00 PM)
-
-  @IsOptional()
   @IsNumber()
-  graceInMinutes?: number;  // Grace time for punch-in (e.g., 15 minutes)
+  graceInMinutes: number;  // Grace time for punch-in (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  graceOutMinutes?: number;  // Grace time for punch-out (e.g., 15 minutes)
+  graceOutMinutes: number;  // Grace time for punch-out (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  requiresApprovalForOvertime?: boolean;  // Whether overtime requires approval
+  requiresApprovalForOvertime: boolean;  // Whether overtime requires approval (required)
+
+  @IsNotEmpty()
+  @IsBoolean()
+  active: boolean;  // Whether the shift is active (required)
 }
 
-// DTO for updating a shift
+// DTO for updating a shift - ALL FIELDS FROM SCHEMA
 export class UpdateShiftDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;  // Shift name (e.g., Morning Shift)
+  name: string;  // Shift name (required)
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  shiftType: string;  // ShiftType ID reference (required)
+
+  @IsNotEmpty()
   @IsEnum(PunchPolicy)
-  punchPolicy?: PunchPolicy;  // Shift punch policy
+  punchPolicy: PunchPolicy;  // Shift punch policy (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  startTime?: string;  // Shift start time (e.g., 09:00 AM)
+  startTime: string;  // Shift start time (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  endTime?: string;  // Shift end time (e.g., 05:00 PM)
+  endTime: string;  // Shift end time (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  graceInMinutes?: number;  // Grace time for punch-in
+  graceInMinutes: number;  // Grace time for punch-in (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  graceOutMinutes?: number;  // Grace time for punch-out
+  graceOutMinutes: number;  // Grace time for punch-out (required)
+
+  @IsNotEmpty()
+  @IsBoolean()
+  requiresApprovalForOvertime: boolean;  // Whether overtime requires approval (required)
+
+  @IsNotEmpty()
+  @IsBoolean()
+  active: boolean;  // Whether the shift is active (required)
 }
 
 // DTO for getting shifts by type (without using ShiftType enum)
@@ -101,27 +121,41 @@ export class GetShiftsByTypeDto {
   shiftType: string;  // Shift type as string (Normal, Rotational, etc.)
 }
 
-// DTO for assigning a shift to an employee
+// DTO for assigning a shift to an employee - ALL FIELDS FROM SCHEMA
 export class AssignShiftToEmployeeDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID to assign the shift to
+  employeeId: string;  // Employee ID to assign the shift to (required)
 
   @IsNotEmpty()
   @IsString()
-  shiftId: string;  // Shift ID to assign to the employee
+  shiftId: string;  // Shift ID to assign to the employee (required)
 
-  @IsEnum(ShiftAssignmentStatus)
   @IsNotEmpty()
-  status: ShiftAssignmentStatus;  // Status of the shift assignment (Pending, Approved, etc.)
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;  // Start date for the shift assignment (required)
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;  // End date for the shift assignment (required)
+
+  @IsNotEmpty()
+  @IsEnum(ShiftAssignmentStatus)
+  status: ShiftAssignmentStatus;  // Status of the shift assignment (required)
 
   @IsOptional()
-  @IsDate()
-  startDate?: Date;  // Start date for the shift assignment
+  @IsString()
+  departmentId?: string;  // Department ID (optional per schema)
 
   @IsOptional()
-  @IsDate()
-  endDate?: Date;  // End date for the shift assignment (if it's ongoing)
+  @IsString()
+  positionId?: string;  // Position ID (optional per schema)
+
+  @IsOptional()
+  @IsString()
+  scheduleRuleId?: string;  // Schedule rule ID (optional per schema)
 }
 
 export class AssignShiftToDepartmentDto {
@@ -169,19 +203,41 @@ export class AssignShiftToPositionDto {
   endDate?: Date;
 }
 
-// DTO for updating a shift assignment
+// DTO for updating a shift assignment - ALL FIELDS FROM SCHEMA
 export class UpdateShiftAssignmentDto {
-  @IsEnum(ShiftAssignmentStatus)
   @IsNotEmpty()
-  status: ShiftAssignmentStatus;  // Status of the shift assignment (Pending, Approved, etc.)
+  @IsEnum(ShiftAssignmentStatus)
+  status: ShiftAssignmentStatus;  // Status of the shift assignment (required)
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;  // Start date for the shift assignment (required)
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;  // End date for the shift assignment (required)
 
   @IsOptional()
-  @IsDate()
-  startDate?: Date;  // Optional: Start date for the shift assignment
+  @IsString()
+  employeeId?: string;  // Employee ID (optional)
 
   @IsOptional()
-  @IsDate()
-  endDate?: Date;  // Optional: End date for the shift assignment
+  @IsString()
+  departmentId?: string;  // Department ID (optional)
+
+  @IsOptional()
+  @IsString()
+  positionId?: string;  // Position ID (optional)
+
+  @IsOptional()
+  @IsString()
+  shiftId?: string;  // Shift ID (optional)
+
+  @IsOptional()
+  @IsString()
+  scheduleRuleId?: string;  // Schedule rule ID (optional)
 }
 
 export class RenewShiftAssignmentDto {
@@ -236,15 +292,15 @@ export class GetShiftAssignmentStatusDto {
 export class CreateScheduleRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the schedule rule (e.g., Rotational, Flexible)
+  name: string;  // Name of the schedule rule (required)
 
   @IsNotEmpty()
   @IsString()
-  pattern: string;  // Pattern of the schedule rule (e.g., 4 days on, 3 days off)
+  pattern: string;  // Pattern of the schedule rule (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the schedule rule is active or not
+  active: boolean;  // Whether the schedule rule is active (required)
 }
 
 // DTO for getting all schedule rules
@@ -273,19 +329,19 @@ export class AssignScheduleRuleToEmployeeDto {
   endDate?: Date;  // End date for the schedule assignment (if it's ongoing)
 }
 
-// DTO for defining flexible scheduling rules
+// DTO for defining flexible scheduling rules - ALL FIELDS FROM SCHEMA
 export class DefineFlexibleSchedulingRulesDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the flexible scheduling rule
+  name: string;  // Name of the flexible scheduling rule (required)
 
   @IsNotEmpty()
   @IsString()
-  pattern: string;  // Pattern for flexible scheduling (e.g., flex-in/flex-out hours)
+  pattern: string;  // Pattern for flexible scheduling (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
-  active?: boolean;  // Whether the flexible schedule is active
+  active: boolean;  // Whether the flexible schedule is active (required)
 }
 
 export class CreateShiftTypeWithDatesDto {

@@ -1,23 +1,33 @@
-import { IsString, IsNotEmpty, IsArray, IsOptional, IsDate, IsBoolean, IsEnum } from 'class-validator';
-import { CorrectionRequestStatus,TimeExceptionType, TimeExceptionStatus  } from '../models/enums';  // Importing enums from index.ts
+import { IsString, IsNotEmpty, IsArray, IsOptional, IsDate, IsBoolean, IsEnum, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CorrectionRequestStatus, TimeExceptionType, TimeExceptionStatus, PunchType } from '../models/enums';  // Importing enums from index.ts
 
-// DTO for creating an attendance record
+// DTO for creating an attendance record - ALL FIELDS FROM SCHEMA
 export class CreateAttendanceRecordDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID referencing the employee
+  employeeId: string;  // Employee ID referencing the employee (required)
 
-  @IsArray()
-  punches: { type: string; time: Date }[];  // Array of punch records (clock-in, clock-out times)
-
-  @IsOptional()
-  @IsDate()
   @IsNotEmpty()
-  date?: Date;  // Optional: Date of the attendance record
+  @IsArray()
+  punches: { type: PunchType; time: Date }[];  // Array of punch records with PunchType enum (required)
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsNumber()
+  totalWorkMinutes: number;  // Total work minutes computed (required)
+
+  @IsNotEmpty()
   @IsBoolean()
-  finalisedForPayroll?: boolean;  // Whether the record is finalised for payroll
+  hasMissedPunch: boolean;  // Whether there's a missed punch (required)
+
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  exceptionIds: string[];  // Array of TimeException IDs (required)
+
+  @IsNotEmpty()
+  @IsBoolean()
+  finalisedForPayroll: boolean;  // Whether the record is finalised for payroll (required)
 }
 
 // DTO for getting attendance records by employee
@@ -35,19 +45,28 @@ export class GetAttendanceRecordDto {
   endDate?: Date;  // Optional: End date for the attendance period
 }
 
-// DTO for updating an attendance record
+// DTO for updating an attendance record - ALL FIELDS FROM SCHEMA
 export class UpdateAttendanceRecordDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsArray()
-  punches?: { type: string; time: Date }[];  // Array of updated punch records (clock-in, clock-out times)
+  punches: { type: PunchType; time: Date }[];  // Array of punch records with PunchType enum (required)
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsNumber()
+  totalWorkMinutes: number;  // Total work minutes computed (required)
+
+  @IsNotEmpty()
   @IsBoolean()
-  finalisedForPayroll?: boolean;  // Whether the record is finalised for payroll
+  hasMissedPunch: boolean;  // Whether there's a missed punch (required)
 
-  @IsOptional()
-  @IsDate()
-  correctedDate?: Date;  // Optional: Date of correction for the attendance record
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  exceptionIds: string[];  // Array of TimeException IDs (required)
+
+  @IsNotEmpty()
+  @IsBoolean()
+  finalisedForPayroll: boolean;  // Whether the record is finalised for payroll (required)
 }
 
 // DTO for validating an attendance record
@@ -80,23 +99,23 @@ export class CalculateWorkMinutesDto {
   endDate?: Date;  // Optional: End date for calculating work minutes
 }
 
-// DTO for submitting a correction request
+// DTO for submitting a correction request - ALL FIELDS FROM SCHEMA
 export class SubmitCorrectionRequestDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID requesting the correction
+  employeeId: string;  // Employee ID requesting the correction (required)
 
   @IsNotEmpty()
   @IsString()
-  attendanceRecordId: string;  // Attendance record ID that needs correction
+  attendanceRecord: string;  // Attendance record ID that needs correction (required) - matches schema field name
 
-  @IsEnum(CorrectionRequestStatus)
-  @IsOptional()
-  status?: CorrectionRequestStatus;  // Correction request status (default is 'SUBMITTED')
-
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  reason?: string;  // Reason for the correction request (e.g., missed punch, incorrect time)
+  reason: string;  // Reason for the correction request (required)
+
+  @IsNotEmpty()
+  @IsEnum(CorrectionRequestStatus)
+  status: CorrectionRequestStatus;  // Correction request status (required)
 }
 
 // DTO for getting all attendance correction requests by employee
@@ -121,33 +140,46 @@ export class GetAllCorrectionsDto {
   employeeId?: string;  // Optional: Filter by employee ID
 }
 
+// DTO for creating a time exception - ALL FIELDS FROM SCHEMA
 export class CreateTimeExceptionDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID requesting the exception
+  employeeId: string;  // Employee ID requesting the exception (required)
 
+  @IsNotEmpty()
   @IsEnum(TimeExceptionType)
-  @IsNotEmpty()
-  type: TimeExceptionType;  // Type of exception (Missed Punch, Late, Overtime, etc.)
+  type: TimeExceptionType;  // Type of exception (required)
 
   @IsNotEmpty()
   @IsString()
-  attendanceRecordId: string;  // Attendance record associated with the exception
+  attendanceRecordId: string;  // Attendance record associated with the exception (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  reason?: string;  // Optional reason for the time exception (e.g., late arrival, overtime request)
+  assignedTo: string;  // Person responsible for handling the exception (required)
+
+  @IsNotEmpty()
+  @IsEnum(TimeExceptionStatus)
+  status: TimeExceptionStatus;  // Status of the exception (required)
+
+  @IsNotEmpty()
+  @IsString()
+  reason: string;  // Reason for the time exception (required)
 }
 
-// DTO for updating a time exception
+// DTO for updating a time exception - ALL FIELDS FROM SCHEMA
 export class UpdateTimeExceptionDto {
-  @IsEnum(TimeExceptionStatus)
   @IsNotEmpty()
-  status: TimeExceptionStatus;  // Status of the exception (e.g., Approved, Rejected)
+  @IsEnum(TimeExceptionStatus)
+  status: TimeExceptionStatus;  // Status of the exception (required)
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  reason?: string;  // Optional reason for the status change (e.g., manager's comments)
+  assignedTo: string;  // Person responsible for handling the exception (required)
+
+  @IsNotEmpty()
+  @IsString()
+  reason: string;  // Reason for the status change (required)
 }
 
 // DTO for retrieving all time exceptions by employee
