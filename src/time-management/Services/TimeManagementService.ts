@@ -63,24 +63,31 @@ export class TimeManagementService {
   // 1b. Clock out with employee ID
   async clockOutWithID(employeeId: string) {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    // Find today's attendance record (most recent one created today)
-    const attendanceRecord = await this.attendanceRecordModel.findOne({
+    // Find the most recent attendance record for this employee
+    // Query all records and find the one with an IN punch that hasn't been clocked out
+    const attendanceRecords = await this.attendanceRecordModel.find({
       employeeId,
-      createdAt: { $gte: today, $lt: tomorrow },
     }).sort({ createdAt: -1 }).exec();
 
-    if (!attendanceRecord) {
-      throw new Error('No attendance record found for today. Please clock in first.');
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      throw new Error('No attendance record found. Please clock in first.');
     }
 
-    // Check if last punch is already OUT (can't clock out twice)
-    const lastPunch = attendanceRecord.punches[attendanceRecord.punches.length - 1];
-    if (lastPunch && lastPunch.type === PunchType.OUT) {
-      throw new Error('You have already clocked out. Please clock in first.');
+    // Find the most recent record where the last punch is IN (not OUT)
+    let attendanceRecord: any = null;
+    for (const record of attendanceRecords) {
+      if (record.punches && record.punches.length > 0) {
+        const lastPunch = record.punches[record.punches.length - 1];
+        if (lastPunch.type === PunchType.IN) {
+          attendanceRecord = record;
+          break;
+        }
+      }
+    }
+
+    if (!attendanceRecord) {
+      throw new Error('No active clock-in found. Please clock in first.');
     }
 
     // Add clock-out punch
@@ -384,11 +391,15 @@ export class TimeManagementService {
 
   // Check for expiring shift assignments and send notifications
   async checkExpiringShiftAssignments(daysBeforeExpiry: number = 7) {
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + daysBeforeExpiry);
+    const now = new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setUTCDate(expiryDate.getUTCDate() + daysBeforeExpiry);
+    // Convert to UTC end of day for proper comparison
+    const expiryDateUTC = this.convertDateToUTCEnd(expiryDate);
+    const nowUTC = this.convertDateToUTCStart(now);
 
     const expiringAssignments = await this.shiftAssignmentModel.find({
-      endDate: { $lte: expiryDate, $gte: new Date() },
+      endDate: { $lte: expiryDateUTC, $gte: nowUTC },
       status: 'APPROVED',
     }).populate('employeeId').exec();
 
@@ -405,14 +416,15 @@ export class TimeManagementService {
 
   // Detect missed punches and send alerts
   async detectMissedPunches() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    // Use UTC for date range to match MongoDB's UTC createdAt field
+    const todayUTC = this.convertDateToUTCStart(now);
+    const tomorrowUTC = new Date(todayUTC);
+    tomorrowUTC.setUTCDate(tomorrowUTC.getUTCDate() + 1);
 
     // Find attendance records for today
     const attendanceRecords = await this.attendanceRecordModel.find({
-      createdAt: { $gte: today, $lt: tomorrow },
+      createdAt: { $gte: todayUTC, $lt: tomorrowUTC },
     }).exec();
 
     const missedPunchRecords: any[] = [];
@@ -482,7 +494,10 @@ export class TimeManagementService {
     }
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const overtimeExceptions = await this.timeExceptionModel.find(query)
@@ -535,7 +550,10 @@ export class TimeManagementService {
     }
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const latenessExceptions = await this.timeExceptionModel.find(query)
@@ -572,7 +590,10 @@ export class TimeManagementService {
     }
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const exceptions = await this.timeExceptionModel.find(query)
@@ -715,6 +736,22 @@ export class TimeManagementService {
 
   private dateToMinutesUTC(date: Date) {
     return date.getUTCHours() * 60 + date.getUTCMinutes();
+  }
+
+  /**
+   * Converts a date to UTC by setting it to midnight UTC of the same calendar date
+   * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   */
+  private convertDateToUTCStart(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  /**
+   * Converts a date to UTC by setting it to end of day UTC of the same calendar date
+   * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   */
+  private convertDateToUTCEnd(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
   }
 
   private formatAsCSV(data: any): string {

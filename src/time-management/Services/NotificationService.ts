@@ -59,7 +59,10 @@ export class NotificationService {
     const query: any = { employeeId };
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const attendance = await this.attendanceRecordModel.find(query)
@@ -124,7 +127,10 @@ export class NotificationService {
     const query: any = { employeeId };
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const attendance = await this.attendanceRecordModel.find(query)
@@ -172,7 +178,10 @@ export class NotificationService {
     const query: any = { employeeId };
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const attendance = await this.attendanceRecordModel.find(query)
@@ -208,7 +217,10 @@ export class NotificationService {
     };
 
     if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
+      // Convert DTO dates to UTC for proper comparison with MongoDB's UTC createdAt
+      const startDateUTC = this.convertDateToUTCStart(startDate);
+      const endDateUTC = this.convertDateToUTCEnd(endDate);
+      query.createdAt = { $gte: startDateUTC, $lte: endDateUTC };
     }
 
     const overtimeExceptions = await this.timeExceptionModel.find(query)
@@ -250,6 +262,22 @@ export class NotificationService {
   }
 
   // ===== PRIVATE HELPER METHODS =====
+
+  /**
+   * Converts a date to UTC by setting it to midnight UTC of the same calendar date
+   * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   */
+  private convertDateToUTCStart(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  /**
+   * Converts a date to UTC by setting it to end of day UTC of the same calendar date
+   * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   */
+  private convertDateToUTCEnd(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+  }
 
   private async logTimeManagementChange(entity: string, changeSet: Record<string, unknown>, actorId?: string) {
     this.auditLogs.push({
