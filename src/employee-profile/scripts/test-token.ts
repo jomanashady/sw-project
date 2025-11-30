@@ -1,6 +1,10 @@
 /**
  * Test Token Validation
+<<<<<<< HEAD
  *
+=======
+ * 
+>>>>>>> karma
  * This script helps debug token issues
  */
 
@@ -16,8 +20,12 @@ async function testToken() {
   const configService = app.get(ConfigService);
   const employeeService = app.get(EmployeeProfileService);
 
+<<<<<<< HEAD
   const token =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkVNUC0yMDI1LTAwMTMiLCJzdWIiOiI2OTJhMmNlODEwNGIwMWM0Nzc4YjAwY2QiLCJyb2xlcyI6WyJTeXN0ZW0gQWRtaW4iXSwicGVybWlzc2lvbnMiOlsiKiJdLCJpYXQiOjE3NjQzNzI0MTksImV4cCI6MTc2NDQ1ODgxOX0.hNkfPXsKmb1MDvjYazEpe4oMV26mATXUpZUBicy7ass';
+=======
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkVNUC0yMDI1LTAwMTMiLCJzdWIiOiI2OTJhMmNlODEwNGIwMWM0Nzc4YjAwY2QiLCJyb2xlcyI6WyJTeXN0ZW0gQWRtaW4iXSwicGVybWlzc2lvbnMiOlsiKiJdLCJpYXQiOjE3NjQzNzI0MTksImV4cCI6MTc2NDQ1ODgxOX0.hNkfPXsKmb1MDvjYazEpe4oMV26mATXUpZUBicy7ass';
+>>>>>>> karma
 
   console.log('🔍 Testing Token Validation...\n');
 
@@ -40,6 +48,7 @@ async function testToken() {
       console.log('');
 
       // Check if user exists
+<<<<<<< HEAD
       const userId = decoded.sub;
       console.log(`👤 User ID from token: ${userId}`);
 
@@ -53,6 +62,17 @@ async function testToken() {
         console.log(
           "   This is likely the issue! The user ID in the token doesn't exist.",
         );
+=======
+      const userId = (decoded as any).sub;
+      console.log(`👤 User ID from token: ${userId}`);
+      
+      try {
+        const employee = await employeeService.findOne(userId);
+        console.log(`✅ User exists: ${employee.fullName} (${employee.employeeNumber})`);
+      } catch (error: any) {
+        console.log(`❌ User NOT found in database: ${error.message}`);
+        console.log('   This is likely the issue! The user ID in the token doesn\'t exist.');
+>>>>>>> karma
       }
     } catch (error: any) {
       console.log(`❌ Token verification failed: ${error.message}`);
@@ -71,3 +91,7 @@ async function testToken() {
 }
 
 testToken().catch(console.error);
+<<<<<<< HEAD
+=======
+
+>>>>>>> karma

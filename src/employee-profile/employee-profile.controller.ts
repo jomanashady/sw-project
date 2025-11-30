@@ -8,8 +8,11 @@ import {
   Param,
   Delete,
   Query,
+<<<<<<< HEAD
   UseGuards,
   Request,
+=======
+>>>>>>> karma
   HttpCode,
   HttpStatus,
   UnauthorizedException,
@@ -22,6 +25,7 @@ import {
   QueryEmployeeDto,
   AssignSystemRoleDto,
 } from './dto';
+<<<<<<< HEAD
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -30,13 +34,22 @@ import { SystemRole } from './enums/employee-profile.enums';
 
 @Controller('employee-profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
+=======
+import { CreateCandidateDto } from './dto/create-candidate.dto';
+import { SystemRole } from './enums/employee-profile.enums';
+
+@Controller('employee-profile')
+>>>>>>> karma
 export class EmployeeProfileController {
   constructor(
     private readonly employeeProfileService: EmployeeProfileService,
   ) {}
 
   @Post()
+<<<<<<< HEAD
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
+=======
+>>>>>>> karma
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createEmployeeDto: CreateEmployeeDto) {
     const employee =
@@ -48,6 +61,7 @@ export class EmployeeProfileController {
   }
 
   @Get()
+<<<<<<< HEAD
   @Roles(
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
@@ -58,6 +72,12 @@ export class EmployeeProfileController {
     const result = await this.employeeProfileService.findAll(
       query,
       user.userId,
+=======
+  async findAll(@Query() query: QueryEmployeeDto) {
+    const result = await this.employeeProfileService.findAll(
+      query,
+      undefined,
+>>>>>>> karma
     );
     return {
       message: 'Employees retrieved successfully',
@@ -66,6 +86,7 @@ export class EmployeeProfileController {
   }
 
   @Get('me')
+<<<<<<< HEAD
   async getMyProfile(@CurrentUser() user: any) {
     if (!user || !user.userId) {
       throw new UnauthorizedException('User information not found in token');
@@ -75,10 +96,15 @@ export class EmployeeProfileController {
       message: 'Profile retrieved successfully',
       data: employee,
     };
+=======
+  async getMyProfile() {
+    throw new UnauthorizedException('Authentication not configured');
+>>>>>>> karma
   }
 
   @Patch('me')
   async updateMyProfile(
+<<<<<<< HEAD
     @CurrentUser() user: any,
     @Body() updateDto: UpdateEmployeeSelfServiceDto,
   ) {
@@ -94,6 +120,14 @@ export class EmployeeProfileController {
 
   @Get('stats')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+=======
+    @Body() updateDto: UpdateEmployeeSelfServiceDto,
+  ) {
+    throw new UnauthorizedException('Authentication not configured');
+  }
+
+  @Get('stats')
+>>>>>>> karma
   async getStats() {
     const stats = await this.employeeProfileService.getEmployeeStats();
     return {
@@ -103,11 +137,14 @@ export class EmployeeProfileController {
   }
 
   @Get('department/:departmentId')
+<<<<<<< HEAD
   @Roles(
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.DEPARTMENT_HEAD,
   )
+=======
+>>>>>>> karma
   async findByDepartment(@Param('departmentId') departmentId: string) {
     const employees =
       await this.employeeProfileService.findByDepartment(departmentId);
@@ -127,7 +164,10 @@ export class EmployeeProfileController {
   }
 
   @Patch(':id')
+<<<<<<< HEAD
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
+=======
+>>>>>>> karma
   async update(
     @Param('id') id: string,
     @Body() updateEmployeeDto: UpdateEmployeeDto,
@@ -143,7 +183,10 @@ export class EmployeeProfileController {
   }
 
   @Delete(':id')
+<<<<<<< HEAD
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+=======
+>>>>>>> karma
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {
     await this.employeeProfileService.remove(id);
@@ -153,7 +196,10 @@ export class EmployeeProfileController {
   }
 
   @Post('assign-roles')
+<<<<<<< HEAD
   @Roles(SystemRole.SYSTEM_ADMIN)
+=======
+>>>>>>> karma
   @HttpCode(HttpStatus.OK)
   async assignRoles(@Body() assignRoleDto: AssignSystemRoleDto) {
     const systemRole = await this.employeeProfileService.assignSystemRoles(
@@ -168,7 +214,10 @@ export class EmployeeProfileController {
   }
 
   @Get(':id/roles')
+<<<<<<< HEAD
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+=======
+>>>>>>> karma
   async getEmployeeRoles(@Param('id') id: string) {
     const roles = await this.employeeProfileService.getSystemRoles(id);
     return {
@@ -176,4 +225,37 @@ export class EmployeeProfileController {
       data: roles,
     };
   }
+<<<<<<< HEAD
+=======
+
+  // ============= CANDIDATE ENDPOINTS =============
+
+  @Post('candidates')
+  @HttpCode(HttpStatus.CREATED)
+  async createCandidate(@Body() createCandidateDto: CreateCandidateDto) {
+    const candidate = await this.employeeProfileService.createCandidate(createCandidateDto);
+    return {
+      message: 'Candidate created successfully',
+      data: candidate,
+    };
+  }
+
+  @Get('candidates')
+  async getAllCandidates() {
+    const candidates = await this.employeeProfileService.findAllCandidates();
+    return {
+      message: 'Candidates retrieved successfully',
+      data: candidates,
+    };
+  }
+
+  @Get('candidates/:id')
+  async getCandidateById(@Param('id') id: string) {
+    const candidate = await this.employeeProfileService.findCandidateById(id);
+    return {
+      message: 'Candidate retrieved successfully',
+      data: candidate,
+    };
+  }
+>>>>>>> karma
 }

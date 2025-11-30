@@ -15,14 +15,22 @@ async function checkUser() {
   const employeeService = app.get(EmployeeProfileService);
 
   // Your token
+<<<<<<< HEAD
   const token =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkVNUC0yMDI1LTAwMTMiLCJzdWIiOiI2OTJhMmNlODEwNGIwMWM0Nzc4YjAwY2QiLCJyb2xlcyI6WyJTeXN0ZW0gQWRtaW4iXSwicGVybWlzc2lvbnMiOlsiKiJdLCJpYXQiOjE3NjQzNzI0MTksImV4cCI6MTc2NDQ1ODgxOX0.hNkfPXsKmb1MDvjYazEpe4oMV26mATXUpZUBicy7ass';
+=======
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkVNUC0yMDI1LTAwMTMiLCJzdWIiOiI2OTJhMmNlODEwNGIwMWM0Nzc4YjAwY2QiLCJyb2xlcyI6WyJTeXN0ZW0gQWRtaW4iXSwicGVybWlzc2lvbnMiOlsiKiJdLCJpYXQiOjE3NjQzNzI0MTksImV4cCI6MTc2NDQ1ODgxOX0.hNkfPXsKmb1MDvjYazEpe4oMV26mATXUpZUBicy7ass';
+>>>>>>> karma
 
   console.log('🔍 Checking token and user...\n');
 
   try {
     // Decode token
+<<<<<<< HEAD
     const decoded = jwtService.decode(token);
+=======
+    const decoded = jwtService.decode(token) as any;
+>>>>>>> karma
     const userId = decoded?.sub;
     const username = decoded?.username;
 
@@ -47,9 +55,13 @@ async function checkUser() {
       console.log(`   ID: ${(employee as any)._id}`);
       console.log('');
       console.log('✅ The /me endpoint should work!');
+<<<<<<< HEAD
       console.log(
         "   If it doesn't, the issue is with token validation, not the user.",
       );
+=======
+      console.log('   If it doesn\'t, the issue is with token validation, not the user.');
+>>>>>>> karma
     } catch (error: any) {
       console.log(`❌ User NOT FOUND in database!`);
       console.log(`   Error: ${error.message}`);
@@ -69,8 +81,14 @@ async function checkUser() {
     } catch (error: any) {
       console.log('');
       console.log(`❌ Token signature invalid: ${error.message}`);
+<<<<<<< HEAD
       console.log("   This means JWT_SECRET doesn't match!");
     }
+=======
+      console.log('   This means JWT_SECRET doesn\'t match!');
+    }
+
+>>>>>>> karma
   } catch (error: any) {
     console.log(`❌ Error: ${error.message}`);
   } finally {
@@ -79,3 +97,7 @@ async function checkUser() {
 }
 
 checkUser().catch(console.error);
+<<<<<<< HEAD
+=======
+
+>>>>>>> karma

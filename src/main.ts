@@ -34,6 +34,8 @@ function loadEnv() {
   } catch {}
 }
 
+
+
 async function bootstrap() {
   loadEnv();
   const app = await NestFactory.create(AppModule);

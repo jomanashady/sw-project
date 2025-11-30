@@ -52,4 +52,8 @@ export class StructureApprovalResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma

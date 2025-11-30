@@ -4,6 +4,10 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+<<<<<<< HEAD
+=======
+  OnModuleInit,
+>>>>>>> karma
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -24,7 +28,11 @@ import {
 import { EmployeeStatus, SystemRole } from './enums/employee-profile.enums';
 
 @Injectable()
+<<<<<<< HEAD
 export class EmployeeProfileService {
+=======
+export class EmployeeProfileService implements OnModuleInit {
+>>>>>>> karma
   constructor(
     @InjectModel(EmployeeProfile.name)
     private employeeModel: Model<EmployeeProfileDocument>,
@@ -36,6 +44,19 @@ export class EmployeeProfileService {
     private systemRoleModel: Model<EmployeeSystemRole>,
   ) {}
 
+<<<<<<< HEAD
+=======
+  async onModuleInit() {
+    // Drop old email_1 index if it exists
+    try {
+      await this.candidateModel.collection.dropIndex('email_1');
+      console.log('Dropped old email_1 index from candidates collection');
+    } catch (error) {
+      // Index doesn't exist or already dropped, ignore
+    }
+  }
+
+>>>>>>> karma
   // ==================== EMPLOYEE CRUD ====================
 
   async create(createEmployeeDto: CreateEmployeeDto): Promise<EmployeeProfile> {
@@ -230,7 +251,11 @@ export class EmployeeProfileService {
       .select('-password')
       .exec();
 
+<<<<<<< HEAD
     return updatedEmployee;
+=======
+    return updatedEmployee!;
+>>>>>>> karma
   }
 
   async updateSelfService(
@@ -244,7 +269,11 @@ export class EmployeeProfileService {
       .select('-password')
       .exec();
 
+<<<<<<< HEAD
     return updatedEmployee;
+=======
+    return updatedEmployee!;
+>>>>>>> karma
   }
 
   async remove(id: string): Promise<void> {
@@ -385,4 +414,80 @@ export class EmployeeProfileService {
       }, {}),
     };
   }
+<<<<<<< HEAD
 }
+=======
+
+  // ==================== CANDIDATE CRUD ====================
+
+  async createCandidate(createCandidateDto: any): Promise<any> {
+    // Check for duplicate national ID
+    const existingCandidate = await this.candidateModel
+      .findOne({ nationalId: createCandidateDto.nationalId })
+      .exec();
+
+    if (existingCandidate) {
+      throw new ConflictException(
+        'Candidate with this National ID already exists',
+      );
+    }
+
+    // Generate candidate number
+    const year = new Date().getFullYear();
+    const prefix = `CAND-${year}`;
+
+    const lastCandidate = await this.candidateModel
+      .findOne({ candidateNumber: { $regex: `^${prefix}` } })
+      .sort({ candidateNumber: -1 })
+      .exec();
+
+    let sequence = 1;
+    if (lastCandidate) {
+      const lastSequence = parseInt(
+        lastCandidate.candidateNumber.split('-')[2],
+        10,
+      );
+      sequence = lastSequence + 1;
+    }
+
+    const candidateNumber = `${prefix}-${sequence.toString().padStart(4, '0')}`;
+
+    // Create full name
+    const fullName = [
+      createCandidateDto.firstName,
+      createCandidateDto.middleName,
+      createCandidateDto.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    const candidate = new this.candidateModel({
+      ...createCandidateDto,
+      candidateNumber,
+      fullName,
+      status: 'APPLIED',
+      applicationDate: new Date(),
+    });
+
+    return candidate.save();
+  }
+
+  async findAllCandidates(): Promise<any[]> {
+    return this.candidateModel.find().exec();
+  }
+
+  async findCandidateById(id: string): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid candidate ID');
+    }
+
+    const candidate = await this.candidateModel.findById(id).exec();
+
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${id} not found`);
+    }
+
+    return candidate;
+  }
+}
+>>>>>>> karma

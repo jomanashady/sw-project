@@ -89,4 +89,8 @@ export class PositionAssignmentResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma

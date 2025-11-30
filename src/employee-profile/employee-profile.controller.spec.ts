@@ -3,7 +3,10 @@ import { EmployeeProfileController } from './employee-profile.controller';
 import { EmployeeProfileService } from './employee-profile.service';
 import { SystemRole } from './enums/employee-profile.enums';
 import { Reflector } from '@nestjs/core';
+<<<<<<< HEAD
 import { Roles } from '../common/decorators/roles.decorator';
+=======
+>>>>>>> karma
 
 describe('EmployeeProfileController', () => {
   let controller: EmployeeProfileController;
@@ -107,6 +110,7 @@ describe('EmployeeProfileController', () => {
     });
   });
 
+<<<<<<< HEAD
   describe('Role Guards', () => {
     it('should require SYSTEM_ADMIN, HR_MANAGER, or HR_EMPLOYEE for create', () => {
       const roles = Reflect.getMetadata('roles', controller.create);
@@ -133,6 +137,8 @@ describe('EmployeeProfileController', () => {
     });
   });
 
+=======
+>>>>>>> karma
   describe('create', () => {
     it('should create an employee', async () => {
       const createDto = {
@@ -162,7 +168,10 @@ describe('EmployeeProfileController', () => {
   describe('findAll', () => {
     it('should return paginated employees', async () => {
       const queryDto = { page: 1, limit: 10 };
+<<<<<<< HEAD
       const mockUser = { userId: '507f1f77bcf86cd799439011' };
+=======
+>>>>>>> karma
       const mockResult = {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
@@ -170,9 +179,15 @@ describe('EmployeeProfileController', () => {
 
       mockEmployeeProfileService.findAll.mockResolvedValue(mockResult);
 
+<<<<<<< HEAD
       const result = await controller.findAll(queryDto, mockUser);
 
       expect(service.findAll).toHaveBeenCalledWith(queryDto, mockUser.userId);
+=======
+      const result = await controller.findAll(queryDto);
+
+      expect(service.findAll).toHaveBeenCalledWith(queryDto, undefined);
+>>>>>>> karma
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
@@ -180,6 +195,7 @@ describe('EmployeeProfileController', () => {
   });
 
   describe('getMyProfile', () => {
+<<<<<<< HEAD
     it('should return current user profile', async () => {
       const mockUser = { userId: '507f1f77bcf86cd799439011' };
       const mockEmployee = {
@@ -196,10 +212,15 @@ describe('EmployeeProfileController', () => {
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('data');
       expect(result.data).toEqual(mockEmployee);
+=======
+    it('should throw unauthorized error when auth not configured', async () => {
+      await expect(controller.getMyProfile()).rejects.toThrow('Authentication not configured');
+>>>>>>> karma
     });
   });
 
   describe('updateMyProfile', () => {
+<<<<<<< HEAD
     it('should update own profile', async () => {
       const mockUser = { userId: '507f1f77bcf86cd799439011' };
       const updateDto = { personalEmail: 'new@example.com' };
@@ -220,6 +241,11 @@ describe('EmployeeProfileController', () => {
       );
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('data');
+=======
+    it('should throw unauthorized error when auth not configured', async () => {
+      const updateDto = { personalEmail: 'new@example.com' };
+      await expect(controller.updateMyProfile(updateDto)).rejects.toThrow('Authentication not configured');
+>>>>>>> karma
     });
   });
 

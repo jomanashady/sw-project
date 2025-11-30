@@ -73,4 +73,8 @@ export class DepartmentResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma
