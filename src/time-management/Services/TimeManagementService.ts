@@ -741,17 +741,23 @@ export class TimeManagementService {
   /**
    * Converts a date to UTC by setting it to midnight UTC of the same calendar date
    * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   * Handles both Date objects and date strings
    */
-  private convertDateToUTCStart(date: Date): Date {
-    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+  private convertDateToUTCStart(date: Date | string): Date {
+    // Convert string to Date if needed
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate(), 0, 0, 0, 0));
   }
 
   /**
    * Converts a date to UTC by setting it to end of day UTC of the same calendar date
    * This ensures date range queries work correctly with MongoDB's UTC createdAt fields
+   * Handles both Date objects and date strings
    */
-  private convertDateToUTCEnd(date: Date): Date {
-    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+  private convertDateToUTCEnd(date: Date | string): Date {
+    // Convert string to Date if needed
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate(), 23, 59, 59, 999));
   }
 
   private formatAsCSV(data: any): string {
