@@ -88,7 +88,7 @@ export class SubmitCorrectionRequestDto {
 
   @IsNotEmpty()
   @IsString()
-  attendanceRecordId: string;  // Attendance record ID that needs correction
+  attendanceRecord: string;  // Attendance record ID that needs correction
 
   @IsEnum(CorrectionRequestStatus)
   @IsOptional()
