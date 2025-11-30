@@ -50,7 +50,7 @@
  * ============================================================================
  */
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { JobRequisition } from './models/job-requisition.schema';
@@ -130,9 +130,8 @@ import {
   AppraisalRecordDocument,
 } from '../performance/models/appraisal-record.schema';
 
-// System enums
+// System enums (EmployeeStatus already imported above, only import SystemRole here)
 import {
-  EmployeeStatus,
   SystemRole,
 } from '../employee-profile/enums/employee-profile.enums';
 
@@ -191,15 +190,13 @@ export class RecruitmentService {
     
     // Organization Structure Service - For validating departments/positions in job requisitions
     // private readonly organizationStructureService: OrganizationStructureService,
-  ) {}
- 
-   
-     @InjectModel(TerminationRequest.name)
+
+    // ============= OFFBOARDING MODELS =============
+    @InjectModel(TerminationRequest.name)
     private terminationModel: Model<TerminationRequest>,
 
     @InjectModel(ClearanceChecklist.name)
     private clearanceModel: Model<ClearanceChecklist>,
-////NEW OFFBOARDING 
 
     @InjectModel(EmployeeProfile.name)
     private employeeModel: Model<EmployeeProfileDocument>,
@@ -302,6 +299,21 @@ export class RecruitmentService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job template ID format');
     }
+
+    // Validate that template exists
+    const existingTemplate = await this.jobTemplateModel.findById(id);
+    if (!existingTemplate) {
+      throw new NotFoundException('Job Template not found');
+    }
+
+    // Validate update data if provided
+    if (dto.title !== undefined && (typeof dto.title !== 'string' || dto.title.trim().length === 0)) {
+      throw new BadRequestException('Title must be a non-empty string');
+    }
+    if (dto.department !== undefined && (typeof dto.department !== 'string' || dto.department.trim().length === 0)) {
+      throw new BadRequestException('Department must be a non-empty string');
+    }
+
     const updated = await this.jobTemplateModel.findByIdAndUpdate(id, dto, { new: true });
     if (!updated) {
       throw new NotFoundException('Job Template not found');
@@ -477,7 +489,10 @@ export class RecruitmentService {
 
   async getAllApplications(requisitionId?: string, prioritizeReferrals: boolean = true) {
     let query: any = {};
-    if (requisitionId && Types.ObjectId.isValid(requisitionId)) {
+    if (requisitionId) {
+      if (!Types.ObjectId.isValid(requisitionId)) {
+        throw new BadRequestException('Invalid requisition ID format');
+      }
       query.requisitionId = new Types.ObjectId(requisitionId);
     }
 
@@ -932,6 +947,13 @@ export class RecruitmentService {
       throw new NotFoundException('Offer not found');
     }
 
+    // Check if offer is already finalized
+    if (offer.finalStatus !== OfferFinalStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot respond to offer: Offer has already been finalized with status: ${offer.finalStatus}.`,
+      );
+    }
+
     // Check if offer deadline has passed
     if (offer.deadline && new Date(offer.deadline) < new Date()) {
       throw new BadRequestException(
@@ -1047,20 +1069,53 @@ export class RecruitmentService {
   // Email function to notify candidates
   // ---------------------------------------------------
   async sendEmail(recipient: string, subject: string, text: string) {
-    let transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,  // Use environment variable
-        pass: process.env.EMAIL_PASS,   // Use environment variable
-      },
-    });
+    // Validate recipient email
+    if (!recipient || typeof recipient !== 'string' || recipient.trim().length === 0) {
+      throw new BadRequestException('Recipient email is required');
+    }
 
-    await transporter.sendMail({
-      from: '"HR System" <your-email@gmail.com>',
-      to: recipient,
-      subject: subject,
-      text: text,
-    });
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipient.trim())) {
+      throw new BadRequestException('Invalid recipient email format');
+    }
+
+    // Validate subject
+    if (!subject || typeof subject !== 'string' || subject.trim().length === 0) {
+      throw new BadRequestException('Email subject is required');
+    }
+
+    // Validate text content
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      throw new BadRequestException('Email text content is required');
+    }
+
+    // Check if email credentials are configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn('Email credentials not configured. Email will not be sent.');
+      return; // Don't throw error, just log warning
+    }
+
+    try {
+      let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,  // Use environment variable
+          pass: process.env.EMAIL_PASS,   // Use environment variable
+        },
+      });
+
+      await transporter.sendMail({
+        from: '"HR System" <your-email@gmail.com>',
+        to: recipient.trim(),
+        subject: subject.trim(),
+        text: text.trim(),
+      });
+    } catch (error) {
+      // Log error but don't throw - email sending failures should not break the main flow
+      console.error('Failed to send email:', error);
+      throw error; // Re-throw to allow caller to handle if needed
+    }
   }
 
   // ============= ONBOARDING METHODS =============
@@ -2097,6 +2152,13 @@ export class RecruitmentService {
         throw new BadRequestException('Interview has not been scheduled yet');
       }
 
+      // Validate that interview has been conducted (scheduled date is in the past) - optional business rule
+      // Allow feedback submission even if interview is in the future (for pre-interview notes)
+      // But warn if interview is more than 1 day in the future
+      if (interview.scheduledDate && new Date(interview.scheduledDate) > new Date(Date.now() + 24 * 60 * 60 * 1000)) {
+        console.warn(`Feedback submitted for interview scheduled more than 1 day in the future: ${interview.scheduledDate}`);
+      }
+
       // Check if interviewer is part of the panel
       const panelIds = interview.panel?.map((id: any) => id.toString()) || [];
       if (panelIds.length === 0) {
@@ -2430,19 +2492,40 @@ export class RecruitmentService {
         throw new BadRequestException('Invalid employee ID format');
       }
 
+      // Validate equipmentType
+      if (!equipmentType || typeof equipmentType !== 'string' || equipmentType.trim().length === 0) {
+        throw new BadRequestException('Equipment type is required and must be a non-empty string');
+      }
+
+      // Validate equipmentDetails
+      if (!equipmentDetails || typeof equipmentDetails !== 'object') {
+        throw new BadRequestException('Equipment details are required and must be an object');
+      }
+
       const onboarding = await this.onboardingModel.findOne({ employeeId: new Types.ObjectId(employeeId) });
       if (!onboarding) {
         throw new NotFoundException('Onboarding not found');
       }
 
+      // Check if onboarding is already completed
+      if (onboarding.completed) {
+        throw new BadRequestException('Cannot reserve equipment for a completed onboarding checklist');
+      }
+
       // Find Admin tasks related to equipment
       const adminTasks = onboarding.tasks.filter((task: any) => task.department === 'Admin');
       
+      if (adminTasks.length === 0) {
+        throw new BadRequestException('No Admin tasks found in onboarding checklist');
+      }
+
       let targetTask = null;
       if (equipmentType === 'workspace' || equipmentType === 'desk') {
         targetTask = adminTasks.find((task: any) => task.name.includes('Workspace') || task.name.includes('Desk'));
       } else if (equipmentType === 'access_card' || equipmentType === 'badge') {
         targetTask = adminTasks.find((task: any) => task.name.includes('ID Badge') || task.name.includes('Access Card'));
+      } else {
+        throw new BadRequestException(`Invalid equipment type: ${equipmentType}. Valid types: workspace, desk, access_card, badge`);
       }
 
       if (!targetTask) {
@@ -2476,6 +2559,27 @@ export class RecruitmentService {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
+      }
+
+      // Validate startDate
+      if (!startDate || isNaN(new Date(startDate).getTime())) {
+        throw new BadRequestException('Invalid start date format. Expected ISO 8601 date string or Date object.');
+      }
+
+      const startDateObj = new Date(startDate);
+      if (startDateObj < new Date()) {
+        throw new BadRequestException('Start date cannot be in the past');
+      }
+
+      // Validate endDate if provided
+      if (endDate !== undefined && endDate !== null) {
+        if (isNaN(new Date(endDate).getTime())) {
+          throw new BadRequestException('Invalid end date format. Expected ISO 8601 date string or Date object.');
+        }
+        const endDateObj = new Date(endDate);
+        if (endDateObj <= startDateObj) {
+          throw new BadRequestException('End date must be after start date');
+        }
       }
 
       // ============= INTEGRATION: IT Service & Time Management Service =============
@@ -2522,13 +2626,16 @@ export class RecruitmentService {
       // 4. Store scheduling information in onboarding tasks
       // Update IT tasks with scheduled dates
       const itTasks = onboarding.tasks.filter((task: any) => (task as any).department === 'IT');
+      if (itTasks.length === 0) {
+        throw new BadRequestException('No IT tasks found in onboarding checklist. Cannot schedule access provisioning.');
+      }
       for (const task of itTasks) {
         const taskDeadline = (task as any).deadline;
-        if (!taskDeadline || new Date(taskDeadline) > startDate) {
-          (task as any).deadline = startDate;
-          (task as any).notes = ((task as any).notes || '') + `\n[${new Date().toISOString()}] Scheduled for automatic provisioning on ${startDate.toISOString()}`;
+        if (!taskDeadline || new Date(taskDeadline) > startDateObj) {
+          (task as any).deadline = startDateObj;
+          (task as any).notes = ((task as any).notes || '') + `\n[${new Date().toISOString()}] Scheduled for automatic provisioning on ${startDateObj.toISOString()}`;
           if (endDate) {
-            (task as any).notes += `\n[${new Date().toISOString()}] Scheduled for automatic revocation on ${endDate.toISOString()}`;
+            (task as any).notes += `\n[${new Date().toISOString()}] Scheduled for automatic revocation on ${new Date(endDate).toISOString()}`;
           }
         }
       }
@@ -2538,11 +2645,11 @@ export class RecruitmentService {
 
       return {
         message: 'Access provisioning scheduled',
-        startDate,
-        endDate,
+        startDate: startDateObj,
+        endDate: endDate ? new Date(endDate) : undefined,
         note: endDate 
-          ? `Access will be provisioned on ${startDate.toISOString()} and revoked on ${endDate.toISOString()}`
-          : `Access will be provisioned on ${startDate.toISOString()}`,
+          ? `Access will be provisioned on ${startDateObj.toISOString()} and revoked on ${new Date(endDate).toISOString()}`
+          : `Access will be provisioned on ${startDateObj.toISOString()}`,
       };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -2816,6 +2923,16 @@ export class RecruitmentService {
       throw new ForbiddenException('User role missing from token.');
     }
 
+    // Validate employeeId format (employeeNumber)
+    if (!dto.employeeId || typeof dto.employeeId !== 'string' || dto.employeeId.trim().length === 0) {
+      throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
+    }
+
+    // Validate initiator
+    if (!dto.initiator || !Object.values(TerminationInitiation).includes(dto.initiator)) {
+      throw new BadRequestException('Invalid termination initiator. Must be one of: employee, hr, manager');
+    }
+
     // Find employee by employeeNumber (EMP-001, EMP-002, ...)
     const employee = await this.employeeModel
       .findOne({ employeeNumber: dto.employeeId })
@@ -2924,7 +3041,7 @@ export class RecruitmentService {
   // 2) GET TERMINATION REQUEST
   async getTerminationRequestById(id: string) {
     if (!Types.ObjectId.isValid(id)) {
-      throw new NotFoundException('Termination request not found.');
+      throw new BadRequestException('Invalid termination request ID format');
     }
 
     const termination = await this.terminationModel.findById(id).exec();
@@ -2948,9 +3065,24 @@ export class RecruitmentService {
       );
     }
 
+    // Validate ID format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid termination request ID format');
+    }
+
+    // Validate status
+    if (!dto.status || !Object.values(TerminationStatus).includes(dto.status)) {
+      throw new BadRequestException('Invalid termination status');
+    }
+
     const termination = await this.terminationModel.findById(id);
     if (!termination) {
       throw new NotFoundException('Termination request not found.');
+    }
+
+    // Validate status transition - cannot change from APPROVED to other statuses
+    if (termination.status === TerminationStatus.APPROVED && dto.status !== TerminationStatus.APPROVED) {
+      throw new BadRequestException('Cannot change status of an approved termination request');
     }
 
     termination.status = dto.status;
@@ -2965,14 +3097,25 @@ export class RecruitmentService {
 
     const saved = await termination.save();
 
-    // When approved → create clearance checklist
+    // When approved → create clearance checklist (if it doesn't already exist)
     if (dto.status === TerminationStatus.APPROVED) {
-      await this.createClearanceChecklist(
-        {
-          terminationId: termination._id.toString(),
-        } as CreateClearanceChecklistDto,
-        user,
-      );
+      try {
+        // Check if checklist already exists
+        const existingChecklist = await this.clearanceModel.findOne({
+          terminationId: termination._id,
+        });
+        if (!existingChecklist) {
+          await this.createClearanceChecklist(
+            {
+              terminationId: termination._id.toString(),
+            } as CreateClearanceChecklistDto,
+            user,
+          );
+        }
+      } catch (e) {
+        // Non-critical - log but don't fail status update
+        console.warn('Failed to create clearance checklist automatically:', e);
+      }
     }
 
     return saved;
@@ -2991,15 +3134,52 @@ export class RecruitmentService {
       );
     }
 
+    // Validate ID format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid termination request ID format');
+    }
+
+    // Validate termination exists
+    const termination = await this.terminationModel.findById(id);
+    if (!termination) {
+      throw new NotFoundException('Termination request not found.');
+    }
+
+    // Cannot edit approved terminations
+    if (termination.status === TerminationStatus.APPROVED) {
+      throw new BadRequestException('Cannot edit details of an approved termination request');
+    }
+
+    // Validate termination date if provided
+    if (dto.terminationDate) {
+      const terminationDate = new Date(dto.terminationDate);
+      if (isNaN(terminationDate.getTime())) {
+        throw new BadRequestException('Invalid termination date format. Expected ISO 8601 date string.');
+      }
+      // Validate termination date is not in the past (optional business rule)
+      if (terminationDate < new Date()) {
+        throw new BadRequestException('Termination date cannot be in the past');
+      }
+    }
+
     const update: any = {};
 
-    if (dto.reason !== undefined) update.reason = dto.reason;
+    if (dto.reason !== undefined) {
+      if (typeof dto.reason !== 'string' || dto.reason.trim().length === 0) {
+        throw new BadRequestException('Reason must be a non-empty string');
+      }
+      update.reason = dto.reason;
+    }
     if (dto.employeeComments !== undefined)
       update.employeeComments = dto.employeeComments;
     if (dto.terminationDate)
       update.terminationDate = new Date(dto.terminationDate);
 
-    return this.terminationModel.findByIdAndUpdate(id, update, { new: true });
+    const updated = await this.terminationModel.findByIdAndUpdate(id, update, { new: true });
+    if (!updated) {
+      throw new NotFoundException('Termination request not found.');
+    }
+    return updated;
   }
 
   // 5) CREATE CLEARANCE CHECKLIST
@@ -3012,6 +3192,25 @@ export class RecruitmentService {
       throw new ForbiddenException(
         'Only HR Manager can create clearance checklist.',
       );
+    }
+
+    // Validate terminationId format
+    if (!dto.terminationId || !Types.ObjectId.isValid(dto.terminationId)) {
+      throw new BadRequestException('Invalid termination ID format');
+    }
+
+    // Validate termination exists
+    const termination = await this.terminationModel.findById(dto.terminationId);
+    if (!termination) {
+      throw new NotFoundException('Termination request not found.');
+    }
+
+    // Check if checklist already exists for this termination
+    const existingChecklist = await this.clearanceModel.findOne({
+      terminationId: new Types.ObjectId(dto.terminationId),
+    });
+    if (existingChecklist) {
+      throw new BadRequestException('Clearance checklist already exists for this termination request');
     }
 
     const checklist = new this.clearanceModel({
@@ -3032,6 +3231,11 @@ export class RecruitmentService {
 
   // 6) GET CHECKLIST BY EMPLOYEE (employeeNumber)
   async getChecklistByEmployee(employeeId: string) {
+    // Validate employeeId format
+    if (!employeeId || typeof employeeId !== 'string' || employeeId.trim().length === 0) {
+      throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
+    }
+
     const employee = await this.employeeModel
       .findOne({ employeeNumber: employeeId })
       .exec();
@@ -3045,10 +3249,15 @@ export class RecruitmentService {
     });
 
     if (!termination) {
-      throw new NotFoundException('No termination found.');
+      throw new NotFoundException('No termination found for this employee.');
     }
 
-    return this.clearanceModel.findOne({ terminationId: termination._id });
+    const checklist = await this.clearanceModel.findOne({ terminationId: termination._id });
+    if (!checklist) {
+      throw new NotFoundException('No clearance checklist found for this employee.');
+    }
+
+    return checklist;
   }
 
   // 7) UPDATE CLEARANCE ITEM STATUS
@@ -3062,6 +3271,34 @@ export class RecruitmentService {
       throw new ForbiddenException('Unauthorized clearance update.');
     }
 
+    // Validate checklistId format
+    if (!Types.ObjectId.isValid(checklistId)) {
+      throw new BadRequestException('Invalid checklist ID format');
+    }
+
+    // Validate department
+    if (!dto.department || typeof dto.department !== 'string') {
+      throw new BadRequestException('Department is required and must be a non-empty string');
+    }
+
+    // Validate status
+    if (!dto.status || !Object.values(ApprovalStatus).includes(dto.status)) {
+      throw new BadRequestException('Invalid approval status');
+    }
+
+    // Check if checklist exists
+    const checklist = await this.clearanceModel.findById(checklistId);
+    if (!checklist) {
+      throw new NotFoundException('Checklist not found.');
+    }
+
+    // Check if department item exists in checklist
+    const departmentItem = checklist.items.find((item: any) => item.department === dto.department);
+    if (!departmentItem) {
+      throw new BadRequestException(`Department '${dto.department}' not found in clearance checklist`);
+    }
+
+    // Update the item
     await this.clearanceModel.updateOne(
       { _id: checklistId, 'items.department': dto.department },
       {
@@ -3074,20 +3311,21 @@ export class RecruitmentService {
       },
     );
 
-    const checklist = await this.clearanceModel.findById(checklistId);
-    if (!checklist) {
+    // Reload checklist to get updated data
+    const updatedChecklist = await this.clearanceModel.findById(checklistId);
+    if (!updatedChecklist) {
       throw new NotFoundException('Checklist not found.');
     }
 
-    const allApproved = checklist.items.every(
+    const allApproved = updatedChecklist.items.every(
       (i: any) => i.status === ApprovalStatus.APPROVED,
     );
 
     if (allApproved) {
-      checklist.cardReturned = true;
-      await checklist.save();
+      updatedChecklist.cardReturned = true;
+      await updatedChecklist.save();
 
-      await this.terminationModel.findByIdAndUpdate(checklist.terminationId, {
+      await this.terminationModel.findByIdAndUpdate(updatedChecklist.terminationId, {
         status: TerminationStatus.APPROVED,
       });
     }
@@ -3103,15 +3341,37 @@ export class RecruitmentService {
       );
     }
 
-    return this.clearanceModel.findByIdAndUpdate(
+    // Validate checklistId format
+    if (!Types.ObjectId.isValid(checklistId)) {
+      throw new BadRequestException('Invalid checklist ID format');
+    }
+
+    // Check if checklist exists
+    const checklist = await this.clearanceModel.findById(checklistId);
+    if (!checklist) {
+      throw new NotFoundException('Checklist not found.');
+    }
+
+    const updated = await this.clearanceModel.findByIdAndUpdate(
       checklistId,
       { cardReturned: true },
       { new: true },
     );
+
+    if (!updated) {
+      throw new NotFoundException('Checklist not found.');
+    }
+
+    return updated;
   }
 
   // 9) GET LATEST APPRAISAL FOR AN EMPLOYEE (by employeeNumber)
   async getLatestAppraisalForEmployee(employeeId: string) {
+    // Validate employeeId format
+    if (!employeeId || typeof employeeId !== 'string' || employeeId.trim().length === 0) {
+      throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
+    }
+
     const employee = await this.employeeModel
       .findOne({ employeeNumber: employeeId })
       .exec();
@@ -3179,6 +3439,11 @@ export class RecruitmentService {
       );
     }
 
+    // Validate employeeId format
+    if (!dto.employeeId || typeof dto.employeeId !== 'string' || dto.employeeId.trim().length === 0) {
+      throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
+    }
+
     // Find employee by employeeNumber
     const employee = await this.employeeModel.findOne({
       employeeNumber: dto.employeeId,
@@ -3188,12 +3453,21 @@ export class RecruitmentService {
       throw new NotFoundException('Employee not found.');
     }
 
+    // Check if employee is already inactive
+    if (employee.status === EmployeeStatus.INACTIVE) {
+      throw new BadRequestException('Employee is already inactive. System access has already been revoked.');
+    }
+
     // Update status to INACTIVE
     employee.status = EmployeeStatus.INACTIVE;
     await employee.save();
 
     return {
       message: 'System access revoked. Employee made inactive.',
+      employeeId: employee._id,
+      employeeNumber: employee.employeeNumber,
+      previousStatus: employee.status,
+      newStatus: EmployeeStatus.INACTIVE,
     };
   }
 

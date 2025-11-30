@@ -14,7 +14,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Res,
-  Request,
+  Req,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -226,7 +226,7 @@ export class RecruitmentController {
   updateAppStatus(
     @Param('id') id: string,
     @Body() dto: UpdateApplicationStatusDto,
-    @Request() req: any,
+    @Req() req: any,
   ) {
     // Get user ID from request (set by auth guard)
     const changedBy = req.user?.id || req.user?._id;
@@ -275,7 +275,7 @@ export class RecruitmentController {
   submitInterviewFeedback(
     @Param('id') interviewId: string,
     @Body() dto: { score: number; comments?: string },
-    @Request() req: any,
+    @Req() req: any,
   ) {
     const interviewerId = req.user?.id || req.user?._id;
     if (!interviewerId) {
@@ -672,7 +672,7 @@ export class RecruitmentController {
   tagCandidateAsReferral(
     @Param('candidateId') candidateId: string,
     @Body() dto: { referringEmployeeId: string; role?: string; level?: string },
-    @Request() req: any,
+    @Req() req: any,
   ) {
     // Use referringEmployeeId from body, or fallback to current user
     const referringEmployeeId = dto.referringEmployeeId || req.user?.id || req.user?._id;
@@ -807,7 +807,6 @@ export class RecruitmentController {
   revokeAccess(@Body() dto: RevokeSystemAccessDto, @Req() req: any) {
     return this.service.revokeSystemAccess(dto, req.user);
   }
-}
 }
 
 

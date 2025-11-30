@@ -46,14 +46,11 @@ import { Candidate, CandidateSchema } from '../employee-profile/models/candidate
       { name: Document.name, schema: DocumentSchema },
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
-      //new for offboarding
-      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
-        { name: AppraisalRecord.name, schema: AppraisalRecordSchema },
-
-
-    ]),EmployeeProfileModule
       { name: Onboarding.name, schema: OnboardingSchema }, // Make sure this line exists
       { name: Candidate.name, schema: CandidateSchema }, // For creating employees from candidates
+      //new for offboarding
+      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+      { name: AppraisalRecord.name, schema: AppraisalRecordSchema },
     ]),
     // ============= INTEGRATED MODULES =============
     EmployeeProfileModule, // ACTIVE - For creating employees from candidates
