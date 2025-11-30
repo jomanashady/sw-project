@@ -762,27 +762,46 @@ export class RecruitmentService {
         }
       }
 
-      // REC-011: Send calendar invites to panel members
-      // Note: Actual calendar integration would require a calendar API (Google Calendar, Outlook, etc.)
-      // For now, we send email notifications with calendar details
+      // REC-011: Send email notifications to panel members
+      // Note: Calendar invites would require a calendar API (Google Calendar, Outlook, etc.)
+      // For now, we send email notifications with interview details
       if (dto.panel && dto.panel.length > 0) {
-        // In a real implementation, you would:
-        // 1. Fetch panel member emails from User service
-        // 2. Send calendar invites via calendar API
-        // 3. Send email notifications via sendNotification('panel_invitation', ...)
-        // For now, we log that calendar invites should be sent
-        console.log(`Calendar invites should be sent to panel members: ${dto.panel.join(', ')}`);
-        // TODO: When User service is available, fetch emails and send panel invitations:
-        // for (const panelMemberId of dto.panel) {
-        //   const panelMember = await userService.getUserById(panelMemberId);
-        //   if (panelMember && panelMember.email) {
-        //     await this.sendNotification('panel_invitation', panelMember.email, {
-        //       interviewDate: interviewDate,
-        //       method: methodText,
-        //       videoLink: dto.videoLink,
-        //     }, { nonBlocking: true });
-        //   }
-        // }
+        // Get job requisition details for context
+        const jobRequisition = app?.requisitionId 
+          ? await this.jobModel.findById(app.requisitionId).lean().exec()
+          : null;
+        const positionTitle = (jobRequisition as any)?.title || 'Position';
+
+        // Send email notifications to each panel member using existing EmployeeProfileService
+        for (const panelMemberId of dto.panel) {
+          try {
+            // Use existing EmployeeProfileService to get panel member details
+            const panelMember = await this.employeeProfileService.findOne(panelMemberId);
+            
+            // Get email - prefer workEmail, fallback to personalEmail
+            const panelMemberEmail = panelMember.workEmail || panelMember.personalEmail;
+            
+            if (panelMemberEmail) {
+              await this.sendNotification(
+                'panel_invitation',
+                panelMemberEmail,
+                {
+                  interviewDate: interviewDate,
+                  method: methodText,
+                  videoLink: dto.videoLink,
+                  candidateName: candidate?.fullName || candidate?.firstName || 'Candidate',
+                  position: positionTitle,
+                },
+                { nonBlocking: true } // Non-blocking - don't fail if one email fails
+              );
+            } else {
+              console.warn(`Panel member ${panelMemberId} has no email address. Notification skipped.`);
+            }
+          } catch (error) {
+            // Non-blocking - log error but continue with other panel members
+            console.warn(`Failed to send panel invitation to ${panelMemberId}:`, error);
+          }
+        }
       }
     } catch (e) {
       // non-critical
@@ -1212,8 +1231,12 @@ export class RecruitmentService {
           const panelInterviewDate = context.interviewDate || 'TBD';
           const panelMethod = context.method || 'TBD';
           const panelVideoLink = context.videoLink ? `\nVideo Link: ${context.videoLink}` : '';
+          const panelCandidateName = context.candidateName || 'Candidate';
+          const panelPosition = context.position || 'Position';
           
           text = `You have been invited to participate in an interview panel.\n\n`;
+          text += `Position: ${panelPosition}\n`;
+          text += `Candidate: ${panelCandidateName}\n`;
           text += `Interview Date: ${panelInterviewDate}\n`;
           text += `Interview Method: ${panelMethod}${panelVideoLink}\n\n`;
           text += `Please confirm your availability.\n\n`;
