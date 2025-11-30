@@ -16,6 +16,7 @@ import { TerminationRequest, TerminationRequestSchema } from './models/terminati
 import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance-checklist.schema';
 import { Onboarding, OnboardingSchema } from './models/onboarding.schema'; // Make sure this import exists
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
+import { Candidate, CandidateSchema } from '../employee-profile/models/candidate.schema';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EmployeeProfileModule } from '../employee-profile/employee-profile.modu
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
       { name: Onboarding.name, schema: OnboardingSchema }, // Make sure this line exists
+      { name: Candidate.name, schema: CandidateSchema }, // For creating employees from candidates
     ]),
     EmployeeProfileModule,
   ],
