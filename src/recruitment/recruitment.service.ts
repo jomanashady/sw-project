@@ -1,3 +1,4 @@
+// src/recruitment/recruitment.service.ts
 import {
   Injectable,
   ForbiddenException,
@@ -32,6 +33,20 @@ import {
   EmployeeProfileDocument,
 } from '../employee-profile/models/employee-profile.schema';
 
+// NEW – performance linkage
+import {
+  AppraisalRecord,
+  AppraisalRecordDocument,
+} from '../performance/models/appraisal-record.schema';
+
+// System enums
+import {
+  EmployeeStatus,
+  SystemRole,
+} from '../employee-profile/enums/employee-profile.enums';
+
+import { RevokeSystemAccessDto } from './dto/system-access.dto';
+
 @Injectable()
 export class RecruitmentService {
   constructor(
@@ -46,26 +61,28 @@ export class RecruitmentService {
 
     @InjectModel(ClearanceChecklist.name)
     private clearanceModel: Model<ClearanceChecklist>,
+////NEW OFFBOARDING 
 
     @InjectModel(EmployeeProfile.name)
-    private employeeModel: Model<EmployeeProfileDocument>, // <-- use Document type
+    private employeeModel: Model<EmployeeProfileDocument>,
+
+    @InjectModel(AppraisalRecord.name)
+    private appraisalRecordModel: Model<AppraisalRecordDocument>,
   ) {}
 
-  // ===================== OFFBOARDING =====================
+  // ================================== OFFBOARDING =======================================
 
   // 1) CREATE TERMINATION / RESIGNATION REQUEST
-  async createTerminationRequest(dto: CreateTerminationRequestDto) {
-    // Rule: EMPLOYEE can only initiate as "employee"
-    if (
-      dto.actorRole === 'EMPLOYEE' &&
-      dto.initiator !== TerminationInitiation.EMPLOYEE // 'employee'
-    ) {
-      throw new ForbiddenException(
-        'Employees may only initiate requests as EMPLOYEE.',
-      );
+  async createTerminationRequest(
+    dto: CreateTerminationRequestDto,
+    user: any,
+  ) {
+    // Guard: user must be authenticated
+    if (!user || !user.role) {
+      throw new ForbiddenException('User role missing from token.');
     }
 
-    // dto.employeeId is actually the employeeNumber string (e.g. "EMP-001")
+    // Find employee by employeeNumber (EMP-001, EMP-002, ...)
     const employee = await this.employeeModel
       .findOne({ employeeNumber: dto.employeeId })
       .exec();
@@ -74,34 +91,124 @@ export class RecruitmentService {
       throw new NotFoundException('Employee not found.');
     }
 
-    // Create termination request
-    const termination = await this.terminationModel.create({
-      // store the REAL Mongo _id as the reference (schema expects ObjectId)
-      employeeId: employee._id,
+    // --- A) RESIGNATION: employee initiates their own request ---
+    if (dto.initiator === TerminationInitiation.EMPLOYEE) {
+      // Must be an EMPLOYEE in token
+      if (user.role !== SystemRole.EMPLOYEE) {
+        throw new ForbiddenException(
+          'Only employees can initiate a resignation.',
+        );
+      }
 
-      initiator: dto.initiator, // 'employee' | 'hr' | 'manager'
-      reason: dto.reason,
-      employeeComments: dto.employeeComments,
-      terminationDate: dto.terminationDate
-        ? new Date(dto.terminationDate)
-        : undefined,
-      status: TerminationStatus.PENDING,
+      // Optional extra safety: make sure the employee is resigning themselves
+      if (
+        user.employeeNumber &&
+        user.employeeNumber !== dto.employeeId
+      ) {
+        throw new ForbiddenException(
+          'You can only submit a resignation for your own profile.',
+        );
+      }
 
-      // you don't actually have contracts → use employee._id as a dummy valid ObjectId
-      contractId: employee._id,
-    });
+      const termination = await this.terminationModel.create({
+        employeeId: employee._id,
+        initiator: dto.initiator, // 'employee'
+        reason: dto.reason,
+        employeeComments: dto.employeeComments,
+        terminationDate: dto.terminationDate
+          ? new Date(dto.terminationDate)
+          : undefined,
+        status: TerminationStatus.PENDING,
+        // no separate contract entity → use employee._id as dummy ObjectId
+        contractId: employee._id,
+      });
 
-    return termination;
+      return termination;
+    }
+
+    // --- B) HR TERMINATION BASED ON PERFORMANCE ---
+    if (
+      dto.initiator === TerminationInitiation.HR ||
+      dto.initiator === TerminationInitiation.MANAGER
+    ) {
+      // Only HR_MANAGER is allowed to do this
+      if (user.role !== SystemRole.HR_MANAGER) {
+        throw new ForbiddenException(
+          'Only HR Manager can initiate termination based on performance.',
+        );
+      }
+
+      // Get latest performance appraisal for this employee
+      const latestRecord = await this.appraisalRecordModel
+        .findOne({ employeeProfileId: employee._id })
+        .sort({ createdAt: -1 })
+        .exec();
+
+      if (!latestRecord) {
+        throw new ForbiddenException(
+          'Cannot terminate: employee has no appraisal record.',
+        );
+      }
+
+      if (
+        latestRecord.totalScore === undefined ||
+        latestRecord.totalScore === null
+      ) {
+        throw new ForbiddenException(
+          'Cannot terminate: appraisal has no total score.',
+        );
+      }
+
+      // Example rule: only allow termination if totalScore < 2.5
+      if (latestRecord.totalScore >= 2.5) {
+        throw new ForbiddenException(
+          'Cannot terminate: performance score is not low enough for termination.',
+        );
+      }
+
+      const termination = await this.terminationModel.create({
+        employeeId: employee._id,
+        initiator: dto.initiator, // 'hr' or 'manager'
+        reason:
+          dto.reason ||
+          `Termination due to poor performance (score: ${latestRecord.totalScore})`,
+        employeeComments: dto.employeeComments,
+        terminationDate: dto.terminationDate
+          ? new Date(dto.terminationDate)
+          : undefined,
+        status: TerminationStatus.PENDING,
+        contractId: employee._id,
+      });
+
+      return termination;
+    }
+
+    // --- C) Any other initiator value ---
+    throw new ForbiddenException('Unsupported termination initiator.');
   }
 
   // 2) GET TERMINATION REQUEST
   async getTerminationRequestById(id: string) {
-    return this.terminationModel.findById(id);
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Termination request not found.');
+    }
+
+    const termination = await this.terminationModel.findById(id).exec();
+    if (!termination) {
+      throw new NotFoundException('Termination request not found.');
+    }
+
+    return termination;
   }
 
   // 3) HR UPDATES TERMINATION STATUS
-  async updateTerminationStatus(id: string, dto: UpdateTerminationStatusDto) {
-    if (dto.actorRole !== 'HR_MANAGER') {
+  async updateTerminationStatus(
+    id: string,
+    dto: UpdateTerminationStatusDto,
+    user: any,
+  ) {
+    // Only HR Manager
+    if (!user || user.role !== SystemRole.HR_MANAGER) {
       throw new ForbiddenException(
         'Only HR Manager can update termination status.',
       );
@@ -113,9 +220,11 @@ export class RecruitmentService {
     }
 
     termination.status = dto.status;
+
     if (dto.hrComments !== undefined) {
       termination.hrComments = dto.hrComments;
     }
+
     if (dto.terminationDate) {
       termination.terminationDate = new Date(dto.terminationDate);
     }
@@ -124,17 +233,30 @@ export class RecruitmentService {
 
     // When approved → create clearance checklist
     if (dto.status === TerminationStatus.APPROVED) {
-      await this.createClearanceChecklist({
-        terminationId: termination._id.toString(),
-        actorRole: 'HR_MANAGER',
-      });
+      await this.createClearanceChecklist(
+        {
+          terminationId: termination._id.toString(),
+        } as CreateClearanceChecklistDto,
+        user,
+      );
     }
 
     return saved;
   }
 
   // 4) UPDATE TERMINATION DETAILS (reason/comments/date)
-  async updateTerminationDetails(id: string, dto: UpdateTerminationDetailsDto) {
+  async updateTerminationDetails(
+    id: string,
+    dto: UpdateTerminationDetailsDto,
+    user: any,
+  ) {
+    // Reasonable to restrict to HR Manager
+    if (!user || user.role !== SystemRole.HR_MANAGER) {
+      throw new ForbiddenException(
+        'Only HR Manager can edit termination details.',
+      );
+    }
+
     const update: any = {};
 
     if (dto.reason !== undefined) update.reason = dto.reason;
@@ -147,8 +269,12 @@ export class RecruitmentService {
   }
 
   // 5) CREATE CLEARANCE CHECKLIST
-  async createClearanceChecklist(dto: CreateClearanceChecklistDto) {
-    if (dto.actorRole !== 'HR_MANAGER') {
+  async createClearanceChecklist(
+    dto: CreateClearanceChecklistDto,
+    user: any,
+  ) {
+    // Only HR Manager
+    if (!user || user.role !== SystemRole.HR_MANAGER) {
       throw new ForbiddenException(
         'Only HR Manager can create clearance checklist.',
       );
@@ -170,10 +296,8 @@ export class RecruitmentService {
     return checklist.save();
   }
 
-  // 6) GET CHECKLIST BY EMPLOYEE
-  // Here employeeId is actually the employeeNumber string (e.g. "EMP-001")
+  // 6) GET CHECKLIST BY EMPLOYEE (employeeNumber)
   async getChecklistByEmployee(employeeId: string) {
-    // 1) Find employee by employeeNumber
     const employee = await this.employeeModel
       .findOne({ employeeNumber: employeeId })
       .exec();
@@ -182,7 +306,6 @@ export class RecruitmentService {
       throw new NotFoundException('Employee not found.');
     }
 
-    // 2) Find termination for that employee _id
     const termination = await this.terminationModel.findOne({
       employeeId: employee._id,
     });
@@ -191,7 +314,6 @@ export class RecruitmentService {
       throw new NotFoundException('No termination found.');
     }
 
-    // 3) Return checklist linked to that termination
     return this.clearanceModel.findOne({ terminationId: termination._id });
   }
 
@@ -199,8 +321,10 @@ export class RecruitmentService {
   async updateClearanceItemStatus(
     checklistId: string,
     dto: UpdateClearanceItemStatusDto,
+    user: any,
   ) {
-    if (dto.actorRole !== 'HR_MANAGER' && dto.actorRole !== dto.department) {
+    // For now: only HR Manager can perform department sign-offs
+    if (!user || user.role !== SystemRole.HR_MANAGER) {
       throw new ForbiddenException('Unauthorized clearance update.');
     }
 
@@ -210,7 +334,7 @@ export class RecruitmentService {
         $set: {
           'items.$.status': dto.status,
           'items.$.comments': dto.comments ?? null,
-          'items.$.updatedBy': new Types.ObjectId(dto.actorId),
+          'items.$.updatedBy': user.id ? new Types.ObjectId(user.id) : null,
           'items.$.updatedAt': new Date(),
         },
       },
@@ -238,11 +362,105 @@ export class RecruitmentService {
   }
 
   // 8) MANUAL COMPLETE
-  async markChecklistCompleted(checklistId: string) {
+  async markChecklistCompleted(checklistId: string, user: any) {
+    if (!user || user.role !== SystemRole.HR_MANAGER) {
+      throw new ForbiddenException(
+        'Only HR Manager can manually complete checklist.',
+      );
+    }
+
     return this.clearanceModel.findByIdAndUpdate(
       checklistId,
       { cardReturned: true },
       { new: true },
     );
   }
+
+  // 9) GET LATEST APPRAISAL FOR AN EMPLOYEE (by employeeNumber)
+  async getLatestAppraisalForEmployee(employeeId: string) {
+    const employee = await this.employeeModel
+      .findOne({ employeeNumber: employeeId })
+      .exec();
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found.');
+    }
+
+    // If EmployeeProfile has lastAppraisalRecordId, prefer it
+    if (employee.lastAppraisalRecordId) {
+      const record = await this.appraisalRecordModel
+        .findById(employee.lastAppraisalRecordId)
+        .exec();
+
+      if (!record) {
+        throw new NotFoundException(
+          'No appraisal record found for this employee.',
+        );
+      }
+
+      return {
+        employee: {
+          id: employee._id,
+          employeeNumber: employee.employeeNumber,
+          status: employee.status,
+          lastAppraisalDate: employee.lastAppraisalDate,
+          lastAppraisalScore: employee.lastAppraisalScore,
+          lastAppraisalRatingLabel: employee.lastAppraisalRatingLabel,
+        },
+        appraisal: record,
+      };
+    }
+
+    // Fallback: latest by employeeProfileId
+    const latestRecord = await this.appraisalRecordModel
+      .findOne({ employeeProfileId: employee._id })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!latestRecord) {
+      throw new NotFoundException(
+        'No appraisal record found for this employee.',
+      );
+    }
+
+    return {
+      employee: {
+        id: employee._id,
+        employeeNumber: employee.employeeNumber,
+        status: employee.status,
+        lastAppraisalDate: employee.lastAppraisalDate,
+        lastAppraisalScore: employee.lastAppraisalScore,
+        lastAppraisalRatingLabel: employee.lastAppraisalRatingLabel,
+      },
+      appraisal: latestRecord,
+    };
+  }
+
+  // 10) FUNCTION TO MAKE EMPLOYEE INACTIVE (SYSTEM ADMIN)
+  async revokeSystemAccess(dto: RevokeSystemAccessDto, user: any) {
+    // Only SYSTEM_ADMIN can do this
+    if (!user || user.role !== SystemRole.SYSTEM_ADMIN) {
+      throw new ForbiddenException(
+        'Only System Admin can revoke system access.',
+      );
+    }
+
+    // Find employee by employeeNumber
+    const employee = await this.employeeModel.findOne({
+      employeeNumber: dto.employeeId,
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found.');
+    }
+
+    // Update status to INACTIVE
+    employee.status = EmployeeStatus.INACTIVE;
+    await employee.save();
+
+    return {
+      message: 'System access revoked. Employee made inactive.',
+    };
+  }
 }
+// ===================================END OFFBOARDING=========================================

@@ -22,6 +22,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
      MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/'),
 
+
     TimeManagementModule, RecruitmentModule, LeavesModule, PayrollExecutionModule, PayrollConfigurationModule, PayrollTrackingModule, EmployeeProfileModule, OrganizationStructureModule, PerformanceModule],
   controllers: [AppController],
   providers: [AppService],

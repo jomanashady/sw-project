@@ -16,6 +16,8 @@ import { TerminationRequest,TerminationRequestSchema } from './models/terminatio
 import { ClearanceChecklist,ClearanceChecklistSchema } from './models/clearance-checklist.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
+//NEW FOR OFFBOARDING
+import { AppraisalRecord, AppraisalRecordSchema } from '../performance/models/appraisal-record.schema';
 @Module({
   imports:[MongooseModule.forFeature([
       { name: JobTemplate.name, schema: JobTemplateSchema },
@@ -30,8 +32,10 @@ import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/mode
       { name: Document.name, schema: DocumentSchema },
       { name: TerminationRequest.name, schema: TerminationRequestSchema },
       { name: ClearanceChecklist.name, schema: ClearanceChecklistSchema },
-      //new
+      //new for offboarding
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+        { name: AppraisalRecord.name, schema: AppraisalRecordSchema },
+
 
     ]),EmployeeProfileModule
   ],
