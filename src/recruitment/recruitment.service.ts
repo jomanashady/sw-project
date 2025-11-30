@@ -15,27 +15,51 @@ import { CreateOnboardingDto } from './dto/create-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import { UpdateOnboardingTaskDto } from './dto/update-task.dto';
 import { OnboardingTaskStatus } from './enums/onboarding-task-status.enum';
+import { Document, DocumentDocument } from './models/document.schema';
+import * as fs from 'fs-extra';
+import { DocumentType } from './enums/document-type.enum';
+import { Response } from 'express';
+import { EmployeeProfileService } from '../employee-profile/employee-profile.service';
+import { Contract, ContractDocument } from './models/contract.schema';
+import { CreateEmployeeFromContractDto } from './dto/create-employee-from-contract.dto';
+import { OfferResponseStatus } from './enums/offer-response-status.enum';
+import { OfferFinalStatus } from './enums/offer-final-status.enum';
+import { CreateEmployeeDto } from '../employee-profile/dto/create-employee.dto';
+import { EmployeeStatus } from '../employee-profile/enums/employee-profile.enums';
+import { Candidate, CandidateDocument } from '../employee-profile/models/candidate.schema';
+
 
 @Injectable()
 export class RecruitmentService {
-  constructor(
-    @InjectModel(JobRequisition.name)
-    private jobModel: Model<JobRequisition>,
-    
-    @InjectModel(Application.name)
-    private applicationModel: Model<Application>,
+ constructor(
+  @InjectModel(JobRequisition.name)
+  private jobModel: Model<JobRequisition>,
 
-    @InjectModel(Interview.name)
-    private interviewModel: Model<Interview>,
+  @InjectModel(Application.name)
+  private applicationModel: Model<Application>,
 
-    @InjectModel(Offer.name)
-    private offerModel: Model<Offer>,
+  @InjectModel(Interview.name)
+  private interviewModel: Model<Interview>,
 
-    @InjectModel('JobTemplate') private jobTemplateModel: Model<any>,
+  @InjectModel(Offer.name)
+  private offerModel: Model<Offer>,
 
-    @InjectModel(Onboarding.name) 
-    private readonly onboardingModel: Model<OnboardingDocument>,
-  ) {}
+  @InjectModel('JobTemplate') private jobTemplateModel: Model<any>,
+
+  @InjectModel(Onboarding.name)
+  private readonly onboardingModel: Model<OnboardingDocument>,
+
+  @InjectModel(Document.name)
+  private readonly documentModel: Model<DocumentDocument>,
+
+  @InjectModel(Contract.name)
+  private readonly contractModel: Model<ContractDocument>,
+
+  @InjectModel(Candidate.name)
+  private readonly candidateModel: Model<CandidateDocument>,
+
+  private readonly employeeProfileService: EmployeeProfileService,
+) {}
 
   // Utility function to calculate job requisition progress
   calculateProgress(status: string): number {
@@ -422,4 +446,322 @@ export class RecruitmentService {
       throw new BadRequestException('Failed to fetch stats: ' + error.message);
     }
   }
+  // ============= DOCUMENT UPLOAD METHODS (ONB-007) =============
+
+/**
+ * Upload document for onboarding task
+ * ONB-007: Document upload for compliance
+ */
+/**
+ * Upload document for onboarding task
+ * ONB-007: Document upload for compliance
+ */
+async uploadTaskDocument(
+  onboardingId: string,
+  taskIndex: number,
+  file: Express.Multer.File,
+  documentType: DocumentType,
+): Promise<any> {
+  try {
+    // 1. Validate onboarding exists
+    const onboarding = await this.onboardingModel.findById(onboardingId);
+    if (!onboarding) {
+      throw new NotFoundException('Onboarding not found');
+    }
+
+    // 2. Validate task index
+    if (taskIndex < 0 || taskIndex >= onboarding.tasks.length) {
+      throw new BadRequestException('Invalid task index');
+    }
+
+    // 3. Validate file exists
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // 4. Validate file type
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Invalid file type. Allowed: jpg, jpeg, png, pdf, doc, docx',
+      );
+    }
+
+    // 5. Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size exceeds 5MB limit');
+    }
+
+    // 6. Use the file path that Multer already saved
+    // (Multer's diskStorage already saved the file for us)
+    const filePath = file.path;
+
+    // 7. Create Document record
+    const document = new this.documentModel({
+      ownerId: onboarding.employeeId,
+      type: documentType,
+      filePath: filePath,
+      uploadedAt: new Date(),
+    });
+
+    const savedDocument = await document.save();
+
+    // 8. Update task with documentId
+    onboarding.tasks[taskIndex].documentId = savedDocument._id;
+
+    // Auto-complete task if it was pending
+    if (onboarding.tasks[taskIndex].status === OnboardingTaskStatus.PENDING) {
+      onboarding.tasks[taskIndex].status = OnboardingTaskStatus.COMPLETED;
+      onboarding.tasks[taskIndex].completedAt = new Date();
+    }
+
+    // 9. Check if all tasks completed
+    const allCompleted = onboarding.tasks.every(
+      (task) => task.status === OnboardingTaskStatus.COMPLETED,
+    );
+
+    if (allCompleted) {
+      onboarding.completed = true;
+      onboarding.completedAt = new Date();
+    }
+
+    // 10. Save onboarding
+    const savedOnboarding = await onboarding.save();
+
+    return {
+      message: 'Document uploaded successfully',
+      document: savedDocument.toObject(),
+      onboarding: savedOnboarding.toObject(),
+    };
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    throw error;
+  }
+}
+
+/**
+ * Download document by ID
+ */
+async downloadDocument(documentId: string, res: Response): Promise<void> {
+  try {
+    // 1. Find document
+    const document = await this.documentModel.findById(documentId).lean();
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // 2. Check file exists on disk
+    const fileExists = await fs.pathExists(document.filePath);
+    if (!fileExists) {
+      throw new NotFoundException('File not found on server');
+    }
+
+    // 3. Send file
+    res.download(document.filePath);
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get document attached to specific task
+ */
+async getTaskDocument(onboardingId: string, taskIndex: number): Promise<any> {
+  try {
+    const onboarding = await this.onboardingModel.findById(onboardingId).lean();
+    if (!onboarding) {
+      throw new NotFoundException('Onboarding not found');
+    }
+
+    if (taskIndex < 0 || taskIndex >= onboarding.tasks.length) {
+      throw new BadRequestException('Invalid task index');
+    }
+
+    const task = onboarding.tasks[taskIndex];
+    if (!task.documentId) {
+      throw new NotFoundException('No document attached to this task');
+    }
+
+    const document = await this.documentModel.findById(task.documentId).lean();
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    return document;
+  } catch (error) {
+    console.error('Error getting task document:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete document (optional - for cleanup)
+ */
+async deleteDocument(documentId: string): Promise<void> {
+  try {
+    const document = await this.documentModel.findById(documentId);
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Delete file from disk
+    const fileExists = await fs.pathExists(document.filePath);
+    if (fileExists) {
+      await fs.remove(document.filePath);
+    }
+
+    // Delete document record
+    await this.documentModel.findByIdAndDelete(documentId);
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    throw error;
+  }
+}
+
+// ============= EMPLOYEE CREATION FROM CONTRACT =============
+
+/**
+ * Create employee profile from accepted offer and signed contract
+ * HR Manager can access signed contract details to create employee profile
+ */
+async createEmployeeFromContract(
+  offerId: string,
+  dto: CreateEmployeeFromContractDto,
+): Promise<any> {
+  try {
+    // 1. Validate and get offer
+    if (!Types.ObjectId.isValid(offerId)) {
+      throw new BadRequestException('Invalid offer ID');
+    }
+
+    const offer = await this.offerModel.findById(offerId).lean();
+    if (!offer) {
+      throw new NotFoundException('Offer not found');
+    }
+
+    // 2. Validate offer status - must be accepted by candidate AND approved
+    if (offer.applicantResponse !== OfferResponseStatus.ACCEPTED) {
+      throw new BadRequestException(
+        'Offer must be accepted by candidate before creating employee profile',
+      );
+    }
+
+    if (offer.finalStatus !== OfferFinalStatus.APPROVED) {
+      throw new BadRequestException(
+        'Offer must be approved before creating employee profile',
+      );
+    }
+
+    // 3. Find contract for this offer
+    let contract: any = null;
+    if (dto.contractId) {
+      contract = await this.contractModel.findById(dto.contractId).lean();
+      if (!contract || contract.offerId.toString() !== offerId) {
+        throw new NotFoundException('Contract not found or does not match offer');
+      }
+    } else {
+      // Find contract by offerId
+      contract = await this.contractModel.findOne({ offerId: new Types.ObjectId(offerId) }).lean();
+    }
+
+    // 4. Validate contract exists and has signed document
+    if (!contract) {
+      throw new NotFoundException(
+        'No contract found for this offer. Please create and upload signed contract first.',
+      );
+    }
+
+    if (!contract.documentId) {
+      throw new BadRequestException(
+        'Contract must have a signed document attached before creating employee profile',
+      );
+    }
+
+    // 5. Verify the contract document exists
+    const contractDocument = await this.documentModel.findById(contract.documentId).lean();
+    if (!contractDocument) {
+      throw new NotFoundException('Signed contract document not found');
+    }
+
+    // 6. Get candidate data
+    const candidate = await this.candidateModel.findById(offer.candidateId).lean();
+    if (!candidate) {
+      throw new NotFoundException('Candidate not found');
+    }
+
+    // 7. Generate work email if not provided
+    let workEmail = dto.workEmail;
+    if (!workEmail) {
+      const firstName = candidate.firstName?.toLowerCase().replace(/\s+/g, '') || '';
+      const lastName = candidate.lastName?.toLowerCase().replace(/\s+/g, '') || '';
+      workEmail = `${firstName}.${lastName}@company.com`;
+    }
+
+    // 8. Map data to CreateEmployeeDto
+    const createEmployeeDto: CreateEmployeeDto = {
+      // Personal info from candidate
+      firstName: candidate.firstName,
+      middleName: candidate.middleName,
+      lastName: candidate.lastName,
+      nationalId: candidate.nationalId,
+      gender: candidate.gender,
+      maritalStatus: candidate.maritalStatus,
+      dateOfBirth: candidate.dateOfBirth,
+      personalEmail: candidate.personalEmail,
+      mobilePhone: candidate.mobilePhone,
+      homePhone: candidate.homePhone,
+      address: candidate.address,
+      profilePictureUrl: candidate.profilePictureUrl,
+
+      // Work info from offer/contract
+      workEmail: workEmail,
+      dateOfHire: contract.acceptanceDate || new Date(),
+      contractStartDate: contract.acceptanceDate,
+      contractEndDate: undefined, // Can be set manually by HR if needed
+      contractType: dto.contractType,
+      workType: dto.workType,
+      status: EmployeeStatus.PROBATION, // Default to probation for new hires
+
+      // Organizational assignment (from DTO or can be derived from offer)
+      primaryDepartmentId: dto.primaryDepartmentId,
+      supervisorPositionId: dto.supervisorPositionId,
+      payGradeId: dto.payGradeId,
+
+      // Position - can be mapped from offer.role if needed
+      primaryPositionId: dto.primaryDepartmentId, // HR can assign this manually via DTO
+    };
+
+    // 9. Create employee profile
+    const employee = await this.employeeProfileService.create(createEmployeeDto);
+
+    // 10. Return success response with employee and contract details
+    return {
+      message: 'Employee profile created successfully from contract',
+      employee: employee,
+      contractDetails: {
+        contractId: contract._id,
+        offerId: offer._id,
+        role: contract.role,
+        grossSalary: contract.grossSalary,
+        signingBonus: contract.signingBonus,
+        benefits: contract.benefits,
+        documentId: contract.documentId,
+      },
+    };
+  } catch (error) {
+    console.error('Error creating employee from contract:', error);
+    throw error;
+  }
+}
+
 }
