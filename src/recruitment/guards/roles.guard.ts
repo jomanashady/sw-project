@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SystemRole } from '../../employee-profile/enums/employee-profile.enums';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
 /**
  * RolesGuard checks if the authenticated user has the required role(s)
@@ -22,7 +23,7 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<SystemRole[]>('roles', context.getHandler());
+    const requiredRoles = this.reflector.get<SystemRole[]>(ROLES_KEY, context.getHandler());
     if (!requiredRoles || requiredRoles.length === 0) {
       // If no roles specified, allow all authenticated users
       return true;
@@ -42,7 +43,7 @@ export class RolesGuard implements CanActivate {
     const hasRole = requiredRoles.includes(user.role);
     if (!hasRole) {
       throw new ForbiddenException(
-        `   Access denied. Required roles: ${requiredRoles.join(', ')}. Your role: ${user.role}`
+        `Access denied. Required roles: ${requiredRoles.join(', ')}. Your role: ${user.role}`
       );
     }
 
