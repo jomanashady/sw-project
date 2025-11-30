@@ -16,7 +16,7 @@ import { PayrollExecutionModule } from './payroll-execution/payroll-execution.mo
   imports: [
     MongooseModule.forRootAsync({
       useFactory: async () => ({
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hr2-system',
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hr-system',
         dbName: process.env.MONGODB_DB_NAME || undefined,
       }),
     }),

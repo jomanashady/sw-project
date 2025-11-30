@@ -6,6 +6,12 @@ import { ConfigStatus } from './enums/payroll-configuration-enums';
 describe('PayrollConfigurationController', () => {
   let controller: PayrollConfigurationController;
   let service: PayrollConfigurationService;
+  const mockConnection = {
+    db: {
+      listCollections: () => ({ toArray: async () => [] }),
+      databaseName: 'test',
+    },
+  } as any;
 
   const mockPayrollConfigurationService = {
     findAllPayGrades: jest.fn(),
@@ -44,6 +50,7 @@ describe('PayrollConfigurationController', () => {
           provide: PayrollConfigurationService,
           useValue: mockPayrollConfigurationService,
         },
+        { provide: 'DatabaseConnection', useValue: mockConnection },
       ],
     }).compile();
 

@@ -366,9 +366,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay grade with ID ${id} not found`);
     }
 
-    if (payGrade.status !== ConfigStatus.DRAFT) {
+    if (payGrade.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete pay grade with status ${payGrade.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete pay grade with status ${payGrade.status}.`,
       );
     }
 
@@ -512,9 +512,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Allowance with ID ${id} not found`);
     }
 
-    if (allowance.status !== ConfigStatus.DRAFT) {
+    if (allowance.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete allowance with status ${allowance.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete allowance with status ${allowance.status}.`,
       );
     }
 
@@ -654,9 +654,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay type with ID ${id} not found`);
     }
 
-    if (payType.status !== ConfigStatus.DRAFT) {
+    if (payType.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete pay type with status ${payType.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete pay type with status ${payType.status}.`,
       );
     }
 
@@ -796,9 +796,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Tax rule with ID ${id} not found`);
     }
 
-    if (taxRule.status !== ConfigStatus.DRAFT) {
+    if (taxRule.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete tax rule with status ${taxRule.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete tax rule with status ${taxRule.status}.`,
       );
     }
 
@@ -985,9 +985,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (insuranceBracket.status !== ConfigStatus.DRAFT) {
+    if (insuranceBracket.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete insurance bracket with status ${insuranceBracket.status}.`,
       );
     }
 
@@ -1298,9 +1298,9 @@ export class PayrollConfigurationService {
       );
     }
 
-    if (benefit.status !== ConfigStatus.DRAFT) {
+    if (benefit.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete termination benefit with status ${benefit.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete termination benefit with status ${benefit.status}.`,
       );
     }
 
@@ -1469,9 +1469,9 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Payroll policy with ID ${id} not found`);
     }
 
-    if (policy.status !== ConfigStatus.DRAFT) {
+    if (policy.status === ConfigStatus.REJECTED) {
       throw new BadRequestException(
-        `Cannot delete payroll policy with status ${policy.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete payroll policy with status ${policy.status}.`,
       );
     }
 
