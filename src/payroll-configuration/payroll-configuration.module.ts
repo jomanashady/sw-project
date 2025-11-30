@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RolesGuard } from '../common/auth/roles.guard';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PayrollConfigurationController } from './payroll-configuration.controller';
 import { PayrollConfigurationService } from './payroll-configuration.service';
@@ -62,7 +63,7 @@ import {
     ]),
   ],
   controllers: [PayrollConfigurationController],
-  providers: [PayrollConfigurationService, ObjectIdPipe],
+  providers: [PayrollConfigurationService, ObjectIdPipe, RolesGuard],
   exports: [PayrollConfigurationService],
 })
 export class PayrollConfigurationModule {}
