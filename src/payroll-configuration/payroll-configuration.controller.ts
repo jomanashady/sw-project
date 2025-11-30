@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -48,9 +49,13 @@ import {
   UpdateCompanySettingsDto,
 } from './dto/company-settings.dto';
 import { ObjectIdPipe } from './common/pipes/object-id.pipe';
+import { RolesGuard } from '../common/auth/roles.guard';
+import { Roles } from '../common/auth/roles.decorator';
+import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 
 @ApiTags('payroll-configuration')
 @Controller('payroll-configuration')
+@UseGuards(RolesGuard)
 export class PayrollConfigurationController {
   constructor(
     private readonly payrollConfigService: PayrollConfigurationService,
@@ -90,6 +95,7 @@ export class PayrollConfigurationController {
   @ApiBody({ type: CreatePayGradeDto })
   @ApiResponse({ status: 201, description: 'Pay grade created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayGrade(@Body() createDto: CreatePayGradeDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createPayGrade(createDto, userId);
@@ -105,6 +111,7 @@ export class PayrollConfigurationController {
     description: 'Cannot update non-DRAFT pay grade',
   })
   @ApiResponse({ status: 404, description: 'Pay grade not found' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updatePayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayGradeDto,
@@ -122,6 +129,7 @@ export class PayrollConfigurationController {
     description: 'Cannot delete non-DRAFT pay grade',
   })
   @ApiResponse({ status: 404, description: 'Pay grade not found' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deletePayGrade(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deletePayGrade(id);
   }
@@ -136,6 +144,7 @@ export class PayrollConfigurationController {
     description: 'Cannot approve non-DRAFT pay grade',
   })
   @ApiResponse({ status: 404, description: 'Pay grade not found' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approvePayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -153,6 +162,7 @@ export class PayrollConfigurationController {
     description: 'Cannot reject non-DRAFT pay grade',
   })
   @ApiResponse({ status: 404, description: 'Pay grade not found' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectPayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -164,6 +174,7 @@ export class PayrollConfigurationController {
   @Get('stats')
   @ApiOperation({ summary: 'Get configuration statistics dashboard' })
   @ApiResponse({ status: 200, description: 'Returns configuration statistics' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async getConfigurationStats() {
     return this.payrollConfigService.getConfigurationStats();
   }
@@ -176,12 +187,14 @@ export class PayrollConfigurationController {
     description: 'Filter by user ID',
   })
   @ApiResponse({ status: 200, description: 'Returns pending approval items' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async getPendingApprovals(@Query('userId') userId?: string) {
     return this.payrollConfigService.getPendingApprovals(userId);
   }
 
   @Get('debug/db')
   @ApiOperation({ summary: 'Debug database connection info' })
+  @Roles(SystemRole.SYSTEM_ADMIN)
   async getDbDebug() {
     const db = this.connection?.db;
     if (!db) {
@@ -204,6 +217,7 @@ export class PayrollConfigurationController {
   @ApiOperation({ summary: 'Create company-wide settings' })
   @ApiResponse({ status: 201, description: 'Company settings created' })
   @ApiResponse({ status: 409, description: 'Company settings already exist' })
+  @Roles(SystemRole.SYSTEM_ADMIN)
   async createCompanySettings(@Body() createDto: CreateCompanySettingsDto) {
     if (!createDto) {
       throw new BadRequestException('Request body is required');
@@ -215,6 +229,7 @@ export class PayrollConfigurationController {
   @ApiOperation({ summary: 'Update company-wide settings' })
   @ApiResponse({ status: 200, description: 'Company settings updated' })
   @ApiResponse({ status: 404, description: 'Company settings not found' })
+  @Roles(SystemRole.SYSTEM_ADMIN)
   async updateCompanySettings(@Body() updateDto: UpdateCompanySettingsDto) {
     return this.payrollConfigService.updateCompanySettings(updateDto);
   }
@@ -239,6 +254,7 @@ export class PayrollConfigurationController {
 
   @Post('allowances')
   @ApiOperation({ summary: 'Create allowance (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createAllowance(@Body() createDto: CreateAllowanceDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createAllowance(createDto, userId);
@@ -247,6 +263,7 @@ export class PayrollConfigurationController {
   @Put('allowances/:id')
   @ApiOperation({ summary: 'Update allowance (DRAFT only)' })
   @ApiParam({ name: 'id', description: 'Allowance ID' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updateAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateAllowanceDto,
@@ -258,12 +275,14 @@ export class PayrollConfigurationController {
   @Delete('allowances/:id')
   @ApiOperation({ summary: 'Delete allowance (DRAFT only)' })
   @ApiParam({ name: 'id', description: 'Allowance ID' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deleteAllowance(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deleteAllowance(id);
   }
 
   @Post('allowances/:id/approve')
   @ApiOperation({ summary: 'Approve allowance' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approveAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -273,6 +292,7 @@ export class PayrollConfigurationController {
 
   @Post('allowances/:id/reject')
   @ApiOperation({ summary: 'Reject allowance' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -295,6 +315,7 @@ export class PayrollConfigurationController {
 
   @Post('pay-types')
   @ApiOperation({ summary: 'Create pay type (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayType(@Body() createDto: CreatePayTypeDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createPayType(createDto, userId);
@@ -302,6 +323,7 @@ export class PayrollConfigurationController {
 
   @Put('pay-types/:id')
   @ApiOperation({ summary: 'Update pay type (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updatePayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayTypeDto,
@@ -312,12 +334,14 @@ export class PayrollConfigurationController {
 
   @Delete('pay-types/:id')
   @ApiOperation({ summary: 'Delete pay type (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deletePayType(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deletePayType(id);
   }
 
   @Post('pay-types/:id/approve')
   @ApiOperation({ summary: 'Approve pay type' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approvePayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -327,6 +351,7 @@ export class PayrollConfigurationController {
 
   @Post('pay-types/:id/reject')
   @ApiOperation({ summary: 'Reject pay type' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectPayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -349,6 +374,7 @@ export class PayrollConfigurationController {
 
   @Post('tax-rules')
   @ApiOperation({ summary: 'Create tax rule (DRAFT)' })
+  @Roles(SystemRole.LEGAL_POLICY_ADMIN)
   async createTaxRule(@Body() createDto: CreateTaxRuleDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createTaxRule(createDto, userId);
@@ -356,6 +382,7 @@ export class PayrollConfigurationController {
 
   @Put('tax-rules/:id')
   @ApiOperation({ summary: 'Update tax rule (DRAFT only)' })
+  @Roles(SystemRole.LEGAL_POLICY_ADMIN)
   async updateTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateTaxRuleDto,
@@ -366,12 +393,14 @@ export class PayrollConfigurationController {
 
   @Delete('tax-rules/:id')
   @ApiOperation({ summary: 'Delete tax rule (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deleteTaxRule(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deleteTaxRule(id);
   }
 
   @Post('tax-rules/:id/approve')
   @ApiOperation({ summary: 'Approve tax rule' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approveTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -381,6 +410,7 @@ export class PayrollConfigurationController {
 
   @Post('tax-rules/:id/reject')
   @ApiOperation({ summary: 'Reject tax rule' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -405,6 +435,7 @@ export class PayrollConfigurationController {
 
   @Post('insurance-brackets')
   @ApiOperation({ summary: 'Create insurance bracket (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createInsuranceBracket(@Body() createDto: CreateInsuranceBracketDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createInsuranceBracket(createDto, userId);
@@ -412,6 +443,7 @@ export class PayrollConfigurationController {
 
   @Put('insurance-brackets/:id')
   @ApiOperation({ summary: 'Update insurance bracket (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updateInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateInsuranceBracketDto,
@@ -426,12 +458,14 @@ export class PayrollConfigurationController {
 
   @Delete('insurance-brackets/:id')
   @ApiOperation({ summary: 'Delete insurance bracket (DRAFT only)' })
+  @Roles(SystemRole.HR_MANAGER)
   async deleteInsuranceBracket(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deleteInsuranceBracket(id);
   }
 
   @Post('insurance-brackets/:id/approve')
   @ApiOperation({ summary: 'Approve insurance bracket' })
+  @Roles(SystemRole.HR_MANAGER)
   async approveInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -441,6 +475,7 @@ export class PayrollConfigurationController {
 
   @Post('insurance-brackets/:id/reject')
   @ApiOperation({ summary: 'Reject insurance bracket' })
+  @Roles(SystemRole.HR_MANAGER)
   async rejectInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -465,6 +500,7 @@ export class PayrollConfigurationController {
 
   @Post('signing-bonuses')
   @ApiOperation({ summary: 'Create signing bonus (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createSigningBonus(@Body() createDto: CreateSigningBonusDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createSigningBonus(createDto, userId);
@@ -472,6 +508,7 @@ export class PayrollConfigurationController {
 
   @Put('signing-bonuses/:id')
   @ApiOperation({ summary: 'Update signing bonus (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updateSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateSigningBonusDto,
@@ -482,12 +519,14 @@ export class PayrollConfigurationController {
 
   @Delete('signing-bonuses/:id')
   @ApiOperation({ summary: 'Delete signing bonus (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deleteSigningBonus(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deleteSigningBonus(id);
   }
 
   @Post('signing-bonuses/:id/approve')
   @ApiOperation({ summary: 'Approve signing bonus' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approveSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -497,6 +536,7 @@ export class PayrollConfigurationController {
 
   @Post('signing-bonuses/:id/reject')
   @ApiOperation({ summary: 'Reject signing bonus' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -521,6 +561,7 @@ export class PayrollConfigurationController {
 
   @Post('termination-benefits')
   @ApiOperation({ summary: 'Create termination benefit (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createTerminationBenefit(
     @Body() createDto: CreateTerminationBenefitDto,
   ) {
@@ -533,6 +574,7 @@ export class PayrollConfigurationController {
 
   @Put('termination-benefits/:id')
   @ApiOperation({ summary: 'Update termination benefit (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updateTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateTerminationBenefitDto,
@@ -547,12 +589,14 @@ export class PayrollConfigurationController {
 
   @Delete('termination-benefits/:id')
   @ApiOperation({ summary: 'Delete termination benefit (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deleteTerminationBenefit(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deleteTerminationBenefit(id);
   }
 
   @Post('termination-benefits/:id/approve')
   @ApiOperation({ summary: 'Approve termination benefit' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approveTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -562,6 +606,7 @@ export class PayrollConfigurationController {
 
   @Post('termination-benefits/:id/reject')
   @ApiOperation({ summary: 'Reject termination benefit' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
@@ -586,6 +631,7 @@ export class PayrollConfigurationController {
 
   @Post('policies')
   @ApiOperation({ summary: 'Create payroll policy (DRAFT)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayrollPolicy(@Body() createDto: CreatePayrollPolicyDto) {
     const userId = this.getUserId();
     return this.payrollConfigService.createPayrollPolicy(createDto, userId);
@@ -593,6 +639,7 @@ export class PayrollConfigurationController {
 
   @Put('policies/:id')
   @ApiOperation({ summary: 'Update payroll policy (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_SPECIALIST)
   async updatePayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayrollPolicyDto,
@@ -603,12 +650,14 @@ export class PayrollConfigurationController {
 
   @Delete('policies/:id')
   @ApiOperation({ summary: 'Delete payroll policy (DRAFT only)' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async deletePayrollPolicy(@Param('id', ObjectIdPipe) id: string) {
     return this.payrollConfigService.deletePayrollPolicy(id);
   }
 
   @Post('policies/:id/approve')
   @ApiOperation({ summary: 'Approve payroll policy' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async approvePayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
@@ -618,6 +667,7 @@ export class PayrollConfigurationController {
 
   @Post('policies/:id/reject')
   @ApiOperation({ summary: 'Reject payroll policy' })
+  @Roles(SystemRole.PAYROLL_MANAGER)
   async rejectPayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
