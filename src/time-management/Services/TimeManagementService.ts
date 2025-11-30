@@ -128,7 +128,12 @@ export class TimeManagementService {
 
   // 5. Submit a correction request for an attendance record
   async submitAttendanceCorrectionRequest(submitCorrectionRequestDto: any) {
-    const newCorrectionRequest = new this.correctionRequestModel(submitCorrectionRequestDto);
+    const newCorrectionRequest = new this.correctionRequestModel({
+      employeeId: submitCorrectionRequestDto.employeeId,
+      attendanceRecord: submitCorrectionRequestDto.attendanceRecord,
+      reason: submitCorrectionRequestDto.reason,
+      status: submitCorrectionRequestDto.status || CorrectionRequestStatus.SUBMITTED,
+    });
     return newCorrectionRequest.save();
   }
 
@@ -244,13 +249,16 @@ export class TimeManagementService {
   // ===== TIME PERMISSION & ATTENDANCE ENHANCEMENTS =====
 
   async recordPunchWithMetadata(recordPunchWithMetadataDto: RecordPunchWithMetadataDto) {
+    // Convert string dates to Date objects if they come as strings (when ValidationPipe is not configured)
+    const punchesWithDates = recordPunchWithMetadataDto.punches.map((punch) => ({
+      type: punch.type as PunchType,
+      time: punch.time instanceof Date ? punch.time : new Date(punch.time),
+    }));
+
     const attendanceRecord = new this.attendanceRecordModel({
       employeeId: recordPunchWithMetadataDto.employeeId,
-      punches: recordPunchWithMetadataDto.punches.map((punch) => ({
-        type: punch.type as PunchType,
-        time: punch.time,
-      })),
-      totalWorkMinutes: this.calculateWorkMinutesFromPunches(recordPunchWithMetadataDto.punches),
+      punches: punchesWithDates,
+      totalWorkMinutes: this.calculateWorkMinutesFromPunches(punchesWithDates),
       hasMissedPunch: recordPunchWithMetadataDto.punches.length % 2 !== 0,
       finalisedForPayroll: false,
     });
@@ -314,13 +322,17 @@ export class TimeManagementService {
   }
 
   async enforceShiftPunchPolicy(enforceShiftPunchPolicyDto: EnforceShiftPunchPolicyDto) {
+    // Convert shift times to minutes (treating them as UTC times)
     const startMinutes = this.timeStringToMinutes(enforceShiftPunchPolicyDto.shiftStart);
     const endMinutes = this.timeStringToMinutes(enforceShiftPunchPolicyDto.shiftEnd);
     const allowEarly = enforceShiftPunchPolicyDto.allowEarlyMinutes ?? 0;
     const allowLate = enforceShiftPunchPolicyDto.allowLateMinutes ?? 0;
 
     enforceShiftPunchPolicyDto.punches.forEach((punch) => {
-      const punchMinutes = this.dateToMinutes(punch.time);
+      // Convert string date to Date object if needed
+      const punchTime = punch.time instanceof Date ? punch.time : new Date(punch.time);
+      // Extract UTC hours and minutes for consistent timezone comparison
+      const punchMinutes = this.dateToMinutesUTC(punchTime);
       if (punchMinutes < startMinutes - allowEarly) {
         throw new Error('Punch occurs before the allowed start window.');
       }
@@ -699,6 +711,10 @@ export class TimeManagementService {
 
   private dateToMinutes(date: Date) {
     return date.getHours() * 60 + date.getMinutes();
+  }
+
+  private dateToMinutesUTC(date: Date) {
+    return date.getUTCHours() * 60 + date.getUTCMinutes();
   }
 
   private formatAsCSV(data: any): string {
