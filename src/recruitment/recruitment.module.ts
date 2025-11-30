@@ -21,6 +21,16 @@ import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/mode
 import { AppraisalRecord, AppraisalRecordSchema } from '../performance/models/appraisal-record.schema';
 import { Candidate, CandidateSchema } from '../employee-profile/models/candidate.schema';
 
+// ============= INTEGRATION MODULES (Uncomment when ready) =============
+// Payroll Execution Module - For ONB-018 (REQ-PY-23) and ONB-019 (REQ-PY-27)
+// import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
+
+// Time Management Module - For ONB-009 (clock access provisioning)
+// import { TimeManagementModule } from '../time-management/time-management.module';
+
+// Organization Structure Module - For validating departments/positions
+// import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -45,7 +55,13 @@ import { Candidate, CandidateSchema } from '../employee-profile/models/candidate
       { name: Onboarding.name, schema: OnboardingSchema }, // Make sure this line exists
       { name: Candidate.name, schema: CandidateSchema }, // For creating employees from candidates
     ]),
-    EmployeeProfileModule,
+    // ============= INTEGRATED MODULES =============
+    EmployeeProfileModule, // ACTIVE - For creating employees from candidates
+    
+    // ============= PENDING INTEGRATIONS (Uncomment when modules are ready) =============
+    // PayrollExecutionModule, // For payroll initiation and signing bonus processing
+    // TimeManagementModule, // For clock access provisioning
+    // OrganizationStructureModule, // For validating departments/positions in job requisitions
   ],
   controllers: [RecruitmentController],
   providers: [RecruitmentService],

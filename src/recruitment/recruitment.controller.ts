@@ -7,14 +7,15 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   UseGuards,
-} from '@nestjs/common';
-import { 
-  UseInterceptors, 
-  UploadedFile, 
-  Res 
+  UseInterceptors,
+  UploadedFile,
+  Res,
+  Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -123,31 +124,95 @@ export class RecruitmentController {
   }
 
   // ------------------------------------------
+  // JOB TEMPLATES (REC-003)
+  // ------------------------------------------
+
+  /**
+   * REC-003: HR Manager defines standardized job templates
+   * Create a new job template with qualifications and skills
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('job-template')
+  createJobTemplate(@Body() dto: any) {
+    return this.service.createJobTemplate(dto);
+  }
+
+  /**
+   * Get all job templates
+   */
+  @UseGuards(RolesGuard)
+  @Get('job-template')
+  getAllJobTemplates() {
+    return this.service.getAllJobTemplates();
+  }
+
+  /**
+   * Get job template by ID
+   */
+  @UseGuards(RolesGuard)
+  @Get('job-template/:id')
+  getJobTemplateById(@Param('id') id: string) {
+    return this.service.getJobTemplateById(id);
+  }
+
+  /**
+   * Update job template
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Put('job-template/:id')
+  updateJobTemplate(@Param('id') id: string, @Body() dto: any) {
+    return this.service.updateJobTemplate(id, dto);
+  }
+
+  // ------------------------------------------
   // APPLICATIONS (REC-007, REC-008, REC-017, REC-022)
   // ------------------------------------------
 
   /**
    * REC-007: Candidate uploads CV and applies for positions
+   * REC-028: Consent required before storing application
    * Only candidates can apply; system auto-sets candidateId
    */
   @UseGuards(RolesGuard)
   @Roles(SystemRole.JOB_CANDIDATE)
   @Post('application')
   apply(
-    @Body() dto: CreateApplicationDto,
+    @Body() dto: CreateApplicationDto & { consentGiven: boolean },
   ) {
-    return this.service.apply(dto);
+    // BR: Storing applications requires applicant authorization
+    if (!dto.consentGiven) {
+      throw new BadRequestException('Consent for data processing is required to submit application');
+    }
+    return this.service.apply(dto, dto.consentGiven);
   }
 
   /**
    * REC-008, REC-017: HR Employee tracks candidates through hiring stages
    * REC-017: Candidates receive updates about application status
+   * REC-030: Referrals get preferential filtering
    * HR staff and managers can view all; candidates see their own
    */
   @UseGuards(RolesGuard)
   @Get('application')
-  getAllApplications() {
-    return this.service.getAllApplications();
+  getAllApplications(
+    @Query('requisitionId') requisitionId?: string,
+    @Query('prioritizeReferrals') prioritizeReferrals?: string,
+  ) {
+    const prioritize = prioritizeReferrals !== 'false';
+    return this.service.getAllApplications(requisitionId, prioritize);
+  }
+
+  /**
+   * Get ranked applications based on assessment scores and referral status
+   * BR: Ranking rules enforced
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Get('application/ranked/:requisitionId')
+  getRankedApplications(@Param('requisitionId') requisitionId: string) {
+    return this.service.getRankedApplications(requisitionId);
   }
 
   /**
@@ -161,8 +226,11 @@ export class RecruitmentController {
   updateAppStatus(
     @Param('id') id: string,
     @Body() dto: UpdateApplicationStatusDto,
+    @Request() req: any,
   ) {
-    return this.service.updateApplicationStatus(id, dto);
+    // Get user ID from request (set by auth guard)
+    const changedBy = req.user?.id || req.user?._id;
+    return this.service.updateApplicationStatus(id, dto, changedBy);
   }
 
   // ------------------------------------------
@@ -195,6 +263,43 @@ export class RecruitmentController {
     @Body() dto: UpdateInterviewStatusDto,
   ) {
     return this.service.updateInterviewStatus(id, dto);
+  }
+
+  /**
+   * REC-011, REC-020: Submit interview feedback and assessment score
+   * Interviewers provide structured feedback and scoring
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.RECRUITER, SystemRole.SYSTEM_ADMIN)
+  @Post('interview/:id/feedback')
+  submitInterviewFeedback(
+    @Param('id') interviewId: string,
+    @Body() dto: { score: number; comments?: string },
+    @Request() req: any,
+  ) {
+    const interviewerId = req.user?.id || req.user?._id;
+    if (!interviewerId) {
+      throw new BadRequestException('Interviewer ID not found in request');
+    }
+    return this.service.submitInterviewFeedback(interviewId, interviewerId, dto.score, dto.comments);
+  }
+
+  /**
+   * Get all feedback for an interview
+   */
+  @UseGuards(RolesGuard)
+  @Get('interview/:id/feedback')
+  getInterviewFeedback(@Param('id') interviewId: string) {
+    return this.service.getInterviewFeedback(interviewId);
+  }
+
+  /**
+   * Get average score for an interview
+   */
+  @UseGuards(RolesGuard)
+  @Get('interview/:id/score')
+  getInterviewAverageScore(@Param('id') interviewId: string) {
+    return this.service.getInterviewAverageScore(interviewId);
   }
 
   // ------------------------------------------
@@ -241,12 +346,14 @@ export class RecruitmentController {
     return this.service.finalizeOffer(id, dto);
   }
 
-  // ============= ONBOARDING ENDPOINTS (REC-029) =============
+  // ============= EMPLOYEE CREATION FROM CONTRACT =============
   /**
    * POST /recruitment/offer/:id/create-employee
    * Create employee profile from accepted offer and signed contract
    * HR Manager access signed contract details to create employee profile
    */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('offer/:id/create-employee')
   async createEmployeeFromContract(
     @Param('id') offerId: string,
@@ -384,70 +491,234 @@ export class RecruitmentController {
   async deleteOnboarding(@Param('id') id: string) {
     return this.service.deleteOnboarding(id);
   }
-// ============= DOCUMENT UPLOAD ENDPOINTS (ONB-007) =============
+  // ============= DOCUMENT UPLOAD ENDPOINTS (ONB-007) =============
 
-/**
- * POST /recruitment/onboarding/:id/task/:taskIndex/upload
- * Upload document for specific onboarding task
- */
-@Post('onboarding/:id/task/:taskIndex/upload')
-@UseInterceptors(FileInterceptor('file', multerConfig))
-async uploadTaskDocument(
-  @Param('id') onboardingId: string,
-  @Param('taskIndex') taskIndex: string,
-  @UploadedFile() file: Express.Multer.File,
-  @Body('documentType') documentType: DocumentType,
-) {
-  return this.service.uploadTaskDocument(
-    onboardingId,
-    parseInt(taskIndex, 10),
-    file,
-    documentType,
-  );
-}
+  /**
+   * POST /recruitment/onboarding/:id/task/:taskIndex/upload
+   * Upload document for specific onboarding task
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:id/task/:taskIndex/upload')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadTaskDocument(
+    @Param('id') onboardingId: string,
+    @Param('taskIndex') taskIndex: string,
+    @UploadedFile() file: any,
+    @Body('documentType') documentType: DocumentType,
+  ) {
+    return this.service.uploadTaskDocument(
+      onboardingId,
+      parseInt(taskIndex, 10),
+      file,
+      documentType,
+    );
+  }
 
-/**
- * GET /recruitment/document/:documentId/download
- * Download document by ID
- */
-@Get('document/:documentId/download')
-async downloadDocument(
-  @Param('documentId') documentId: string,
-  @Res() res: Response,
-) {
-  return this.service.downloadDocument(documentId, res);
-}
+  /**
+   * GET /recruitment/document/:documentId/download
+   * Download document by ID
+   */
+  @UseGuards(RolesGuard)
+  @Get('document/:documentId/download')
+  async downloadDocument(
+    @Param('documentId') documentId: string,
+    @Res() res: Response,
+  ) {
+    return this.service.downloadDocument(documentId, res);
+  }
 
-/**
- * GET /recruitment/onboarding/:id/task/:taskIndex/document
- * Get document metadata for specific task
- */
-@Get('onboarding/:id/task/:taskIndex/document')
-async getTaskDocument(
-  @Param('id') onboardingId: string,
-  @Param('taskIndex') taskIndex: string,
-) {
-  return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10));
-}
+  /**
+   * GET /recruitment/onboarding/:id/task/:taskIndex/document
+   * Get document metadata for specific task
+   */
+  @UseGuards(RolesGuard)
+  @Get('onboarding/:id/task/:taskIndex/document')
+  async getTaskDocument(
+    @Param('id') onboardingId: string,
+    @Param('taskIndex') taskIndex: string,
+  ) {
+    return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10));
+  }
 
-/**
- * DELETE /recruitment/document/:documentId
- * Delete document (cleanup)
- */
-@Delete('document/:documentId')
-@HttpCode(HttpStatus.NO_CONTENT)
-async deleteDocument(@Param('documentId') documentId: string) {
-  return this.service.deleteDocument(documentId);
-}
+  /**
+   * DELETE /recruitment/document/:documentId
+   * Delete document (cleanup)
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Delete('document/:documentId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteDocument(@Param('documentId') documentId: string) {
+    return this.service.deleteDocument(documentId);
+  }
 
+  // ------------------------------------------
+  // ONBOARDING ENHANCEMENTS
+  // ------------------------------------------
+
+  /**
+   * ONB-005: Send reminders for overdue or upcoming tasks
+   * BR: Reminders required
+   * This endpoint can be called by a scheduled job/cron
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/send-reminders')
+  async sendOnboardingReminders() {
+    await this.service.sendOnboardingReminders();
+    return { message: 'Reminders sent successfully' };
+  }
+
+  /**
+   * ONB-009: Provision system access (SSO/email/tools)
+   * BR: IT access automated
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/provision-access/:taskIndex')
+  async provisionSystemAccess(
+    @Param('employeeId') employeeId: string,
+    @Param('taskIndex') taskIndex: string,
+  ) {
+    return this.service.provisionSystemAccess(employeeId, parseInt(taskIndex, 10));
+  }
+
+  /**
+   * ONB-012: Reserve and track equipment, desk, and access cards
+   * BR: All resources tracked
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/reserve-equipment')
+  async reserveEquipment(
+    @Param('employeeId') employeeId: string,
+    @Body() dto: { equipmentType: string; equipmentDetails: any },
+  ) {
+    return this.service.reserveEquipment(employeeId, dto.equipmentType, dto.equipmentDetails);
+  }
+
+  /**
+   * ONB-013: Schedule automatic account provisioning and revocation
+   * BR: Provisioning and security must be consistent
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/schedule-access')
+  async scheduleAccessProvisioning(
+    @Param('employeeId') employeeId: string,
+    @Body() dto: { startDate: string; endDate?: string },
+  ) {
+    const startDate = new Date(dto.startDate);
+    const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
+    return this.service.scheduleAccessProvisioning(employeeId, startDate, endDate);
+  }
+
+  /**
+   * ONB-018: Automatically handle payroll initiation
+   * BR: Payroll trigger automatic (REQ-PY-23)
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/trigger-payroll')
+  async triggerPayrollInitiation(
+    @Param('employeeId') employeeId: string,
+    @Body() dto: { contractSigningDate: string; grossSalary: number },
+  ) {
+    const contractSigningDate = new Date(dto.contractSigningDate);
+    return this.service.triggerPayrollInitiation(employeeId, contractSigningDate, dto.grossSalary);
+  }
+
+  /**
+   * ONB-019: Automatically process signing bonuses
+   * BR: Bonuses treated as distinct payroll components (REQ-PY-27)
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/process-bonus')
+  async processSigningBonus(
+    @Param('employeeId') employeeId: string,
+    @Body() dto: { signingBonus: number; contractSigningDate: string },
+  ) {
+    const contractSigningDate = new Date(dto.contractSigningDate);
+    return this.service.processSigningBonus(employeeId, dto.signingBonus, contractSigningDate);
+  }
+
+  /**
+   * Cancel/terminate onboarding in case of no-show
+   * BR: Allow onboarding cancellation/termination
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:employeeId/cancel')
+  async cancelOnboarding(
+    @Param('employeeId') employeeId: string,
+    @Body() dto: { reason: string },
+  ) {
+    return this.service.cancelOnboarding(employeeId, dto.reason);
+  }
+
+  // ------------------------------------------
+  // REFERRALS (REC-030)
+  // ------------------------------------------
+
+  /**
+   * REC-030: Tag candidate as referral
+   * HR Employee can tag candidates as referrals to give them higher priority
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('candidate/:candidateId/referral')
+  tagCandidateAsReferral(
+    @Param('candidateId') candidateId: string,
+    @Body() dto: { referringEmployeeId: string; role?: string; level?: string },
+    @Request() req: any,
+  ) {
+    // Use referringEmployeeId from body, or fallback to current user
+    const referringEmployeeId = dto.referringEmployeeId || req.user?.id || req.user?._id;
+    if (!referringEmployeeId) {
+      throw new BadRequestException('Referring employee ID is required');
+    }
+    return this.service.tagCandidateAsReferral(candidateId, referringEmployeeId, dto.role, dto.level);
+  }
+
+  /**
+   * Get all referrals for a candidate
+   */
+  @UseGuards(RolesGuard)
+  @Get('candidate/:candidateId/referrals')
+  getCandidateReferrals(@Param('candidateId') candidateId: string) {
+    return this.service.getCandidateReferrals(candidateId);
+  }
+
+  // ------------------------------------------
+  // CANDIDATE CONSENT (REC-028)
+  // ------------------------------------------
+
+  /**
+   * REC-028: Record candidate consent for data processing
+   * Candidates give consent for personal-data processing and background checks
+   */
+  @UseGuards(RolesGuard)
+  @Post('candidate/:candidateId/consent')
+  recordCandidateConsent(
+    @Param('candidateId') candidateId: string,
+    @Body() dto: { consentGiven: boolean; consentType?: string; notes?: string },
+  ) {
+    return this.service.recordCandidateConsent(
+      candidateId,
+      dto.consentGiven,
+      dto.consentType || 'data_processing',
+      dto.notes,
+    );
+  }
   
   
   @UseGuards(
   // JwtAuthGuard,   // uncomment when you plug the real auth guard
   RolesGuard,
 )
-export class RecruitmentController {
-  constructor(private readonly service: RecruitmentService) {}
+
 
   // ============================= OFFBOARDING =============================
 
