@@ -1,11 +1,19 @@
 /**
  * Route Validation Script
+<<<<<<< HEAD
  *
+=======
+ * 
+>>>>>>> karma
  * This script validates consistency between:
  * - Controller routes and their DTOs
  * - DTOs and Mongoose schemas
  * - Route parameters and service methods
+<<<<<<< HEAD
  *
+=======
+ * 
+>>>>>>> karma
  * Run with: ts-node src/employee-profile/scripts/validate-routes.ts
  */
 
@@ -124,6 +132,7 @@ class RouteValidator {
     for (const file of dtoFiles) {
       try {
         const content = readFileSync(join(dtoPath, file), 'utf-8');
+<<<<<<< HEAD
 
         // Check for required validators
         if (file === 'create-employee.dto.ts') {
@@ -146,16 +155,30 @@ class RouteValidator {
               `CreateEmployeeDto missing nationalId validation`,
               file,
             );
+=======
+        
+        // Check for required validators
+        if (file === 'create-employee.dto.ts') {
+          if (!content.includes('@IsString()') || !content.includes('firstName')) {
+            this.addIssue('error', `CreateEmployeeDto missing required validators`, file);
+          }
+          if (!content.includes('nationalId') || !content.includes('@Matches')) {
+            this.addIssue('error', `CreateEmployeeDto missing nationalId validation`, file);
+>>>>>>> karma
           }
         }
 
         if (file === 'query-employee.dto.ts') {
           if (!content.includes('@IsOptional()')) {
+<<<<<<< HEAD
             this.addIssue(
               'warning',
               `QueryEmployeeDto should have optional validators`,
               file,
             );
+=======
+            this.addIssue('warning', `QueryEmployeeDto should have optional validators`, file);
+>>>>>>> karma
           }
         }
       } catch (error) {
@@ -168,7 +191,11 @@ class RouteValidator {
     console.log('📊 Validating Schemas...');
 
     const schemaPath = join(__dirname, '../models');
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> karma
     try {
       // Read both schema files
       const employeeProfileContent = readFileSync(
@@ -181,7 +208,15 @@ class RouteValidator {
       );
 
       // Check EmployeeProfile schema structure
+<<<<<<< HEAD
       const employeeProfileFields = ['employeeNumber', 'dateOfHire', 'status'];
+=======
+      const employeeProfileFields = [
+        'employeeNumber',
+        'dateOfHire',
+        'status',
+      ];
+>>>>>>> karma
 
       for (const field of employeeProfileFields) {
         if (!employeeProfileContent.includes(field)) {
@@ -239,10 +274,17 @@ class RouteValidator {
     console.log('🔢 Validating Enums...');
 
     const enumPath = join(__dirname, '../enums/employee-profile.enums.ts');
+<<<<<<< HEAD
 
     try {
       const content = readFileSync(enumPath, 'utf-8');
 
+=======
+    
+    try {
+      const content = readFileSync(enumPath, 'utf-8');
+      
+>>>>>>> karma
       const requiredEnums = [
         'EmployeeStatus',
         'SystemRole',
@@ -254,11 +296,15 @@ class RouteValidator {
 
       for (const enumName of requiredEnums) {
         if (!content.includes(`enum ${enumName}`)) {
+<<<<<<< HEAD
           this.addIssue(
             'error',
             `Missing required enum: ${enumName}`,
             enumPath,
           );
+=======
+          this.addIssue('error', `Missing required enum: ${enumName}`, enumPath);
+>>>>>>> karma
         }
       }
 
@@ -273,11 +319,15 @@ class RouteValidator {
 
       for (const role of systemRoleValues) {
         if (!content.includes(role)) {
+<<<<<<< HEAD
           this.addIssue(
             'warning',
             `SystemRole enum may be missing: ${role}`,
             enumPath,
           );
+=======
+          this.addIssue('warning', `SystemRole enum may be missing: ${role}`, enumPath);
+>>>>>>> karma
         }
       }
     } catch (error) {
@@ -289,10 +339,17 @@ class RouteValidator {
     console.log('⚙️  Validating Service Methods...');
 
     const servicePath = join(__dirname, '../employee-profile.service.ts');
+<<<<<<< HEAD
 
     try {
       const content = readFileSync(servicePath, 'utf-8');
 
+=======
+    
+    try {
+      const content = readFileSync(servicePath, 'utf-8');
+      
+>>>>>>> karma
       const requiredMethods = [
         'create',
         'findAll',
@@ -308,15 +365,20 @@ class RouteValidator {
 
       for (const method of requiredMethods) {
         if (!content.includes(`async ${method}(`)) {
+<<<<<<< HEAD
           this.addIssue(
             'error',
             `Service missing required method: ${method}`,
             servicePath,
           );
+=======
+          this.addIssue('error', `Service missing required method: ${method}`, servicePath);
+>>>>>>> karma
         }
       }
 
       // Check for proper error handling
+<<<<<<< HEAD
       if (
         !content.includes('NotFoundException') ||
         !content.includes('BadRequestException')
@@ -326,6 +388,10 @@ class RouteValidator {
           `Service should use proper exception types`,
           servicePath,
         );
+=======
+      if (!content.includes('NotFoundException') || !content.includes('BadRequestException')) {
+        this.addIssue('warning', `Service should use proper exception types`, servicePath);
+>>>>>>> karma
       }
     } catch (error) {
       this.addIssue('error', `Cannot read service file`, servicePath);
@@ -337,6 +403,7 @@ class RouteValidator {
 
     // This would require parsing TypeScript AST
     // For now, we'll do basic checks
+<<<<<<< HEAD
 
     const dtoPath = join(__dirname, '../dto/create-employee.dto.ts');
     const schemaPath = join(__dirname, '../models/employee-profile.schema.ts');
@@ -387,6 +454,37 @@ class RouteValidator {
     message: string,
     location: string,
   ) {
+=======
+    
+    const dtoPath = join(__dirname, '../dto/create-employee.dto.ts');
+    const schemaPath = join(__dirname, '../models/employee-profile.schema.ts');
+    
+    try {
+      const dtoContent = readFileSync(dtoPath, 'utf-8');
+      const schemaContent = readFileSync(schemaPath, 'utf-8');
+      
+      // Check common fields
+      const commonFields = ['firstName', 'lastName', 'nationalId', 'dateOfHire'];
+      
+      for (const field of commonFields) {
+        const inDto = dtoContent.includes(field);
+        const inSchema = schemaContent.includes(field);
+        
+        if (inDto && !inSchema) {
+          this.addIssue('error', `Field ${field} in DTO but not in schema`, 'DTO-Schema');
+        }
+        if (inSchema && !inDto && field !== 'employeeNumber') {
+          // employeeNumber is auto-generated, so it's OK to not be in DTO
+          this.addIssue('warning', `Field ${field} in schema but not in DTO`, 'DTO-Schema');
+        }
+      }
+    } catch (error) {
+      this.addIssue('error', `Cannot validate DTO-Schema consistency`, 'DTO-Schema');
+    }
+  }
+
+  private addIssue(severity: 'error' | 'warning', message: string, location: string) {
+>>>>>>> karma
     this.issues.push({ severity, message, location });
   }
 
@@ -395,8 +493,13 @@ class RouteValidator {
     console.log('📊 VALIDATION REPORT');
     console.log('='.repeat(60) + '\n');
 
+<<<<<<< HEAD
     const errors = this.issues.filter((i) => i.severity === 'error');
     const warnings = this.issues.filter((i) => i.severity === 'warning');
+=======
+    const errors = this.issues.filter(i => i.severity === 'error');
+    const warnings = this.issues.filter(i => i.severity === 'warning');
+>>>>>>> karma
 
     if (errors.length > 0) {
       console.log(`❌ ERRORS (${errors.length}):`);
@@ -419,9 +522,13 @@ class RouteValidator {
     }
 
     console.log('='.repeat(60));
+<<<<<<< HEAD
     console.log(
       `Total Issues: ${this.issues.length} (${errors.length} errors, ${warnings.length} warnings)`,
     );
+=======
+    console.log(`Total Issues: ${this.issues.length} (${errors.length} errors, ${warnings.length} warnings)`);
+>>>>>>> karma
     console.log('='.repeat(60) + '\n');
 
     if (errors.length > 0) {
@@ -437,3 +544,7 @@ if (require.main === module) {
 }
 
 export { RouteValidator };
+<<<<<<< HEAD
+=======
+
+>>>>>>> karma

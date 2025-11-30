@@ -16,8 +16,19 @@
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
+<<<<<<< HEAD
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true
   }
+=======
+    "noFallthroughCasesInSwitch": false,
+    "types": ["jest", "node"]
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/scripts/**"
+  ]
+>>>>>>> karma
 }

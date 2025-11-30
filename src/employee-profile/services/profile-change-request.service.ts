@@ -90,7 +90,11 @@ export class ProfileChangeRequestService {
       { new: true },
     );
 
+<<<<<<< HEAD
     return updated;
+=======
+    return updated!;
+>>>>>>> karma
   }
 
   async cancel(
@@ -118,7 +122,11 @@ export class ProfileChangeRequestService {
       { new: true },
     );
 
+<<<<<<< HEAD
     return updated;
+=======
+    return updated!;
+>>>>>>> karma
   }
 
   private async generateRequestId(): Promise<string> {
@@ -138,4 +146,8 @@ export class ProfileChangeRequestService {
 
     return `${prefix}-${sequence.toString().padStart(4, '0')}`;
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma

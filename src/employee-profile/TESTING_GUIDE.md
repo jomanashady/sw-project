@@ -285,4 +285,7 @@ npm run test:e2e:employee
 - DTOs use class-validator decorators for validation
 - Schemas use Mongoose decorators for database structure
 - Enums should be used consistently across DTOs, schemas, and controllers
+<<<<<<< HEAD
 
+=======
+>>>>>>> karma

@@ -1,9 +1,13 @@
 import { IsString, IsOptional, IsMongoId, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+<<<<<<< HEAD
 import {
   StructureRequestType,
   StructureRequestStatus,
 } from '../enums/organization-structure.enums';
+=======
+import { StructureRequestType, StructureRequestStatus } from '../enums/organization-structure.enums';
+>>>>>>> karma
 
 export class CreateStructureChangeRequestDto {
   @ApiProperty()
@@ -107,4 +111,8 @@ export class StructureChangeRequestResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma

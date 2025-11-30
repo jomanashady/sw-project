@@ -142,4 +142,8 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsMongoId()
   payGradeId?: string;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> karma
