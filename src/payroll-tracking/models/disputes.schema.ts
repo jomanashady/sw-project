@@ -20,8 +20,14 @@ export class disputes {
   })
   employeeId: mongoose.Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
-  financeStaffId?: mongoose.Types.ObjectId;
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
+    financeStaffId?: mongoose.Types.ObjectId;
+
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
+    payrollSpecialistId?: mongoose.Types.ObjectId;
+
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Employee.name })
+    payrollManagerId?: mongoose.Types.ObjectId;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
@@ -30,13 +36,8 @@ export class disputes {
   })
   payslipId: mongoose.Types.ObjectId;
 
-  @Prop({
-    required: true,
-    type: String,
-    enum: DisputeStatus,
-    default: DisputeStatus.UNDER_REVIEW,
-  })
-  status: DisputeStatus; // under review, approved, rejected
+    @Prop({ required: true, type: String, enum: DisputeStatus, default: DisputeStatus.UNDER_REVIEW })
+    status: DisputeStatus;// under review,pending_manager_approval, approved, rejected
 
   @Prop()
   rejectionReason?: string;
