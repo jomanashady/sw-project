@@ -50,7 +50,11 @@ export class TimeManagementController {
 
   // ===== Clocking and Attendance Records =====
   @Post('clock-in/:employeeId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.FINANCE_STAFF,
+  )
   async clockInWithID(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
@@ -66,7 +70,11 @@ export class TimeManagementController {
   }
 
   @Post('clock-out/:employeeId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.FINANCE_STAFF,
+  )
   async clockOutWithID(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
@@ -122,6 +130,7 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
+    SystemRole.FINANCE_STAFF,
     SystemRole.SYSTEM_ADMIN,
   )
   async submitAttendanceCorrectionRequest(

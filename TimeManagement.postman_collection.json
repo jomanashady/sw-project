@@ -1,0 +1,1312 @@
+{
+	"info": {
+		"_postman_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+		"name": "Time Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:6000"
+		},
+		{
+			"key": "accessToken",
+			"value": "YOUR_JWT_TOKEN_HERE"
+		},
+		{
+			"key": "employeeId",
+			"value": "employee-id-here"
+		},
+		{
+			"key": "attendanceId",
+			"value": "attendance-id-here"
+		},
+		{
+			"key": "shiftId",
+			"value": "shift-id-here"
+		},
+		{
+			"key": "shiftTypeId",
+			"value": "shift-type-id-here"
+		},
+		{
+			"key": "overtimeRuleId",
+			"value": "overtime-rule-id-here"
+		},
+		{
+			"key": "latenessRuleId",
+			"value": "lateness-rule-id-here"
+		},
+		{
+			"key": "holidayId",
+			"value": "holiday-id-here"
+		},
+		{
+			"key": "timeExceptionId",
+			"value": "time-exception-id-here"
+		},
+		{
+			"key": "correctionRequestId",
+			"value": "correction-request-id-here"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Time Management",
+			"item": [
+				{
+					"name": "Clocking and Attendance",
+					"item": [
+						{
+							"name": "Clock In",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "clock-in", "{{employeeId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Clock Out",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time-management/clock-out/{{employeeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "clock-out", "{{employeeId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Attendance Record",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"punches\": [\n    {\"type\": \"IN\", \"time\": \"2025-12-01T09:00:00.000Z\"},\n    {\"type\": \"OUT\", \"time\": \"2025-12-01T17:00:00.000Z\"}\n  ],\n  \"totalWorkMinutes\": 480,\n  \"hasMissedPunch\": false,\n  \"exceptionIds\": [],\n  \"finalisedForPayroll\": false\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Attendance Record",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"punches\": [\n    {\"type\": \"IN\", \"time\": \"2025-12-01T08:30:00.000Z\"},\n    {\"type\": \"OUT\", \"time\": \"2025-12-01T17:30:00.000Z\"}\n  ],\n  \"totalWorkMinutes\": 540,\n  \"hasMissedPunch\": false,\n  \"exceptionIds\": [],\n  \"finalisedForPayroll\": false\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/{{attendanceId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "{{attendanceId}}"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Attendance Corrections",
+					"item": [
+						{
+							"name": "Submit Correction Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"attendanceRecord\": \"{{attendanceId}}\",\n  \"reason\": \"Forgot to clock out due to urgent meeting\",\n  \"status\": \"SUBMITTED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/correction",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "correction"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Correction Requests",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"SUBMITTED\",\n  \"employeeId\": \"{{employeeId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/corrections",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "corrections"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Approve Correction Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"correctionRequestId\": \"{{correctionRequestId}}\",\n  \"reason\": \"Valid reason provided\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/corrections/approve",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "corrections", "approve"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Reject Correction Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"correctionRequestId\": \"{{correctionRequestId}}\",\n  \"reason\": \"Insufficient documentation\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/corrections/reject",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "corrections", "reject"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Punch Enhancements",
+					"item": [
+						{
+							"name": "Record Punch with Metadata",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"punches\": [{\"type\": \"IN\", \"time\": \"2025-12-01T09:00:00.000Z\"}],\n  \"deviceId\": \"device-001\",\n  \"location\": \"Main Office\",\n  \"source\": \"biometric\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/punch/metadata",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "punch", "metadata"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Record Punch from Device",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"punches\": [{\"type\": \"IN\", \"time\": \"2025-12-01T09:00:00.000Z\"}],\n  \"deviceId\": \"device-001\",\n  \"location\": \"Main Office\",\n  \"source\": \"biometric\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/punch/device",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "punch", "device"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Enforce Punch Policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"punches\": [\n    {\"type\": \"IN\", \"time\": \"2025-12-01T09:00:00.000Z\"},\n    {\"type\": \"OUT\", \"time\": \"2025-12-01T17:00:00.000Z\"}\n  ],\n  \"policy\": \"FIRST_LAST\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/enforce-punch-policy",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "enforce-punch-policy"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Apply Attendance Rounding",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"attendanceRecordId\": \"{{attendanceId}}\",\n  \"intervalMinutes\": 15,\n  \"strategy\": \"NEAREST\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/rounding",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "rounding"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Enforce Shift Punch Policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"punches\": [\n    {\"type\": \"IN\", \"time\": \"2025-12-01T09:00:00.000Z\"},\n    {\"type\": \"OUT\", \"time\": \"2025-12-01T17:00:00.000Z\"}\n  ],\n  \"shiftStart\": \"09:00\",\n  \"shiftEnd\": \"17:00\",\n  \"allowEarlyMinutes\": 15,\n  \"allowLateMinutes\": 10\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/attendance/enforce-shift-policy",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "attendance", "enforce-shift-policy"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Time Exceptions",
+					"item": [
+						{
+							"name": "Create Time Exception",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"type\": \"MISSED_PUNCH\",\n  \"attendanceRecordId\": \"{{attendanceId}}\",\n  \"assignedTo\": \"manager-id-here\",\n  \"status\": \"OPEN\",\n  \"reason\": \"Forgot to clock out\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Time Exception",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"PENDING\",\n  \"assignedTo\": \"hr-manager-id\",\n  \"reason\": \"Under review\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception/{{timeExceptionId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception", "{{timeExceptionId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Time Exceptions by Employee",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"status\": \"OPEN\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception/employee/{{employeeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception", "employee", "{{employeeId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Approve Time Exception",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"timeExceptionId\": \"{{timeExceptionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception/approve",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception", "approve"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Reject Time Exception",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"timeExceptionId\": \"{{timeExceptionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception/reject",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception", "reject"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Escalate Time Exception",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"timeExceptionId\": \"{{timeExceptionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/time-exception/escalate",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "time-exception", "escalate"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Automation",
+					"item": [
+						{
+							"name": "Check Expiring Shift Assignments",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"daysBeforeExpiry\": 7\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/check-expiring-shifts",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "check-expiring-shifts"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Detect Missed Punches",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/detect-missed-punches",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "detect-missed-punches"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Escalate Before Payroll",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"payrollCutOffDate\": \"2025-12-31T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/escalate-before-payroll",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "escalate-before-payroll"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Monitor Repeated Lateness",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"threshold\": 3,\n  \"lookbackDays\": 30\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/monitor-lateness",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "monitor-lateness"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Trigger Lateness Disciplinary",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"action\": \"warning\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/trigger-lateness",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "trigger-lateness"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Schedule Time Data Backup",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time-management/automation/schedule-backup",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "automation", "schedule-backup"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reporting",
+					"item": [
+						{
+							"name": "Generate Overtime Report",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/reports/overtime",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "reports", "overtime"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate Lateness Report",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/reports/lateness",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "reports", "lateness"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate Exception Report",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/reports/exception",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "reports", "exception"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Export Report",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reportType\": \"overtime\",\n  \"format\": \"excel\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/time-management/reports/export",
+									"host": ["{{baseUrl}}"],
+									"path": ["time-management", "reports", "export"]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Shift Schedule",
+			"item": [
+				{
+					"name": "Create Shift Type",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Morning Shift\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/type",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "type"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Day Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"17:00\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 15,\n  \"graceOutMinutes\": 10,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Day Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"08:30\",\n  \"endTime\": \"17:30\",\n  \"punchPolicy\": \"MULTIPLE\",\n  \"graceInMinutes\": 10,\n  \"graceOutMinutes\": 15,\n  \"requiresApprovalForOvertime\": false,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "{{shiftId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Shift to Employee",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assign"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Schedule Rule",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Weekly Rotation\",\n  \"pattern\": \"MON-FRI\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Define Flexible Scheduling Rules",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Flexible Hours\",\n  \"pattern\": \"FLEX-8HR\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/flexible",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "flexible"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Policy Configuration",
+			"item": [
+				{
+					"name": "Overtime Rules",
+					"item": [
+						{
+							"name": "Create Overtime Rule",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Standard Overtime\",\n  \"description\": \"1.5x pay for hours beyond 40\",\n  \"active\": true,\n  \"approved\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/overtime",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "overtime"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Overtime Rules",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/overtime?active=true&approved=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "overtime"],
+									"query": [
+										{"key": "active", "value": "true"},
+										{"key": "approved", "value": "true"}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Overtime Rule by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/overtime/{{overtimeRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "overtime", "{{overtimeRuleId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Overtime Rule",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Overtime\",\n  \"description\": \"2x pay for weekend\",\n  \"active\": true,\n  \"approved\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/overtime/{{overtimeRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "overtime", "{{overtimeRuleId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Overtime Rule",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/overtime/{{overtimeRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "overtime", "{{overtimeRuleId}}"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Lateness Rules",
+					"item": [
+						{
+							"name": "Create Lateness Rule",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Standard Lateness\",\n  \"description\": \"Deduction per minute late\",\n  \"gracePeriodMinutes\": 15,\n  \"deductionForEachMinute\": 0.5,\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/lateness",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "lateness"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Lateness Rules",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/lateness?active=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "lateness"],
+									"query": [{"key": "active", "value": "true"}]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Lateness Rule by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/lateness/{{latenessRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "lateness", "{{latenessRuleId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Lateness Rule",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Lateness\",\n  \"description\": \"Stricter policy\",\n  \"gracePeriodMinutes\": 10,\n  \"deductionForEachMinute\": 1.0,\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/lateness/{{latenessRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "lateness", "{{latenessRuleId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Lateness Rule",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/lateness/{{latenessRuleId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "lateness", "{{latenessRuleId}}"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Holidays",
+					"item": [
+						{
+							"name": "Create Holiday",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"New Year\",\n  \"type\": \"NATIONAL\",\n  \"startDate\": \"2026-01-01T00:00:00.000Z\",\n  \"endDate\": \"2026-01-01T23:59:59.000Z\",\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Holidays",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday?active=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday"],
+									"query": [{"key": "active", "value": "true"}]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Upcoming Holidays",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/upcoming?days=30",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "upcoming"],
+									"query": [{"key": "days", "value": "30"}]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Holiday by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/{{holidayId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "{{holidayId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Holiday",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Holiday\",\n  \"type\": \"ORGANIZATIONAL\",\n  \"startDate\": \"2026-01-01T00:00:00.000Z\",\n  \"endDate\": \"2026-01-02T23:59:59.000Z\",\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/{{holidayId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "{{holidayId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Holiday",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/{{holidayId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "{{holidayId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Check Holiday",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"date\": \"2026-01-01T00:00:00.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/check",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "check"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Validate Attendance Holiday",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"date\": \"2026-01-01T00:00:00.000Z\",\n  \"suppressPenalty\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/policy-config/holiday/validate-attendance",
+									"host": ["{{baseUrl}}"],
+									"path": ["policy-config", "holiday", "validate-attendance"]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Notification Sync",
+			"item": [
+				{
+					"name": "Send Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"{{employeeId}}\",\n  \"type\": \"attendance_reminder\",\n  \"message\": \"Please clock out before leaving.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/notification",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "notification"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notification Logs by Employee",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/notification/employee/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "notification", "employee", "{{employeeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Sync Attendance with Payroll",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/sync/attendance",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "sync", "attendance"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Sync Leave with Payroll",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/sync/leave",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "sync", "leave"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Sync Attendance and Leave",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"startDate\": \"2025-11-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/sync/attendance-leave",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "sync", "attendance-leave"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance Data for Sync",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/sync/attendance/{{employeeId}}?startDate=2025-11-01&endDate=2025-11-30",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "sync", "attendance", "{{employeeId}}"],
+							"query": [
+								{"key": "startDate", "value": "2025-11-01"},
+								{"key": "endDate", "value": "2025-11-30"}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Overtime Data for Sync",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/sync/overtime/{{employeeId}}?startDate=2025-11-01&endDate=2025-11-30",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "sync", "overtime", "{{employeeId}}"],
+							"query": [
+								{"key": "startDate", "value": "2025-11-01"},
+								{"key": "endDate", "value": "2025-11-30"}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
