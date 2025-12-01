@@ -79,5 +79,8 @@ import { PolicyConfigService } from './services/policy-config.service';
     NotificationService,
     PolicyConfigService,
   ],
+  exports: [
+    TimeManagementService, // Export for use in other modules (e.g., RecruitmentModule)
+  ],
 })
 export class TimeManagementModule {}

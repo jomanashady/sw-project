@@ -51,13 +51,17 @@ import {
 
 // ============= INTEGRATION MODULES (Uncomment when ready) =============
 // Payroll Execution Module - For ONB-018 (REQ-PY-23) and ONB-019 (REQ-PY-27)
+// Integration ready: Uncomment when PayrollExecutionService is implemented
 // import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
 
 // Time Management Module - For ONB-009 (clock access provisioning)
-// import { TimeManagementModule } from '../time-management/time-management.module';
+import { TimeManagementModule } from '../time-management/time-management.module';
 
 // Organization Structure Module - For validating departments/positions
 import { OrganizationStructureModule } from '../organization-structure/organization-structure.module';
+
+// Leaves Module - For OFF-013 (final settlement - leave balance calculation)
+import { LeavesModule } from '../leaves/leaves.module';
 
 @Module({
   imports: [
@@ -87,10 +91,12 @@ import { OrganizationStructureModule } from '../organization-structure/organizat
     // ============= INTEGRATED MODULES =============
     EmployeeProfileModule, // ACTIVE - For creating employees from candidates
     OrganizationStructureModule, // ACTIVE - For validating departments/positions when creating employees
+    LeavesModule, // ACTIVE - For final settlement leave balance calculation (OFF-013)
 
     // ============= PENDING INTEGRATIONS (Uncomment when modules are ready) =============
-    // PayrollExecutionModule, // For payroll initiation and signing bonus processing
-    // TimeManagementModule, // For clock access provisioning
+    // PayrollExecutionModule, // For payroll initiation and signing bonus processing (ONB-018, ONB-019)
+    // Integration ready: Uncomment import above and this line when PayrollExecutionService is implemented
+    TimeManagementModule, // ACTIVE - For clock access provisioning (ONB-009)
   ],
   controllers: [RecruitmentController],
   providers: [RecruitmentService],

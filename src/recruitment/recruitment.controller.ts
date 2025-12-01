@@ -16,6 +16,7 @@ import {
   Res,
   Req,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -86,6 +87,17 @@ export class RecruitmentController {
   @Get('job')
   getJobs() {
     return this.service.getAllJobRequisitions();
+  }
+
+  /**
+   * REC-009: Real-time visualization of recruitment progress
+   * BR: Status tracking must be real-time and visualized
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Get('recruitment/progress')
+  getRecruitmentProgress() {
+    return this.service.getRecruitmentProgress();
   }
 
   /**
@@ -173,6 +185,21 @@ export class RecruitmentController {
   // ------------------------------------------
   // APPLICATIONS (REC-007, REC-008, REC-017, REC-022)
   // ------------------------------------------
+
+  /**
+   * REC-007: Candidate uploads CV
+   * Upload CV/resume for candidate profile
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.JOB_CANDIDATE)
+  @Post('candidate/:candidateId/upload-cv')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadCV(
+    @Param('candidateId') candidateId: string,
+    @UploadedFile() file: any,
+  ) {
+    return this.service.uploadCandidateCV(candidateId, file);
+  }
 
   /**
    * REC-007: Candidate uploads CV and applies for positions
@@ -282,6 +309,8 @@ export class RecruitmentController {
   /**
    * REC-011, REC-020: Submit interview feedback and assessment score
    * Interviewers provide structured feedback and scoring
+   * BR: Criteria used in interview assessment are pre-set and agreed upon
+   * BR: System needs to allow/house the multiple assessment tools to be used
    */
   @UseGuards(RolesGuard)
   @Roles(
@@ -293,7 +322,7 @@ export class RecruitmentController {
   @Post('interview/:id/feedback')
   submitInterviewFeedback(
     @Param('id') interviewId: string,
-    @Body() dto: { score: number; comments?: string },
+    @Body() dto: { score: number; comments?: string; assessmentTool?: string },
     @Req() req: any,
   ) {
     const interviewerId = req.user?.id || req.user?._id;
@@ -305,7 +334,25 @@ export class RecruitmentController {
       interviewerId,
       dto.score,
       dto.comments,
+      dto.assessmentTool,
     );
+  }
+
+  /**
+   * REC-020: Get assessment criteria/tools for a role
+   * BR: Criteria used in interview assessment are pre-set and agreed upon
+   * BR: System needs to allow/house the multiple assessment tools to be used
+   */
+  @UseGuards(RolesGuard)
+  @Roles(
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.RECRUITER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  @Get('assessment-tools/:requisitionId')
+  getAssessmentTools(@Param('requisitionId') requisitionId: string) {
+    return this.service.getAssessmentTools(requisitionId);
   }
 
   /**
@@ -351,6 +398,22 @@ export class RecruitmentController {
   @Patch('offer/:id/respond')
   respond(@Param('id') id: string, @Body() dto: RespondToOfferDto) {
     return this.service.respondToOffer(id, dto);
+  }
+
+  /**
+   * ONB-002: Candidate uploads signed contract and required forms
+   * As a Candidate, I want to upload signed contract and candidate required forms and templates to initiate the onboarding process
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.JOB_CANDIDATE)
+  @Post('offer/:id/upload-contract')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadSignedContract(
+    @Param('id') offerId: string,
+    @UploadedFile() file: any,
+    @Body() dto: { additionalForms?: string[] }, // For future: multiple form uploads
+  ) {
+    return this.service.uploadSignedContract(offerId, file);
   }
 
   /**
@@ -428,11 +491,30 @@ export class RecruitmentController {
 
   /**
    * Get onboarding by employee ID (ONB-004)
+   * ONB-004: New Hire views onboarding steps in a tracker
    * Employees can view their own; HR staff can view any
    */
   @UseGuards(RolesGuard)
   @Get('onboarding/employee/:employeeId')
-  async getOnboardingByEmployeeId(@Param('employeeId') employeeId: string) {
+  async getOnboardingByEmployeeId(
+    @Param('employeeId') employeeId: string,
+    @Req() req: any,
+  ) {
+    // Authorization: Allow HR staff or the employee themselves
+    const user = req.user;
+    const userRoles = user?.roles || [];
+    const isHRStaff =
+      userRoles.includes(SystemRole.HR_EMPLOYEE) ||
+      userRoles.includes(SystemRole.HR_MANAGER) ||
+      userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isEmployee = user?.id?.toString() === employeeId || user?._id?.toString() === employeeId;
+
+    if (!isHRStaff && !isEmployee) {
+      throw new ForbiddenException(
+        'You are not authorized to view this onboarding tracker',
+      );
+    }
+
     return this.service.getOnboardingByEmployeeId(employeeId);
   }
 
@@ -511,9 +593,10 @@ export class RecruitmentController {
   /**
    * POST /recruitment/onboarding/:id/task/:taskIndex/upload
    * Upload document for specific onboarding task
+   * ONB-007: New Hire uploads documents (e.g., ID, contracts, certifications)
+   * Allows both HR staff and new hires (employees) to upload documents
    */
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('onboarding/:id/task/:taskIndex/upload')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadTaskDocument(
@@ -521,12 +604,15 @@ export class RecruitmentController {
     @Param('taskIndex') taskIndex: string,
     @UploadedFile() file: any,
     @Body('documentType') documentType: DocumentType,
+    @Req() req: any,
   ) {
+    // Allow HR staff, managers, admins, and the employee themselves
     return this.service.uploadTaskDocument(
       onboardingId,
       parseInt(taskIndex, 10),
       file,
       documentType,
+      req.user, // Pass user for authorization check
     );
   }
 
@@ -554,6 +640,29 @@ export class RecruitmentController {
     @Param('taskIndex') taskIndex: string,
   ) {
     return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10));
+  }
+
+  /**
+   * POST /recruitment/onboarding/:id/task/:taskIndex/verify-document
+   * HR verifies uploaded document (ONB-007)
+   * BR: Documents must be collected and verified by the HR department before the first working day
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Post('onboarding/:id/task/:taskIndex/verify-document')
+  async verifyDocument(
+    @Param('id') onboardingId: string,
+    @Param('taskIndex') taskIndex: string,
+    @Body() dto: { verified: boolean; verificationNotes?: string },
+    @Req() req: any,
+  ) {
+    return this.service.verifyDocument(
+      onboardingId,
+      parseInt(taskIndex, 10),
+      dto.verified,
+      dto.verificationNotes,
+      req.user,
+    );
   }
 
   /**
@@ -729,6 +838,39 @@ export class RecruitmentController {
   @Get('candidate/:candidateId/referrals')
   getCandidateReferrals(@Param('candidateId') candidateId: string) {
     return this.service.getCandidateReferrals(candidateId);
+  }
+
+  // ------------------------------------------
+  // REPORTS (REC-009)
+  // ------------------------------------------
+
+  /**
+   * Generate time-to-hire report
+   * Multiple reports could be generated like time-to-hire
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Get('reports/time-to-hire')
+  getTimeToHireReport(
+    @Query('requisitionId') requisitionId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.service.getTimeToHireReport(requisitionId, startDate, endDate);
+  }
+
+  /**
+   * Generate source effectiveness report
+   * Multiple reports could be generated like source effectiveness
+   */
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Get('reports/source-effectiveness')
+  getSourceEffectivenessReport(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.service.getSourceEffectivenessReport(startDate, endDate);
   }
 
   // ------------------------------------------
