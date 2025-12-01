@@ -31,10 +31,12 @@ import { CreateOfferDto, RespondToOfferDto, FinalizeOfferDto } from './dto/offer
 import { CreateOnboardingDto } from './dto/create-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import { UpdateOnboardingTaskDto } from './dto/update-task.dto';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
 import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { CreateEmployeeFromContractDto } from './dto/create-employee-from-contract.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 
 import {
@@ -50,6 +52,7 @@ import {
 
 import { RevokeSystemAccessDto } from './dto/system-access.dto';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('recruitment')
 export class RecruitmentController {
   constructor(private readonly service: RecruitmentService) {}
@@ -67,8 +70,9 @@ export class RecruitmentController {
   @Post('job')
   createJob(
     @Body() dto: CreateJobRequisitionDto,
+    @CurrentUser() user: any,
   ) {
-    return this.service.createJobRequisition(dto);
+    return this.service.createJobRequisition(dto, user.userId);
   }
 
   /**
@@ -77,8 +81,10 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('job')
-  getJobs() {
-    return this.service.getAllJobRequisitions();
+  getJobs(
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getAllJobRequisitions(user.userId);
   }
 
   /**
@@ -86,8 +92,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('job/:id')
-  getJobById(@Param('id') id: string) {
-    return this.service.getJobRequisitionById(id);
+  getJobById(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getJobRequisitionById(id, user.userId);
   }
 
   /**
@@ -99,8 +108,9 @@ export class RecruitmentController {
   updateJobStatus(
     @Param('id') id: string,
     @Body() dto: { status: string },
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateJobRequisitionStatus(id, dto.status);
+    return this.service.updateJobRequisitionStatus(id, dto.status, user.userId);
   }
 
   /**
@@ -110,8 +120,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('job/:id/publish')
-  publishJob(@Param('id') id: string) {
-    return this.service.publishJobRequisition(id);
+  publishJob(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.publishJobRequisition(id, user.userId);
   }
 
   /**
@@ -119,8 +132,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('job/:id/preview')
-  previewJob(@Param('id') id: string) {
-    return this.service.previewJobRequisition(id);
+  previewJob(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.previewJobRequisition(id, user.userId);
   }
 
   // ------------------------------------------
@@ -134,8 +150,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('job-template')
-  createJobTemplate(@Body() dto: any) {
-    return this.service.createJobTemplate(dto);
+  createJobTemplate(
+    @Body() dto: any,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.createJobTemplate(dto, user.userId);
   }
 
   /**
@@ -143,8 +162,10 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('job-template')
-  getAllJobTemplates() {
-    return this.service.getAllJobTemplates();
+  getAllJobTemplates(
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getAllJobTemplates(user.userId);
   }
 
   /**
@@ -152,8 +173,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('job-template/:id')
-  getJobTemplateById(@Param('id') id: string) {
-    return this.service.getJobTemplateById(id);
+  getJobTemplateById(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getJobTemplateById(id, user.userId);
   }
 
   /**
@@ -162,8 +186,12 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Put('job-template/:id')
-  updateJobTemplate(@Param('id') id: string, @Body() dto: any) {
-    return this.service.updateJobTemplate(id, dto);
+  updateJobTemplate(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.updateJobTemplate(id, dto, user.userId);
   }
 
   // ------------------------------------------
@@ -180,12 +208,13 @@ export class RecruitmentController {
   @Post('application')
   apply(
     @Body() dto: CreateApplicationDto & { consentGiven: boolean },
+    @CurrentUser() user: any,
   ) {
     // BR: Storing applications requires applicant authorization
     if (!dto.consentGiven) {
       throw new BadRequestException('Consent for data processing is required to submit application');
     }
-    return this.service.apply(dto, dto.consentGiven);
+    return this.service.apply(dto, dto.consentGiven, user.userId);
   }
 
   /**
@@ -199,9 +228,10 @@ export class RecruitmentController {
   getAllApplications(
     @Query('requisitionId') requisitionId?: string,
     @Query('prioritizeReferrals') prioritizeReferrals?: string,
+    @CurrentUser() user?: any,
   ) {
     const prioritize = prioritizeReferrals !== 'false';
-    return this.service.getAllApplications(requisitionId, prioritize);
+    return this.service.getAllApplications(requisitionId, prioritize, user?.userId);
   }
 
   /**
@@ -211,8 +241,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Get('application/ranked/:requisitionId')
-  getRankedApplications(@Param('requisitionId') requisitionId: string) {
-    return this.service.getRankedApplications(requisitionId);
+  getRankedApplications(
+    @Param('requisitionId') requisitionId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getRankedApplications(requisitionId, user.userId);
   }
 
   /**
@@ -227,10 +260,11 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Body() dto: UpdateApplicationStatusDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
     // Get user ID from request (set by auth guard)
     const changedBy = req.user?.id || req.user?._id;
-    return this.service.updateApplicationStatus(id, dto, changedBy);
+    return this.service.updateApplicationStatus(id, dto, changedBy, user.userId);
   }
 
   // ------------------------------------------
@@ -247,8 +281,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.RECRUITER, SystemRole.SYSTEM_ADMIN)
   @Post('interview')
-  scheduleInterview(@Body() dto: ScheduleInterviewDto) {
-    return this.service.scheduleInterview(dto);
+  scheduleInterview(
+    @Body() dto: ScheduleInterviewDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.scheduleInterview(dto, user.userId);
   }
 
   /**
@@ -261,8 +298,9 @@ export class RecruitmentController {
   updateInterviewStatus(
     @Param('id') id: string,
     @Body() dto: UpdateInterviewStatusDto,
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateInterviewStatus(id, dto);
+    return this.service.updateInterviewStatus(id, dto, user.userId);
   }
 
   /**
@@ -276,12 +314,19 @@ export class RecruitmentController {
     @Param('id') interviewId: string,
     @Body() dto: { score: number; comments?: string },
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
     const interviewerId = req.user?.id || req.user?._id;
     if (!interviewerId) {
       throw new BadRequestException('Interviewer ID not found in request');
     }
-    return this.service.submitInterviewFeedback(interviewId, interviewerId, dto.score, dto.comments);
+    return this.service.submitInterviewFeedback(
+      interviewId,
+      interviewerId,
+      dto.score,
+      dto.comments,
+      user.userId,
+    );
   }
 
   /**
@@ -289,8 +334,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('interview/:id/feedback')
-  getInterviewFeedback(@Param('id') interviewId: string) {
-    return this.service.getInterviewFeedback(interviewId);
+  getInterviewFeedback(
+    @Param('id') interviewId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getInterviewFeedback(interviewId, user.userId);
   }
 
   /**
@@ -298,8 +346,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('interview/:id/score')
-  getInterviewAverageScore(@Param('id') interviewId: string) {
-    return this.service.getInterviewAverageScore(interviewId);
+  getInterviewAverageScore(
+    @Param('id') interviewId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getInterviewAverageScore(interviewId, user.userId);
   }
 
   // ------------------------------------------
@@ -314,8 +365,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('offer')
-  createOffer(@Body() dto: CreateOfferDto) {
-    return this.service.createOffer(dto);
+  createOffer(
+    @Body() dto: CreateOfferDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.createOffer(dto, user.userId);
   }
 
   /**
@@ -328,8 +382,9 @@ export class RecruitmentController {
   respond(
     @Param('id') id: string,
     @Body() dto: RespondToOfferDto,
+    @CurrentUser() user: any,
   ) {
-    return this.service.respondToOffer(id, dto);
+    return this.service.respondToOffer(id, dto, user.userId);
   }
 
   /**
@@ -342,8 +397,9 @@ export class RecruitmentController {
   finalize(
     @Param('id') id: string,
     @Body() dto: FinalizeOfferDto,
+    @CurrentUser() user: any,
   ) {
-    return this.service.finalizeOffer(id, dto);
+    return this.service.finalizeOffer(id, dto, user.userId);
   }
 
   // ============= EMPLOYEE CREATION FROM CONTRACT =============
@@ -372,8 +428,11 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('onboarding')
-  async createOnboarding(@Body() createOnboardingDto: CreateOnboardingDto) {
-    return this.service.createOnboarding(createOnboardingDto);
+  async createOnboarding(
+    @Body() createOnboardingDto: CreateOnboardingDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.createOnboarding(createOnboardingDto, undefined, undefined, undefined, user.userId);
   }
 
   /**
@@ -383,8 +442,10 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Get('onboarding')
-  async getAllOnboardings() {
-    return this.service.getAllOnboardings();
+  async getAllOnboardings(
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getAllOnboardings(user.userId);
   }
 
   /**
@@ -394,8 +455,10 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Get('onboarding/stats')
-  async getOnboardingStats() {
-    return this.service.getOnboardingStats();
+  async getOnboardingStats(
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getOnboardingStats(user.userId);
   }
 
   /**
@@ -404,8 +467,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('onboarding/:id')
-  async getOnboardingById(@Param('id') id: string) {
-    return this.service.getOnboardingById(id);
+  async getOnboardingById(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getOnboardingById(id, user.userId);
   }
 
   /**
@@ -414,8 +480,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('onboarding/employee/:employeeId')
-  async getOnboardingByEmployeeId(@Param('employeeId') employeeId: string) {
-    return this.service.getOnboardingByEmployeeId(employeeId);
+  async getOnboardingByEmployeeId(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getOnboardingByEmployeeId(employeeId, user.userId);
   }
 
   /**
@@ -428,8 +497,9 @@ export class RecruitmentController {
   async updateOnboarding(
     @Param('id') id: string,
     @Body() updateOnboardingDto: UpdateOnboardingDto,
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateOnboarding(id, updateOnboardingDto);
+    return this.service.updateOnboarding(id, updateOnboardingDto, user.userId);
   }
 
   /**
@@ -443,11 +513,13 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Param('taskIndex') taskIndex: string,
     @Body() updateTaskDto: UpdateOnboardingTaskDto,
+    @CurrentUser() user: any,
   ) {
     return this.service.updateOnboardingTask(
       id,
       parseInt(taskIndex),
       updateTaskDto,
+      user.userId,
     );
   }
 
@@ -461,8 +533,9 @@ export class RecruitmentController {
   async addTaskToOnboarding(
     @Param('id') id: string,
     @Body() taskDto: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.addTaskToOnboarding(id, taskDto);
+    return this.service.addTaskToOnboarding(id, taskDto, user.userId);
   }
 
   /**
@@ -476,8 +549,9 @@ export class RecruitmentController {
   async removeTaskFromOnboarding(
     @Param('id') id: string,
     @Param('taskIndex') taskIndex: string,
+    @CurrentUser() user: any,
   ) {
-    return this.service.removeTaskFromOnboarding(id, parseInt(taskIndex, 10));
+    return this.service.removeTaskFromOnboarding(id, parseInt(taskIndex, 10), user.userId);
   }
 
   /**
@@ -488,8 +562,11 @@ export class RecruitmentController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Delete('onboarding/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteOnboarding(@Param('id') id: string) {
-    return this.service.deleteOnboarding(id);
+  async deleteOnboarding(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.deleteOnboarding(id, user.userId);
   }
   // ============= DOCUMENT UPLOAD ENDPOINTS (ONB-007) =============
 
@@ -506,12 +583,14 @@ export class RecruitmentController {
     @Param('taskIndex') taskIndex: string,
     @UploadedFile() file: any,
     @Body('documentType') documentType: DocumentType,
+    @CurrentUser() user: any,
   ) {
     return this.service.uploadTaskDocument(
       onboardingId,
       parseInt(taskIndex, 10),
       file,
       documentType,
+      user.userId,
     );
   }
 
@@ -524,8 +603,9 @@ export class RecruitmentController {
   async downloadDocument(
     @Param('documentId') documentId: string,
     @Res() res: Response,
+    @CurrentUser() user: any,
   ) {
-    return this.service.downloadDocument(documentId, res);
+    return this.service.downloadDocument(documentId, res, user.userId);
   }
 
   /**
@@ -537,8 +617,9 @@ export class RecruitmentController {
   async getTaskDocument(
     @Param('id') onboardingId: string,
     @Param('taskIndex') taskIndex: string,
+    @CurrentUser() user: any,
   ) {
-    return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10));
+    return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10), user.userId);
   }
 
   /**
@@ -549,8 +630,11 @@ export class RecruitmentController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Delete('document/:documentId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteDocument(@Param('documentId') documentId: string) {
-    return this.service.deleteDocument(documentId);
+  async deleteDocument(
+    @Param('documentId') documentId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.deleteDocument(documentId, user.userId);
   }
 
   // ------------------------------------------
@@ -565,8 +649,10 @@ export class RecruitmentController {
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('onboarding/send-reminders')
-  async sendOnboardingReminders() {
-    await this.service.sendOnboardingReminders();
+  async sendOnboardingReminders(
+    @CurrentUser() user: any,
+  ) {
+    await this.service.sendOnboardingReminders(user.userId);
     return { message: 'Reminders sent successfully' };
   }
 
@@ -580,8 +666,9 @@ export class RecruitmentController {
   async provisionSystemAccess(
     @Param('employeeId') employeeId: string,
     @Param('taskIndex') taskIndex: string,
+    @CurrentUser() user: any,
   ) {
-    return this.service.provisionSystemAccess(employeeId, parseInt(taskIndex, 10));
+    return this.service.provisionSystemAccess(employeeId, parseInt(taskIndex, 10), user.userId);
   }
 
   /**
@@ -594,8 +681,14 @@ export class RecruitmentController {
   async reserveEquipment(
     @Param('employeeId') employeeId: string,
     @Body() dto: { equipmentType: string; equipmentDetails: any },
+    @CurrentUser() user: any,
   ) {
-    return this.service.reserveEquipment(employeeId, dto.equipmentType, dto.equipmentDetails);
+    return this.service.reserveEquipment(
+      employeeId,
+      dto.equipmentType,
+      dto.equipmentDetails,
+      user.userId,
+    );
   }
 
   /**
@@ -608,10 +701,11 @@ export class RecruitmentController {
   async scheduleAccessProvisioning(
     @Param('employeeId') employeeId: string,
     @Body() dto: { startDate: string; endDate?: string },
+    @CurrentUser() user: any,
   ) {
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
-    return this.service.scheduleAccessProvisioning(employeeId, startDate, endDate);
+    return this.service.scheduleAccessProvisioning(employeeId, startDate, endDate, user.userId);
   }
 
   /**
@@ -624,9 +718,15 @@ export class RecruitmentController {
   async triggerPayrollInitiation(
     @Param('employeeId') employeeId: string,
     @Body() dto: { contractSigningDate: string; grossSalary: number },
+    @CurrentUser() user: any,
   ) {
     const contractSigningDate = new Date(dto.contractSigningDate);
-    return this.service.triggerPayrollInitiation(employeeId, contractSigningDate, dto.grossSalary);
+    return this.service.triggerPayrollInitiation(
+      employeeId,
+      contractSigningDate,
+      dto.grossSalary,
+      user.userId,
+    );
   }
 
   /**
@@ -639,9 +739,15 @@ export class RecruitmentController {
   async processSigningBonus(
     @Param('employeeId') employeeId: string,
     @Body() dto: { signingBonus: number; contractSigningDate: string },
+    @CurrentUser() user: any,
   ) {
     const contractSigningDate = new Date(dto.contractSigningDate);
-    return this.service.processSigningBonus(employeeId, dto.signingBonus, contractSigningDate);
+    return this.service.processSigningBonus(
+      employeeId,
+      dto.signingBonus,
+      contractSigningDate,
+      user.userId,
+    );
   }
 
   /**
@@ -654,8 +760,9 @@ export class RecruitmentController {
   async cancelOnboarding(
     @Param('employeeId') employeeId: string,
     @Body() dto: { reason: string },
+    @CurrentUser() user: any,
   ) {
-    return this.service.cancelOnboarding(employeeId, dto.reason);
+    return this.service.cancelOnboarding(employeeId, dto.reason, user.userId);
   }
 
   // ------------------------------------------
@@ -673,13 +780,20 @@ export class RecruitmentController {
     @Param('candidateId') candidateId: string,
     @Body() dto: { referringEmployeeId: string; role?: string; level?: string },
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
     // Use referringEmployeeId from body, or fallback to current user
     const referringEmployeeId = dto.referringEmployeeId || req.user?.id || req.user?._id;
     if (!referringEmployeeId) {
       throw new BadRequestException('Referring employee ID is required');
     }
-    return this.service.tagCandidateAsReferral(candidateId, referringEmployeeId, dto.role, dto.level);
+    return this.service.tagCandidateAsReferral(
+      candidateId,
+      referringEmployeeId,
+      dto.role,
+      dto.level,
+      user.userId,
+    );
   }
 
   /**
@@ -687,8 +801,11 @@ export class RecruitmentController {
    */
   @UseGuards(RolesGuard)
   @Get('candidate/:candidateId/referrals')
-  getCandidateReferrals(@Param('candidateId') candidateId: string) {
-    return this.service.getCandidateReferrals(candidateId);
+  getCandidateReferrals(
+    @Param('candidateId') candidateId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getCandidateReferrals(candidateId, user.userId);
   }
 
   // ------------------------------------------
@@ -704,21 +821,16 @@ export class RecruitmentController {
   recordCandidateConsent(
     @Param('candidateId') candidateId: string,
     @Body() dto: { consentGiven: boolean; consentType?: string; notes?: string },
+    @CurrentUser() user: any,
   ) {
     return this.service.recordCandidateConsent(
       candidateId,
       dto.consentGiven,
       dto.consentType || 'data_processing',
       dto.notes,
+      user.userId,
     );
   }
-  
-  
-  @UseGuards(
-  // JwtAuthGuard,   // uncomment when you plug the real auth guard
-  RolesGuard,
-)
-
 
   // ============================= OFFBOARDING =============================
 
@@ -731,22 +843,29 @@ export class RecruitmentController {
   createTerminationRequest(
     @Body() dto: CreateTerminationRequestDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.createTerminationRequest(dto, req.user);
+    return this.service.createTerminationRequest(dto, req.user, user.userId);
   }
 
   // Employee-facing: get my resignation/termination requests
   @UseGuards(RolesGuard)
   @Get('offboarding/my-resignation')
   @Roles(SystemRole.EMPLOYEE)
-  getMyResignationRequests(@Req() req: any) {
-    return this.service.getMyResignationRequests(req.user);
+  getMyResignationRequests(
+    @Req() req: any,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getMyResignationRequests(req.user, user.userId);
   }
 
   @Get('offboarding/termination/:id')
   @Roles(SystemRole.HR_MANAGER) // only HR can view details
-  getTerminationRequest(@Param('id') id: string) {
-    return this.service.getTerminationRequestById(id);
+  getTerminationRequest(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getTerminationRequestById(id, user.userId);
   }
 
   @Patch('offboarding/termination/:id/status')
@@ -755,8 +874,9 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Body() dto: UpdateTerminationStatusDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateTerminationStatus(id, dto, req.user);
+    return this.service.updateTerminationStatus(id, dto, req.user, user.userId);
   }
 
   @Patch('offboarding/termination/:id')
@@ -765,8 +885,9 @@ export class RecruitmentController {
     @Param('id') id: string,
     @Body() dto: UpdateTerminationDetailsDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateTerminationDetails(id, dto, req.user);
+    return this.service.updateTerminationDetails(id, dto, req.user, user.userId);
   }
 
   // 2) Clearance checklist
@@ -776,22 +897,29 @@ export class RecruitmentController {
   createClearanceChecklist(
     @Body() dto: CreateClearanceChecklistDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.createClearanceChecklist(dto, req.user);
+    return this.service.createClearanceChecklist(dto, req.user, user.userId);
   }
 
   // Manual trigger for clearance reminders (HR Manager / System Admin)
   @UseGuards(RolesGuard)
   @Post('offboarding/clearance/send-reminders')
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
-  sendClearanceReminders(@Body() opts: { force?: boolean } = { force: false }) {
-    return this.service.sendClearanceReminders(opts);
+  sendClearanceReminders(
+    @Body() opts: { force?: boolean } = { force: false },
+    @CurrentUser() user: any,
+  ) {
+    return this.service.sendClearanceReminders(opts, user.userId);
   }
 
   @Get('offboarding/clearance/employee/:employeeId')
   @Roles(SystemRole.HR_MANAGER)
-  getChecklistByEmployee(@Param('employeeId') employeeId: string) {
-    return this.service.getChecklistByEmployee(employeeId);
+  getChecklistByEmployee(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getChecklistByEmployee(employeeId, user.userId);
   }
 
   @Patch('offboarding/clearance/:id/item')
@@ -809,28 +937,40 @@ export class RecruitmentController {
     @Param('id') checklistId: string,
     @Body() dto: UpdateClearanceItemStatusDto,
     @Req() req: any,
+    @CurrentUser() user: any,
   ) {
-    return this.service.updateClearanceItemStatus(checklistId, dto, req.user);
+    return this.service.updateClearanceItemStatus(checklistId, dto, req.user, user.userId);
   }
 
   @Patch('offboarding/clearance/:id/complete')
   @Roles(SystemRole.HR_MANAGER)
-  markChecklistCompleted(@Param('id') checklistId: string, @Req() req: any) {
-    return this.service.markChecklistCompleted(checklistId, req.user);
+  markChecklistCompleted(
+    @Param('id') checklistId: string,
+    @Req() req: any,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.markChecklistCompleted(checklistId, req.user, user.userId);
   }
 
   // 3) Appraisal view for offboarding (latest appraisal of employee)
   @Get('offboarding/appraisal/:employeeId')
   @Roles(SystemRole.HR_MANAGER)
-  getLatestAppraisal(@Param('employeeId') employeeId: string) {
-    return this.service.getLatestAppraisalForEmployee(employeeId);
+  getLatestAppraisal(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.getLatestAppraisalForEmployee(employeeId, user.userId);
   }
 
   // 4) SYSTEM ACCESS REVOCATION
   @Patch('offboarding/system-revoke')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  revokeAccess(@Body() dto: RevokeSystemAccessDto, @Req() req: any) {
-    return this.service.revokeSystemAccess(dto, req.user);
+  revokeAccess(
+    @Body() dto: RevokeSystemAccessDto,
+    @Req() req: any,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.revokeSystemAccess(dto, req.user, user.userId);
   }
 }
 

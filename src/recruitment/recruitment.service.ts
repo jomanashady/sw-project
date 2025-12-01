@@ -233,7 +233,10 @@ export class RecruitmentService {
   // ---------------------------------------------------
   // JOB REQUISITIONS
   // ---------------------------------------------------
-  async createJobRequisition(dto: CreateJobRequisitionDto): Promise<JobRequisition> {
+  async createJobRequisition(
+    dto: CreateJobRequisitionDto,
+    currentUserId: string,
+  ): Promise<JobRequisition> {
     // Validate templateId
     if (!Types.ObjectId.isValid(dto.templateId)) {
       throw new BadRequestException('Invalid template ID format');
@@ -263,12 +266,14 @@ export class RecruitmentService {
       location: dto.location,
       hiringManagerId: dto.hiringManagerId || null,
       publishStatus: 'draft',
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
     return jobRequisition.save();
   }
 
   // JobTemplate CRUD
-  async createJobTemplate(dto: any) {
+  async createJobTemplate(dto: any, currentUserId: string) {
     if (!dto.title || typeof dto.title !== 'string' || dto.title.trim().length === 0) {
       throw new BadRequestException('Title is required and must be a non-empty string');
     }
@@ -282,15 +287,17 @@ export class RecruitmentService {
       qualifications: dto.qualifications || [],
       skills: dto.skills || [],
       description: dto.description || '',
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
     return tpl.save();
   }
 
-  async getAllJobTemplates() {
+  async getAllJobTemplates(_currentUserId: string) {
     return this.jobTemplateModel.find();
   }
 
-  async getJobTemplateById(id: string) {
+  async getJobTemplateById(id: string, _currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job template ID format');
     }
@@ -301,7 +308,7 @@ export class RecruitmentService {
     return template;
   }
 
-  async updateJobTemplate(id: string, dto: any) {
+  async updateJobTemplate(id: string, dto: any, currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job template ID format');
     }
@@ -320,7 +327,12 @@ export class RecruitmentService {
       throw new BadRequestException('Department must be a non-empty string');
     }
 
-    const updated = await this.jobTemplateModel.findByIdAndUpdate(id, dto, { new: true });
+    const updatedDto = {
+      ...dto,
+      updatedBy: currentUserId,
+    };
+
+    const updated = await this.jobTemplateModel.findByIdAndUpdate(id, updatedDto, { new: true });
     if (!updated) {
       throw new NotFoundException('Job Template not found');
     }
@@ -328,7 +340,7 @@ export class RecruitmentService {
   }
 
   // Publish/Preview
-  async publishJobRequisition(id: string) {
+  async publishJobRequisition(id: string, currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job requisition ID format');
     }
@@ -348,7 +360,11 @@ export class RecruitmentService {
       throw new BadRequestException('Cannot publish job requisition: Number of openings must be greater than 0');
     }
 
-    const update = { publishStatus: 'published', postingDate: new Date() };
+    const update = {
+      publishStatus: 'published',
+      postingDate: new Date(),
+      updatedBy: currentUserId,
+    };
     const updated = await this.jobModel.findByIdAndUpdate(id, update, { new: true });
     if (!updated) {
       throw new NotFoundException('Job Requisition not found');
@@ -356,7 +372,7 @@ export class RecruitmentService {
     return updated;
   }
 
-  async previewJobRequisition(id: string) {
+  async previewJobRequisition(id: string, _currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job requisition ID format');
     }
@@ -367,11 +383,11 @@ export class RecruitmentService {
     return job;
   }
 
-  async getAllJobRequisitions() {
+  async getAllJobRequisitions(_currentUserId: string) {
     return this.jobModel.find();
   }
 
-  async getJobRequisitionById(id: string) {
+  async getJobRequisitionById(id: string, _currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job requisition ID format');
     }
@@ -382,7 +398,11 @@ export class RecruitmentService {
     return job;
   }
 
-  async updateJobRequisitionStatus(id: string, newStatus: string) {
+  async updateJobRequisitionStatus(
+    id: string,
+    newStatus: string,
+    currentUserId: string,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid job requisition ID format');
     }
@@ -395,7 +415,9 @@ export class RecruitmentService {
       throw new NotFoundException('Job Requisition not found');
     }
 
-    const update: any = {};
+    const update: any = {
+      updatedBy: currentUserId,
+    };
     
     // BR: Posting must be automatic once approved
     // If status is being set to 'approved' or similar, automatically publish
@@ -417,7 +439,11 @@ export class RecruitmentService {
   // ---------------------------------------------------
   // APPLICATIONS
   // ---------------------------------------------------
-  async apply(dto: CreateApplicationDto, consentGiven: boolean = false): Promise<Application> {
+  async apply(
+    dto: CreateApplicationDto,
+    consentGiven: boolean = false,
+    currentUserId: string,
+  ): Promise<Application> {
     // Validate ObjectIds
     if (!Types.ObjectId.isValid(dto.candidateId)) {
       throw new BadRequestException('Invalid candidate ID format');
@@ -489,11 +515,17 @@ export class RecruitmentService {
       assignedHr: dto.assignedHr || undefined,
       currentStage: ApplicationStage.SCREENING,
       status: ApplicationStatus.SUBMITTED,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
     return application.save();
   }
 
-  async getAllApplications(requisitionId?: string, prioritizeReferrals: boolean = true) {
+  async getAllApplications(
+    requisitionId?: string,
+    prioritizeReferrals: boolean = true,
+    _currentUserId?: string,
+  ) {
     let query: any = {};
     if (requisitionId) {
       if (!Types.ObjectId.isValid(requisitionId)) {
@@ -532,7 +564,12 @@ export class RecruitmentService {
     return applications;
   }
 
-  async updateApplicationStatus(id: string, dto: UpdateApplicationStatusDto, changedBy?: string) {
+  async updateApplicationStatus(
+    id: string,
+    dto: UpdateApplicationStatusDto,
+    changedBy: string | undefined,
+    currentUserId: string,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID format');
     }
@@ -584,11 +621,13 @@ export class RecruitmentService {
     }
 
     // Update application
-    const application = await this.applicationModel.findByIdAndUpdate(
-      id,
-      { status: dto.status, currentStage: newStage },
-      { new: true }
-    ).populate('candidateId');
+    const application = await this.applicationModel
+      .findByIdAndUpdate(
+        id,
+        { status: dto.status, currentStage: newStage, updatedBy: currentUserId },
+        { new: true },
+      )
+      .populate('candidateId');
 
     if (!application) {
       throw new NotFoundException('Application not found');
@@ -661,7 +700,7 @@ export class RecruitmentService {
   // ---------------------------------------------------
   // INTERVIEWS
   // ---------------------------------------------------
-  async scheduleInterview(dto: ScheduleInterviewDto) {
+  async scheduleInterview(dto: ScheduleInterviewDto, currentUserId: string) {
     // Validate ObjectId
     if (!Types.ObjectId.isValid(dto.applicationId)) {
       throw new BadRequestException('Invalid application ID format');
@@ -731,6 +770,8 @@ export class RecruitmentService {
       panel: dto.panel || [],
       videoLink: dto.videoLink,
       status: 'scheduled',
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
     const saved = await interview.save();
 
@@ -816,7 +857,11 @@ export class RecruitmentService {
     return saved;
   }
 
-  async updateInterviewStatus(id: string, dto: UpdateInterviewStatusDto) {
+  async updateInterviewStatus(
+    id: string,
+    dto: UpdateInterviewStatusDto,
+    currentUserId: string,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid interview ID format');
     }
@@ -835,7 +880,11 @@ export class RecruitmentService {
       throw new BadRequestException('Cannot change status of a cancelled interview. Please schedule a new interview.');
     }
 
-    const updated = await this.interviewModel.findByIdAndUpdate(id, { status: dto.status }, { new: true });
+    const updated = await this.interviewModel.findByIdAndUpdate(
+      id,
+      { status: dto.status, updatedBy: currentUserId },
+      { new: true },
+    );
     if (!updated) {
       throw new NotFoundException('Interview not found');
     }
@@ -845,7 +894,7 @@ export class RecruitmentService {
   // ---------------------------------------------------
   // OFFERS
   // ---------------------------------------------------
-  async createOffer(dto: CreateOfferDto) {
+  async createOffer(dto: CreateOfferDto, currentUserId: string) {
     // Validate ObjectIds
     if (!Types.ObjectId.isValid(dto.applicationId)) {
       throw new BadRequestException('Invalid application ID format');
@@ -913,6 +962,8 @@ export class RecruitmentService {
       deadline: deadline,
       applicantResponse: 'pending',
       finalStatus: 'pending',
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
     const savedOffer = await offer.save();
 
@@ -949,7 +1000,11 @@ export class RecruitmentService {
     return savedOffer;
   }
 
-  async respondToOffer(id: string, dto: RespondToOfferDto) {
+  async respondToOffer(
+    id: string,
+    dto: RespondToOfferDto,
+    currentUserId: string,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid offer ID format');
     }
@@ -991,7 +1046,13 @@ export class RecruitmentService {
       updateData.candidateSignedAt = new Date();
     }
 
-    const updated = await this.offerModel.findByIdAndUpdate(id, updateData, { new: true }).populate('applicationId');
+    const updated = await this.offerModel
+      .findByIdAndUpdate(
+        id,
+        { ...updateData, updatedBy: currentUserId },
+        { new: true },
+      )
+      .populate('applicationId');
     if (!updated) {
       throw new NotFoundException('Offer not found');
     }
@@ -1018,7 +1079,11 @@ export class RecruitmentService {
     return updated;
   }
 
-  async finalizeOffer(id: string, dto: FinalizeOfferDto) {
+  async finalizeOffer(
+    id: string,
+    dto: FinalizeOfferDto,
+    currentUserId: string,
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid offer ID format');
     }
@@ -1041,7 +1106,11 @@ export class RecruitmentService {
       );
     }
 
-    const updated = await this.offerModel.findByIdAndUpdate(id, { finalStatus: dto.finalStatus }, { new: true });
+    const updated = await this.offerModel.findByIdAndUpdate(
+      id,
+      { finalStatus: dto.finalStatus, updatedBy: currentUserId },
+      { new: true },
+    );
     if (!updated) {
       throw new NotFoundException('Offer not found');
   }
@@ -1349,7 +1418,13 @@ Due: ${context.dueDate}` : '';
    * BR: Triggered by offer acceptance; checklists customizable
    * Auto-generates tasks for IT, Admin, and HR departments
    */
-  async createOnboarding(createOnboardingDto: CreateOnboardingDto, contractSigningDate?: Date, startDate?: Date, workEmail?: string): Promise<any> {
+  async createOnboarding(
+    createOnboardingDto: CreateOnboardingDto,
+    contractSigningDate: Date | undefined,
+    startDate: Date | undefined,
+    workEmail: string | undefined,
+    currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(createOnboardingDto.employeeId.toString())) {
         throw new BadRequestException('Invalid employee ID format');
@@ -1464,6 +1539,8 @@ Due: ${context.dueDate}` : '';
         employeeId: createOnboardingDto.employeeId,
         tasks: tasks,
         completed: false,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
       });
       const saved = await onboarding.save();
 
@@ -1495,7 +1572,7 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async getAllOnboardings(): Promise<any[]> {
+  async getAllOnboardings(_currentUserId: string): Promise<any[]> {
     try {
       return await this.onboardingModel.find().select('-__v').lean().exec();
     } catch (error) {
@@ -1507,7 +1584,7 @@ Due: ${context.dueDate}` : '';
    * ONB-004: View onboarding tracker with progress
    * BR: Tracker and reminders required
    */
-  async getOnboardingByEmployeeId(employeeId: string): Promise<any> {
+  async getOnboardingByEmployeeId(employeeId: string, _currentUserId: string): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -1566,7 +1643,7 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async getOnboardingById(id: string): Promise<any> {
+  async getOnboardingById(id: string, _currentUserId: string): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid onboarding ID format');
@@ -1584,12 +1661,24 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async updateOnboarding(id: string, updateOnboardingDto: UpdateOnboardingDto): Promise<any> {
+  async updateOnboarding(
+    id: string,
+    updateOnboardingDto: UpdateOnboardingDto,
+    currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid onboarding ID format');
       }
-      const onboarding = await this.onboardingModel.findByIdAndUpdate(id, { $set: updateOnboardingDto }, { new: true }).select('-__v').lean().exec();
+      const update = {
+        ...updateOnboardingDto,
+        updatedBy: currentUserId,
+      };
+      const onboarding = await this.onboardingModel
+        .findByIdAndUpdate(id, { $set: update }, { new: true })
+        .select('-__v')
+        .lean()
+        .exec();
       if (!onboarding) {
         throw new NotFoundException('Onboarding not found');
       }
@@ -1602,7 +1691,12 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async updateOnboardingTask(onboardingId: string, taskIndex: number, updateTaskDto: UpdateOnboardingTaskDto): Promise<any> {
+  async updateOnboardingTask(
+    onboardingId: string,
+    taskIndex: number,
+    updateTaskDto: UpdateOnboardingTaskDto,
+    currentUserId: string,
+  ): Promise<any> {
     try {
       // Validate ObjectId
       if (!Types.ObjectId.isValid(onboardingId)) {
@@ -1643,6 +1737,7 @@ Due: ${context.dueDate}` : '';
         onboarding.completed = false;
         onboarding.completedAt = undefined;
       }
+      (onboarding as any).updatedBy = currentUserId;
       const saved = await onboarding.save();
       return saved.toObject();
     } catch (error) {
@@ -1653,7 +1748,11 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async addTaskToOnboarding(onboardingId: string, taskDto: any): Promise<any> {
+  async addTaskToOnboarding(
+    onboardingId: string,
+    taskDto: any,
+    currentUserId: string,
+  ): Promise<any> {
     try {
       // Validate ObjectId
       if (!Types.ObjectId.isValid(onboardingId)) {
@@ -1679,6 +1778,7 @@ Due: ${context.dueDate}` : '';
       }
 
       onboarding.tasks.push({ ...taskDto, status: taskDto.status || OnboardingTaskStatus.PENDING });
+      (onboarding as any).updatedBy = currentUserId;
       const saved = await onboarding.save();
       return saved.toObject();
     } catch (error) {
@@ -1689,7 +1789,11 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async removeTaskFromOnboarding(onboardingId: string, taskIndex: number): Promise<any> {
+  async removeTaskFromOnboarding(
+    onboardingId: string,
+    taskIndex: number,
+    currentUserId: string,
+  ): Promise<any> {
     try {
       // Validate ObjectId
       if (!Types.ObjectId.isValid(onboardingId)) {
@@ -1716,6 +1820,7 @@ Due: ${context.dueDate}` : '';
       }
 
       onboarding.tasks.splice(taskIndex, 1);
+      (onboarding as any).updatedBy = currentUserId;
       const saved = await onboarding.save();
       return saved.toObject();
     } catch (error) {
@@ -1726,7 +1831,7 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async deleteOnboarding(id: string): Promise<void> {
+  async deleteOnboarding(id: string, _currentUserId: string): Promise<void> {
     try {
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid onboarding ID format');
@@ -1743,7 +1848,7 @@ Due: ${context.dueDate}` : '';
     }
   }
 
-  async getOnboardingStats() {
+  async getOnboardingStats(_currentUserId: string) {
     try {
       const total = await this.onboardingModel.countDocuments();
       const completed = await this.onboardingModel.countDocuments({ completed: true });
@@ -1769,6 +1874,7 @@ Due: ${context.dueDate}` : '';
     taskIndex: number,
     file: any,
     documentType: DocumentType,
+    currentUserId: string,
   ): Promise<any> {
     try {
     // 1. Validate ObjectId
@@ -1834,6 +1940,8 @@ Due: ${context.dueDate}` : '';
       type: documentType,
       filePath: filePath,
       uploadedAt: new Date(),
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
 
     const savedDocument = await document.save();
@@ -1858,6 +1966,7 @@ Due: ${context.dueDate}` : '';
     }
 
     // 13. Save onboarding
+    (onboarding as any).updatedBy = currentUserId;
     const savedOnboarding = await onboarding.save();
 
     return {
@@ -1874,7 +1983,11 @@ Due: ${context.dueDate}` : '';
   /**
    * Download document by ID
    */
-  async downloadDocument(documentId: string, res: Response): Promise<void> {
+  async downloadDocument(
+    documentId: string,
+    res: Response,
+    _currentUserId: string,
+  ): Promise<void> {
     try {
       // 1. Validate ObjectId
       if (!Types.ObjectId.isValid(documentId)) {
@@ -1910,7 +2023,11 @@ Due: ${context.dueDate}` : '';
   /**
    * Get document attached to specific task
    */
-  async getTaskDocument(onboardingId: string, taskIndex: number): Promise<any> {
+  async getTaskDocument(
+    onboardingId: string,
+    taskIndex: number,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       // 1. Validate ObjectId
       if (!Types.ObjectId.isValid(onboardingId)) {
@@ -1953,7 +2070,10 @@ Due: ${context.dueDate}` : '';
   /**
    * Delete document (optional - for cleanup)
    */
-  async deleteDocument(documentId: string): Promise<void> {
+  async deleteDocument(
+    documentId: string,
+    _currentUserId: string,
+  ): Promise<void> {
     try {
       // 1. Validate ObjectId
       if (!Types.ObjectId.isValid(documentId)) {
@@ -2209,6 +2329,7 @@ Due: ${context.dueDate}` : '';
           contractSigningDate,
           startDate,
           workEmail, // Pass work email to include in onboarding tasks
+          employeeId,
         );
 
         // ONB-018: Automatically trigger payroll initiation
@@ -2218,6 +2339,7 @@ Due: ${context.dueDate}` : '';
               employeeId,
               contractSigningDate,
               contract.grossSalary,
+              employeeId,
             );
           } catch (e) {
             console.warn('Failed to trigger payroll initiation:', e);
@@ -2231,6 +2353,7 @@ Due: ${context.dueDate}` : '';
               employeeId,
               contract.signingBonus,
               contractSigningDate,
+              employeeId,
             );
           } catch (e) {
             console.warn('Failed to process signing bonus:', e);
@@ -2242,6 +2365,8 @@ Due: ${context.dueDate}` : '';
           await this.scheduleAccessProvisioning(
             employeeId,
             startDate,
+            undefined,
+            employeeId,
           );
         } catch (e) {
           console.warn('Failed to schedule access provisioning:', e);
@@ -2285,6 +2410,7 @@ Due: ${context.dueDate}` : '';
     referringEmployeeId: string,
     role?: string,
     level?: string,
+    currentUserId?: string,
   ): Promise<any> {
     try {
       // Validate ObjectIds
@@ -2317,6 +2443,8 @@ Due: ${context.dueDate}` : '';
         referringEmployeeId: new Types.ObjectId(referringEmployeeId),
         role: role || '',
         level: level || '',
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
       });
 
       const saved = await referral.save();
@@ -2332,7 +2460,10 @@ Due: ${context.dueDate}` : '';
   /**
    * Get all referrals for a candidate
    */
-  async getCandidateReferrals(candidateId: string): Promise<any[]> {
+  async getCandidateReferrals(
+    candidateId: string,
+    _currentUserId: string,
+  ): Promise<any[]> {
     if (!Types.ObjectId.isValid(candidateId)) {
       throw new BadRequestException('Invalid candidate ID format');
     }
@@ -2355,6 +2486,7 @@ Due: ${context.dueDate}` : '';
     consentGiven: boolean,
     consentType: string = 'data_processing',
     notes?: string,
+    currentUserId?: string,
   ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(candidateId)) {
@@ -2376,7 +2508,7 @@ Due: ${context.dueDate}` : '';
 
       const updated = await this.candidateModel.findByIdAndUpdate(
         candidateId,
-        { notes: updatedNotes },
+        { notes: updatedNotes, updatedBy: currentUserId },
         { new: true }
       );
 
@@ -2406,6 +2538,7 @@ Due: ${context.dueDate}` : '';
     interviewerId: string,
     score: number,
     comments?: string,
+    currentUserId?: string,
   ): Promise<any> {
     try {
       // Validate ObjectIds
@@ -2464,7 +2597,7 @@ Due: ${context.dueDate}` : '';
         // Update existing feedback
         assessmentResult = await this.assessmentResultModel.findByIdAndUpdate(
           existingFeedback._id,
-          { score, comments },
+          { score, comments, updatedBy: currentUserId },
           { new: true }
         );
       } else {
@@ -2474,6 +2607,8 @@ Due: ${context.dueDate}` : '';
           interviewerId: new Types.ObjectId(interviewerId),
           score,
           comments: comments || '',
+          createdBy: currentUserId,
+          updatedBy: currentUserId,
         });
         assessmentResult = await assessmentResult.save();
 
@@ -2495,7 +2630,10 @@ Due: ${context.dueDate}` : '';
   /**
    * Get all feedback for an interview
    */
-  async getInterviewFeedback(interviewId: string): Promise<any[]> {
+  async getInterviewFeedback(
+    interviewId: string,
+    _currentUserId: string,
+  ): Promise<any[]> {
     if (!Types.ObjectId.isValid(interviewId)) {
       throw new BadRequestException('Invalid interview ID format');
     }
@@ -2510,7 +2648,10 @@ Due: ${context.dueDate}` : '';
   /**
    * Get average score for an interview
    */
-  async getInterviewAverageScore(interviewId: string): Promise<number> {
+  async getInterviewAverageScore(
+    interviewId: string,
+    _currentUserId: string,
+  ): Promise<number> {
     if (!Types.ObjectId.isValid(interviewId)) {
       throw new BadRequestException('Invalid interview ID format');
     }
@@ -2531,7 +2672,10 @@ Due: ${context.dueDate}` : '';
    * BR: Ranking rules enforced - Get ranked applications based on assessment scores
    * Applications are ranked by: 1) Referral status, 2) Average interview scores, 3) Application date
    */
-  async getRankedApplications(requisitionId: string): Promise<any[]> {
+  async getRankedApplications(
+    requisitionId: string,
+    _currentUserId: string,
+  ): Promise<any[]> {
     if (!Types.ObjectId.isValid(requisitionId)) {
       throw new BadRequestException('Invalid requisition ID format');
     }
@@ -2569,7 +2713,7 @@ Due: ${context.dueDate}` : '';
     const interviewScores: Record<string, number> = {};
     for (const interview of interviews) {
       const interviewId = (interview as any)._id.toString();
-      const avgScore = await this.getInterviewAverageScore(interviewId);
+      const avgScore = await this.getInterviewAverageScore(interviewId, _currentUserId);
       const applicationId = (interview as any).applicationId.toString();
       if (!interviewScores[applicationId] || avgScore > interviewScores[applicationId]) {
         interviewScores[applicationId] = avgScore;
@@ -2608,7 +2752,7 @@ Due: ${context.dueDate}` : '';
    * ONB-005: Send reminders for overdue or upcoming tasks
    * BR: Reminders required
    */
-  async sendOnboardingReminders(): Promise<void> {
+  async sendOnboardingReminders(_currentUserId: string): Promise<void> {
     try {
       const allOnboardings = await this.onboardingModel.find({ completed: false }).populate('employeeId').lean();
 
@@ -2673,7 +2817,11 @@ Due: ${context.dueDate}` : '';
    * ONB-009: Provision system access (SSO/email/tools)
    * BR: IT access automated
    */
-  async provisionSystemAccess(employeeId: string, taskIndex: number): Promise<any> {
+  async provisionSystemAccess(
+    employeeId: string,
+    taskIndex: number,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -2772,7 +2920,12 @@ Due: ${context.dueDate}` : '';
    * ONB-012: Reserve and track equipment, desk, and access cards
    * BR: All resources tracked
    */
-  async reserveEquipment(employeeId: string, equipmentType: string, equipmentDetails: any): Promise<any> {
+  async reserveEquipment(
+    employeeId: string,
+    equipmentType: string,
+    equipmentDetails: any,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -2841,7 +2994,12 @@ Due: ${context.dueDate}` : '';
    * ONB-013: Schedule automatic account provisioning and revocation
    * BR: Provisioning and security must be consistent
    */
-  async scheduleAccessProvisioning(employeeId: string, startDate: Date, endDate?: Date): Promise<any> {
+  async scheduleAccessProvisioning(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date | undefined,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -2949,7 +3107,12 @@ Due: ${context.dueDate}` : '';
    * ONB-018: Automatically handle payroll initiation based on contract signing day
    * BR: Payroll trigger automatic (REQ-PY-23)
    */
-  async triggerPayrollInitiation(employeeId: string, contractSigningDate: Date, grossSalary: number): Promise<any> {
+  async triggerPayrollInitiation(
+    employeeId: string,
+    contractSigningDate: Date,
+    grossSalary: number,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -3047,7 +3210,12 @@ Due: ${context.dueDate}` : '';
    * ONB-019: Automatically process signing bonuses based on contract
    * BR: Bonuses treated as distinct payroll components (REQ-PY-27)
    */
-  async processSigningBonus(employeeId: string, signingBonus: number, contractSigningDate: Date): Promise<any> {
+  async processSigningBonus(
+    employeeId: string,
+    signingBonus: number,
+    contractSigningDate: Date,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -3141,7 +3309,11 @@ Due: ${context.dueDate}` : '';
    * Cancel/terminate onboarding in case of no-show
    * BR: Allow onboarding cancellation/termination
    */
-  async cancelOnboarding(employeeId: string, reason: string): Promise<any> {
+  async cancelOnboarding(
+    employeeId: string,
+    reason: string,
+    _currentUserId: string,
+  ): Promise<any> {
     try {
       if (!Types.ObjectId.isValid(employeeId)) {
         throw new BadRequestException('Invalid employee ID format');
@@ -3203,6 +3375,7 @@ Due: ${context.dueDate}` : '';
   async createTerminationRequest(
     dto: CreateTerminationRequestDto,
     user: any,
+    currentUserId: string,
   ) {
     // Guard: user must be authenticated
     if (!user || !user.role) {
@@ -3258,6 +3431,8 @@ Due: ${context.dueDate}` : '';
         status: TerminationStatus.PENDING,
         // no separate contract entity → use employee._id as dummy ObjectId
         contractId: employee._id,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
       });
 
       return termination;
@@ -3336,6 +3511,8 @@ Due: ${context.dueDate}` : '';
           : undefined,
         status: TerminationStatus.PENDING,
         contractId: employee._id,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
       });
 
       return termination;
@@ -3346,7 +3523,7 @@ Due: ${context.dueDate}` : '';
   }
 
   // 2) GET TERMINATION REQUEST
-  async getTerminationRequestById(id: string) {
+  async getTerminationRequestById(id: string, _currentUserId: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid termination request ID format');
     }
@@ -3360,7 +3537,10 @@ Due: ${context.dueDate}` : '';
   }
 
   // 2b) GET MY RESIGNATION REQUESTS (for employees)
-  async getMyResignationRequests(user: any) {
+  async getMyResignationRequests(
+    user: any,
+    _currentUserId: string,
+  ) {
     if (!user || !user.role) {
       throw new ForbiddenException('Unauthorized');
     }
@@ -3389,6 +3569,7 @@ Due: ${context.dueDate}` : '';
     id: string,
     dto: UpdateTerminationStatusDto,
     user: any,
+    currentUserId: string,
   ) {
     // Only HR Manager
     if (!user || user.role !== SystemRole.HR_MANAGER) {
@@ -3427,6 +3608,7 @@ Due: ${context.dueDate}` : '';
       termination.terminationDate = new Date(dto.terminationDate);
     }
 
+    (termination as any).updatedBy = currentUserId;
     const saved = await termination.save();
 
     // When approved → create clearance checklist (if it doesn't already exist)
@@ -3442,6 +3624,7 @@ Due: ${context.dueDate}` : '';
               terminationId: termination._id.toString(),
             } as CreateClearanceChecklistDto,
             user,
+            currentUserId,
           );
         }
       } catch (e) {
@@ -3458,6 +3641,7 @@ Due: ${context.dueDate}` : '';
     id: string,
     dto: UpdateTerminationDetailsDto,
     user: any,
+    currentUserId: string,
   ) {
     // Reasonable to restrict to HR Manager
     if (!user || user.role !== SystemRole.HR_MANAGER) {
@@ -3508,7 +3692,11 @@ Due: ${context.dueDate}` : '';
     if (dto.terminationDate)
       update.terminationDate = new Date(dto.terminationDate);
 
-    const updated = await this.terminationModel.findByIdAndUpdate(id, update, { new: true });
+    const updated = await this.terminationModel.findByIdAndUpdate(
+      id,
+      { ...update, updatedBy: currentUserId },
+      { new: true },
+    );
     if (!updated) {
       throw new NotFoundException('Termination request not found.');
     }
@@ -3519,6 +3707,7 @@ Due: ${context.dueDate}` : '';
   async createClearanceChecklist(
     dto: CreateClearanceChecklistDto,
     user: any,
+    currentUserId: string,
   ) {
     // Only HR Manager
     if (!user || user.role !== SystemRole.HR_MANAGER) {
@@ -3567,6 +3756,8 @@ Due: ${context.dueDate}` : '';
         ],
         equipmentList: [],
         cardReturned: false,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
       });
 
       return checklistFallback.save();
@@ -3610,6 +3801,8 @@ Due: ${context.dueDate}` : '';
       items,
       equipmentList,
       cardReturned: false,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
     });
 
     return checklist.save();
@@ -3695,7 +3888,10 @@ Due: ${context.dueDate}` : '';
   // This ensures proper workflow: all departments must sign off before final pay processing.
 
   // 6) GET CHECKLIST BY EMPLOYEE (employeeNumber)
-  async getChecklistByEmployee(employeeId: string) {
+  async getChecklistByEmployee(
+    employeeId: string,
+    _currentUserId: string,
+  ) {
     // Validate employeeId format
     if (!employeeId || typeof employeeId !== 'string' || employeeId.trim().length === 0) {
       throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
@@ -3730,6 +3926,7 @@ Due: ${context.dueDate}` : '';
     checklistId: string,
     dto: UpdateClearanceItemStatusDto,
     user: any,
+    currentUserId: string,
   ) {
     // Authorization and department-specific rules
     if (!user || !user.role) {
@@ -3819,6 +4016,7 @@ Due: ${context.dueDate}` : '';
           'items.$.comments': dto.comments ?? null,
           'items.$.updatedBy': user.id ? new Types.ObjectId(user.id) : null,
           'items.$.updatedAt': new Date(),
+          updatedBy: currentUserId,
         },
       },
     );
@@ -3908,7 +4106,11 @@ Due: ${context.dueDate}` : '';
   }
 
   // 8) MANUAL COMPLETE
-  async markChecklistCompleted(checklistId: string, user: any) {
+  async markChecklistCompleted(
+    checklistId: string,
+    user: any,
+    currentUserId: string,
+  ) {
     if (!user || user.role !== SystemRole.HR_MANAGER) {
       throw new ForbiddenException(
         'Only HR Manager can manually complete checklist.',
@@ -3928,7 +4130,7 @@ Due: ${context.dueDate}` : '';
 
     const updated = await this.clearanceModel.findByIdAndUpdate(
       checklistId,
-      { cardReturned: true },
+      { cardReturned: true, updatedBy: currentUserId },
       { new: true },
     );
 
@@ -4152,7 +4354,10 @@ Due: ${context.dueDate}` : '';
    * - Uses employeeSystemRoleModel and employeeModel to resolve recipients for role-based departments
    * - Defaults: intervalDays=3, escalationAfterDays=7, maxReminders=3
    */
-  async sendClearanceReminders(options?: { force?: boolean }) {
+  async sendClearanceReminders(
+    options: { force?: boolean } | undefined,
+    _currentUserId: string,
+  ) {
     const REMINDER_INTERVAL_DAYS = 3;
     const ESCALATION_AFTER_DAYS = 7;
     const MAX_REMINDERS = 3;
@@ -4319,7 +4524,10 @@ Due: ${context.dueDate}` : '';
   }
 
   // 9) GET LATEST APPRAISAL FOR AN EMPLOYEE (by employeeNumber)
-  async getLatestAppraisalForEmployee(employeeId: string) {
+  async getLatestAppraisalForEmployee(
+    employeeId: string,
+    _currentUserId: string,
+  ) {
     // Validate employeeId format
     if (!employeeId || typeof employeeId !== 'string' || employeeId.trim().length === 0) {
       throw new BadRequestException('Employee ID (employeeNumber) is required and must be a non-empty string');
@@ -4384,7 +4592,11 @@ Due: ${context.dueDate}` : '';
   }
 
   // 10) FUNCTION TO MAKE EMPLOYEE INACTIVE (SYSTEM ADMIN)
-  async revokeSystemAccess(dto: RevokeSystemAccessDto, user: any) {
+  async revokeSystemAccess(
+    dto: RevokeSystemAccessDto,
+    user: any,
+    currentUserId: string,
+  ) {
     // Only SYSTEM_ADMIN can do this
     if (!user || user.role !== SystemRole.SYSTEM_ADMIN) {
       throw new ForbiddenException(
@@ -4424,6 +4636,7 @@ Due: ${context.dueDate}` : '';
     // Capture previous status and Update status to INACTIVE
     const previousStatus = employee.status;
     employee.status = EmployeeStatus.INACTIVE;
+    (employee as any).updatedBy = currentUserId;
     await employee.save();
 
     // Try to find a termination for audit logging
