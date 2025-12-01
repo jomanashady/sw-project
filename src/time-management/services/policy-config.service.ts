@@ -947,7 +947,445 @@ export class PolicyConfigService {
     return this.holidayModel.findByIdAndDelete(id).exec();
   }
 
+  // ===== US17: HOLIDAY & REST DAY CONFIGURATION (BR-TM-19) =====
+
+  /**
+   * Configure weekly rest days for the organization
+   * BR-TM-19: Weekly rest days must be linked to shift schedules
+   */
+  async configureWeeklyRestDays(
+    params: {
+      restDays: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
+      effectiveFrom?: Date;
+      effectiveTo?: Date;
+      departmentId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const { restDays, effectiveFrom, effectiveTo, departmentId } = params;
+    
+    // Validate rest days
+    const validDays = restDays.filter(d => d >= 0 && d <= 6);
+    if (validDays.length === 0) {
+      return {
+        success: false,
+        message: 'Invalid rest days provided. Use 0-6 (Sunday-Saturday)',
+      };
+    }
+    
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const restDayNames = validDays.map(d => dayNames[d]);
+    
+    return {
+      success: true,
+      configuration: {
+        restDays: validDays,
+        restDayNames,
+        effectiveFrom: effectiveFrom || new Date(),
+        effectiveTo: effectiveTo || null,
+        departmentId: departmentId || 'ALL',
+        scope: departmentId ? 'DEPARTMENT' : 'ORGANIZATION',
+      },
+      penaltySuppression: {
+        enabled: true,
+        message: `Attendance penalties will be suppressed on ${restDayNames.join(', ')}`,
+      },
+      configuredAt: new Date(),
+      configuredBy: currentUserId,
+    };
+  }
+
+  /**
+   * Check if a date is a rest day
+   * BR-TM-19: Weekly rest days must be linked to shift schedules
+   */
+  async checkRestDay(
+    params: {
+      date: Date;
+      restDays?: number[]; // Custom rest days, default [5, 6] (Fri, Sat) or [0, 6] (Sun, Sat)
+    },
+    currentUserId: string,
+  ) {
+    const { date, restDays = [5, 6] } = params; // Default: Friday & Saturday
+    
+    const dateObj = new Date(date);
+    const dayOfWeek = dateObj.getDay();
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    const isRestDay = restDays.includes(dayOfWeek);
+    
+    return {
+      date,
+      dayOfWeek,
+      dayName: dayNames[dayOfWeek],
+      isRestDay,
+      configuredRestDays: restDays.map(d => dayNames[d]),
+      penaltySuppression: isRestDay,
+      message: isRestDay 
+        ? `${dayNames[dayOfWeek]} is a configured rest day - penalties suppressed`
+        : `${dayNames[dayOfWeek]} is a working day`,
+    };
+  }
+
+  /**
+   * Bulk create holidays (e.g., annual holiday calendar)
+   * BR-TM-19: National/organizational holidays must be linked to shift schedules
+   */
+  async bulkCreateHolidays(
+    params: {
+      holidays: Array<{
+        name: string;
+        type: string;
+        startDate: Date;
+        endDate?: Date;
+      }>;
+      year?: number;
+    },
+    currentUserId: string,
+  ) {
+    const { holidays, year = new Date().getFullYear() } = params;
+    
+    const createdHolidays: any[] = [];
+    const failedHolidays: any[] = [];
+    
+    for (const holiday of holidays) {
+      try {
+        const newHoliday = new this.holidayModel({
+          name: holiday.name,
+          type: holiday.type,
+          startDate: new Date(holiday.startDate),
+          endDate: holiday.endDate ? new Date(holiday.endDate) : undefined,
+          active: true,
+          createdBy: currentUserId,
+          updatedBy: currentUserId,
+        });
+        const saved = await newHoliday.save();
+        createdHolidays.push({
+          id: (saved as any)._id,
+          name: saved.name,
+          startDate: saved.startDate,
+        });
+      } catch (error) {
+        failedHolidays.push({
+          name: holiday.name,
+          error: 'Failed to create holiday',
+        });
+      }
+    }
+    
+    return {
+      success: failedHolidays.length === 0,
+      year,
+      summary: {
+        total: holidays.length,
+        created: createdHolidays.length,
+        failed: failedHolidays.length,
+      },
+      createdHolidays,
+      failedHolidays: failedHolidays.length > 0 ? failedHolidays : undefined,
+      createdAt: new Date(),
+      createdBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get holiday calendar for a specific period
+   * BR-TM-19: View all holidays and rest days for planning
+   */
+  async getHolidayCalendar(
+    params: {
+      year?: number;
+      month?: number;
+      includeRestDays?: boolean;
+      restDays?: number[];
+    },
+    currentUserId: string,
+  ) {
+    const { year = new Date().getFullYear(), month, includeRestDays = true, restDays = [5, 6] } = params;
+    
+    // Build date range
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (month !== undefined) {
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0); // Last day of month
+    } else {
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year, 11, 31);
+    }
+    
+    // Get holidays in range
+    const holidays = await this.holidayModel
+      .find({
+        active: true,
+        startDate: { $lte: endDate },
+        $or: [
+          { endDate: { $gte: startDate } },
+          { endDate: { $exists: false }, startDate: { $gte: startDate } },
+        ],
+      })
+      .sort({ startDate: 1 })
+      .exec();
+    
+    // Group by type
+    const byType: Record<string, any[]> = {
+      NATIONAL: [],
+      ORGANIZATIONAL: [],
+      WEEKLY_REST: [],
+    };
+    
+    holidays.forEach(h => {
+      const type = h.type || 'ORGANIZATIONAL';
+      if (!byType[type]) byType[type] = [];
+      byType[type].push({
+        id: (h as any)._id,
+        name: h.name,
+        startDate: h.startDate,
+        endDate: h.endDate,
+        type: h.type,
+      });
+    });
+    
+    // Calculate rest days in period if requested
+    let restDaysInPeriod: any[] = [];
+    if (includeRestDays) {
+      const current = new Date(startDate);
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      
+      while (current <= endDate) {
+        if (restDays.includes(current.getDay())) {
+          restDaysInPeriod.push({
+            date: new Date(current),
+            dayName: dayNames[current.getDay()],
+          });
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    
+    return {
+      period: {
+        year,
+        month: month || 'ALL',
+        startDate,
+        endDate,
+      },
+      summary: {
+        totalHolidays: holidays.length,
+        nationalHolidays: byType.NATIONAL.length,
+        organizationalHolidays: byType.ORGANIZATIONAL.length,
+        restDaysCount: restDaysInPeriod.length,
+      },
+      holidays: byType,
+      restDays: includeRestDays ? {
+        configuredDays: restDays.map(d => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]),
+        count: restDaysInPeriod.length,
+        // Only include first few and last few to avoid huge response
+        sample: restDaysInPeriod.length > 10 
+          ? [...restDaysInPeriod.slice(0, 5), { note: `...${restDaysInPeriod.length - 10} more...` }, ...restDaysInPeriod.slice(-5)]
+          : restDaysInPeriod,
+      } : undefined,
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Check if attendance date requires penalty suppression (holiday OR rest day)
+   * BR-TM-19: Comprehensive check for both holidays and rest days
+   */
+  async checkPenaltySuppression(
+    params: {
+      employeeId: string;
+      date: Date;
+      restDays?: number[];
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, date, restDays = [5, 6] } = params;
+    
+    // Check if it's a holiday
+    const holidayCheck = await this.checkHoliday({ date }, currentUserId);
+    
+    // Check if it's a rest day
+    const restDayCheck = await this.checkRestDay({ date, restDays }, currentUserId);
+    
+    const shouldSuppressPenalty = holidayCheck.isHoliday || restDayCheck.isRestDay;
+    
+    let suppressionReason = '';
+    if (holidayCheck.isHoliday && restDayCheck.isRestDay) {
+      suppressionReason = `${holidayCheck.holiday?.name || 'Holiday'} (also a rest day)`;
+    } else if (holidayCheck.isHoliday) {
+      suppressionReason = holidayCheck.holiday?.name || 'Holiday';
+    } else if (restDayCheck.isRestDay) {
+      suppressionReason = `Rest day (${restDayCheck.dayName})`;
+    }
+    
+    return {
+      employeeId,
+      date,
+      dayName: restDayCheck.dayName,
+      checks: {
+        isHoliday: holidayCheck.isHoliday,
+        holidayName: holidayCheck.holiday?.name || null,
+        holidayType: holidayCheck.holiday?.type || null,
+        isRestDay: restDayCheck.isRestDay,
+      },
+      penaltySuppression: {
+        suppress: shouldSuppressPenalty,
+        reason: suppressionReason || 'Working day - no suppression',
+      },
+      recommendation: shouldSuppressPenalty
+        ? 'No attendance penalties should be applied'
+        : 'Standard attendance rules apply',
+      checkedAt: new Date(),
+    };
+  }
+
+  /**
+   * Link holidays to shift schedules
+   * BR-TM-19: Holidays must be linked to shift schedules
+   */
+  async linkHolidaysToShift(
+    params: {
+      shiftId: string;
+      holidayIds: string[];
+      action: 'NO_WORK' | 'OPTIONAL' | 'OVERTIME_ELIGIBLE';
+    },
+    currentUserId: string,
+  ) {
+    const { shiftId, holidayIds, action } = params;
+    
+    // Validate holidays exist
+    const holidays = await this.holidayModel
+      .find({ _id: { $in: holidayIds }, active: true })
+      .exec();
+    
+    if (holidays.length === 0) {
+      return {
+        success: false,
+        message: 'No valid holidays found',
+      };
+    }
+    
+    const linkedHolidays = holidays.map(h => ({
+      holidayId: (h as any)._id,
+      name: h.name,
+      startDate: h.startDate,
+      type: h.type,
+    }));
+    
+    return {
+      success: true,
+      shiftId,
+      action,
+      actionDescription: action === 'NO_WORK' 
+        ? 'Employees are not expected to work'
+        : action === 'OPTIONAL'
+          ? 'Work is optional with no penalty for absence'
+          : 'Work is overtime-eligible with premium rates',
+      linkedHolidays,
+      holidayCount: linkedHolidays.length,
+      linkedAt: new Date(),
+      linkedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get holidays affecting a specific employee's schedule
+   * BR-TM-19: Employee-specific holiday view
+   */
+  async getEmployeeHolidaySchedule(
+    params: {
+      employeeId: string;
+      startDate: Date;
+      endDate: Date;
+      restDays?: number[];
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, startDate, endDate, restDays = [5, 6] } = params;
+    
+    // Get holidays in range
+    const holidays = await this.holidayModel
+      .find({
+        active: true,
+        startDate: { $lte: endDate },
+        $or: [
+          { endDate: { $gte: startDate } },
+          { endDate: { $exists: false }, startDate: { $gte: startDate } },
+        ],
+      })
+      .sort({ startDate: 1 })
+      .exec();
+    
+    // Calculate all non-working days
+    const nonWorkingDays: any[] = [];
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Add holidays
+    holidays.forEach(h => {
+      const hStart = new Date(h.startDate);
+      const hEnd = h.endDate ? new Date(h.endDate) : new Date(h.startDate);
+      
+      const current = new Date(hStart);
+      while (current <= hEnd) {
+        if (current >= startDate && current <= endDate) {
+          nonWorkingDays.push({
+            date: new Date(current),
+            type: 'HOLIDAY',
+            name: h.name || 'Holiday',
+            holidayType: h.type,
+          });
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    
+    // Add rest days
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      if (restDays.includes(currentDate.getDay())) {
+        // Check if not already a holiday
+        const isHoliday = nonWorkingDays.some(
+          d => d.type === 'HOLIDAY' && d.date.toDateString() === currentDate.toDateString()
+        );
+        if (!isHoliday) {
+          nonWorkingDays.push({
+            date: new Date(currentDate),
+            type: 'REST_DAY',
+            name: dayNames[currentDate.getDay()],
+          });
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Sort by date
+    nonWorkingDays.sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    // Calculate working days
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const workingDays = totalDays - nonWorkingDays.length;
+    
+    return {
+      employeeId,
+      period: { startDate, endDate },
+      summary: {
+        totalDays,
+        workingDays,
+        nonWorkingDays: nonWorkingDays.length,
+        holidays: nonWorkingDays.filter(d => d.type === 'HOLIDAY').length,
+        restDays: nonWorkingDays.filter(d => d.type === 'REST_DAY').length,
+      },
+      configuredRestDays: restDays.map(d => dayNames[d]),
+      nonWorkingDays,
+      generatedAt: new Date(),
+    };
+  }
+
   // ===== HOLIDAY VALIDATION METHODS =====
+
 
   // Check if a specific date is a holiday
   async checkHoliday(checkHolidayDto: CheckHolidayDto, currentUserId: string) {
