@@ -564,10 +564,12 @@ export class RecruitmentService {
     dto: CreateApplicationDto,
     consentGiven: boolean = false,
   ): Promise<Application> {
-    // Validate ObjectIds
-    if (!Types.ObjectId.isValid(dto.candidateId)) {
-      throw new BadRequestException('Invalid candidate ID format');
+    // Validate candidateNumber format (e.g., CAN-2025-0001)
+    if (!dto.candidateNumber || typeof dto.candidateNumber !== 'string') {
+      throw new BadRequestException('Candidate number is required');
     }
+
+    // Validate requisitionId
     if (!Types.ObjectId.isValid(dto.requisitionId)) {
       throw new BadRequestException('Invalid requisition ID format');
     }
@@ -582,11 +584,18 @@ export class RecruitmentService {
       );
     }
 
-    // Validate candidate exists
-    const candidate = await this.candidateModel.findById(dto.candidateId);
+    // REC-007: Look up candidate by candidateNumber (not ID, since candidates aren't employees yet)
+    const candidate = await this.candidateModel.findOne({
+      candidateNumber: dto.candidateNumber,
+    });
     if (!candidate) {
-      throw new NotFoundException('Candidate not found');
+      throw new NotFoundException(
+        `Candidate with number ${dto.candidateNumber} not found`,
+      );
     }
+
+    // Get candidate's ObjectId for the Application record
+    const candidateId = candidate._id;
 
     // Check if job requisition exists and is published
     const jobRequisition = await this.jobModel.findById(dto.requisitionId);
@@ -629,20 +638,27 @@ export class RecruitmentService {
 
     // Check if candidate already applied to this requisition
     const existingApplication = await this.applicationModel.findOne({
-      candidateId: new Types.ObjectId(dto.candidateId),
+      candidateId: candidateId,
       requisitionId: new Types.ObjectId(dto.requisitionId),
     });
     if (existingApplication) {
       throw new BadRequestException(
-        'You have already applied to this position',
+        'This candidate has already applied to this position',
       );
     }
 
+    // Use assignedHr if provided, otherwise use hiringManagerId from requisition
+    const assignedHrId = dto.assignedHr
+      ? new Types.ObjectId(dto.assignedHr)
+      : jobRequisition.hiringManagerId || undefined;
+
+    // REC-007: Create application - starts at SCREENING stage (REC-008)
+    // HR creates application using requisitionId, candidateNumber, and optionally assignedHr
     const application = new this.applicationModel({
-      candidateId: dto.candidateId,
+      candidateId: candidateId,
       requisitionId: dto.requisitionId,
-      assignedHr: dto.assignedHr || undefined,
-      currentStage: ApplicationStage.SCREENING,
+      assignedHr: assignedHrId, // Uses provided assignedHr or hiringManagerId from requisition
+      currentStage: ApplicationStage.SCREENING, // BR: Applications tracked through defined stages
       status: ApplicationStatus.SUBMITTED,
     });
     return application.save();
@@ -3115,16 +3131,21 @@ Due: ${context.dueDate}`
    * REC-007: Candidate uploads CV
    * Upload CV/resume for candidate profile
    */
-  async uploadCandidateCV(candidateId: string, file: any): Promise<any> {
+  async uploadCandidateCV(candidateNumber: string, file: any): Promise<any> {
     try {
-      if (!Types.ObjectId.isValid(candidateId)) {
-        throw new BadRequestException('Invalid candidate ID format');
+      // REC-007: Validate candidateNumber format
+      if (!candidateNumber || typeof candidateNumber !== 'string') {
+        throw new BadRequestException('Candidate number is required');
       }
 
-      // Validate candidate exists
-      const candidate = await this.candidateModel.findById(candidateId);
+      // REC-007: Look up candidate by candidateNumber (not ID)
+      const candidate = await this.candidateModel.findOne({
+        candidateNumber: candidateNumber,
+      });
       if (!candidate) {
-        throw new NotFoundException('Candidate not found');
+        throw new NotFoundException(
+          `Candidate with number ${candidateNumber} not found`,
+        );
       }
 
       // Validate file exists
@@ -3162,7 +3183,8 @@ Due: ${context.dueDate}`
 
       return {
         message: 'CV uploaded successfully',
-        candidateId: candidateId,
+        candidateNumber: candidateNumber,
+        candidateId: candidate._id.toString(),
         resumeUrl: file.path,
       };
     } catch (error) {
@@ -3262,19 +3284,25 @@ Due: ${context.dueDate}`
    * a consent schema may be needed to track consent history and withdrawals.
    */
   async recordCandidateConsent(
-    candidateId: string,
+    candidateNumber: string,
     consentGiven: boolean,
     consentType: string = 'data_processing',
     notes?: string,
   ): Promise<any> {
     try {
-      if (!Types.ObjectId.isValid(candidateId)) {
-        throw new BadRequestException('Invalid candidate ID format');
+      // REC-028: Validate candidateNumber format
+      if (!candidateNumber || typeof candidateNumber !== 'string') {
+        throw new BadRequestException('Candidate number is required');
       }
 
-      const candidate = await this.candidateModel.findById(candidateId);
+      // REC-028: Look up candidate by candidateNumber
+      const candidate = await this.candidateModel.findOne({
+        candidateNumber: candidateNumber,
+      });
       if (!candidate) {
-        throw new NotFoundException('Candidate not found');
+        throw new NotFoundException(
+          `Candidate with number ${candidateNumber} not found`,
+        );
       }
 
       // Store consent in candidate notes or create a separate consent record
@@ -3286,12 +3314,13 @@ Due: ${context.dueDate}`
         : consentNote;
 
       const updated = await this.candidateModel.findByIdAndUpdate(
-        candidateId,
+        candidate._id,
         { notes: updatedNotes },
         { new: true },
       );
 
       return {
+        candidateNumber: candidateNumber,
         candidateId: updated?._id,
         consentGiven,
         consentType,

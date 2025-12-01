@@ -43,6 +43,7 @@ import { CreateOnboardingDto } from './dto/create-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import { UpdateOnboardingTaskDto } from './dto/update-task.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { CreateEmployeeFromContractDto } from './dto/create-employee-from-contract.dto';
@@ -189,25 +190,35 @@ export class RecruitmentController {
   /**
    * REC-007: Candidate uploads CV
    * Upload CV/resume for candidate profile
+   * Uses candidateNumber instead of ID (candidates aren't employees yet)
    */
   @UseGuards(RolesGuard)
   @Roles(SystemRole.JOB_CANDIDATE)
-  @Post('candidate/:candidateId/upload-cv')
+  @Post('candidate/:candidateNumber/upload-cv')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadCV(
-    @Param('candidateId') candidateId: string,
+    @Param('candidateNumber') candidateNumber: string,
     @UploadedFile() file: any,
   ) {
-    return this.service.uploadCandidateCV(candidateId, file);
+    return this.service.uploadCandidateCV(candidateNumber, file);
   }
 
   /**
-   * REC-007: Candidate uploads CV and applies for positions
+   * REC-007: Create application for candidate
    * REC-028: Consent required before storing application
-   * Only candidates can apply; system auto-sets candidateId
+   * HR Employees/Managers create applications on behalf of candidates
+   * Uses candidateNumber (candidates aren't employees yet, so they can't authenticate)
+   * 
+   * AUTH REQUIRED: HR Employee/Manager must login first to get JWT token
+   * Header: Authorization: Bearer <jwt_token>
    */
-  @UseGuards(RolesGuard)
-  @Roles(SystemRole.JOB_CANDIDATE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.RECRUITER,
+    SystemRole.SYSTEM_ADMIN,
+  )
   @Post('application')
   apply(@Body() dto: CreateApplicationDto & { consentGiven: boolean }) {
     // BR: Storing applications requires applicant authorization
@@ -882,14 +893,14 @@ export class RecruitmentController {
    * Candidates give consent for personal-data processing and background checks
    */
   @UseGuards(RolesGuard)
-  @Post('candidate/:candidateId/consent')
+  @Post('candidate/:candidateNumber/consent')
   recordCandidateConsent(
-    @Param('candidateId') candidateId: string,
+    @Param('candidateNumber') candidateNumber: string,
     @Body()
     dto: { consentGiven: boolean; consentType?: string; notes?: string },
   ) {
     return this.service.recordCandidateConsent(
-      candidateId,
+      candidateNumber,
       dto.consentGiven,
       dto.consentType || 'data_processing',
       dto.notes,
