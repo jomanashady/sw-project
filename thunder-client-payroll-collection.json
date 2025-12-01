@@ -1,0 +1,1075 @@
+{
+  "clientName": "Payroll Execution API Tests",
+  "collectionName": "Payroll Execution - Complete Test Suite",
+  "collectionId": "payroll-execution-tests",
+  "folders": [
+    {
+      "name": "1. Authentication",
+      "id": "auth-folder"
+    },
+    {
+      "name": "2. Payroll Initiation",
+      "id": "initiation-folder"
+    },
+    {
+      "name": "3. Signing Bonuses",
+      "id": "signing-bonus-folder"
+    },
+    {
+      "name": "4. Termination Benefits",
+      "id": "termination-folder"
+    },
+    {
+      "name": "5. Payroll Calculation",
+      "id": "calculation-folder"
+    },
+    {
+      "name": "6. Draft Generation",
+      "id": "draft-folder"
+    },
+    {
+      "name": "7. Irregularities",
+      "id": "irregularities-folder"
+    },
+    {
+      "name": "8. Preview & Validation",
+      "id": "preview-folder"
+    },
+    {
+      "name": "9. Approval Workflow",
+      "id": "approval-folder"
+    },
+    {
+      "name": "10. Lock/Freeze",
+      "id": "lock-folder"
+    },
+    {
+      "name": "11. Exception Management",
+      "id": "exception-folder"
+    },
+    {
+      "name": "12. Payslip Generation",
+      "id": "payslip-folder"
+    },
+    {
+      "name": "13. Edge Cases",
+      "id": "edge-cases-folder"
+    }
+  ],
+  "requests": [
+    {
+      "name": "Login - Payroll Specialist",
+      "url": "http://localhost:5000/api/v1/auth/login",
+      "method": "POST",
+      "folder": "auth-folder",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeNumber\": \"EMP-2025-0008\",\n  \"password\": \"password123\"\n}"
+      },
+      "tests": [
+        {
+          "name": "Status is 200",
+          "code": "expect(res.getStatus()).to.equal(200);"
+        },
+        {
+          "name": "Has access_token",
+          "code": "expect(res.getBody().access_token).to.exist;"
+        }
+      ]
+    },
+    {
+      "name": "Login - Payroll Manager",
+      "url": "http://localhost:5000/api/v1/auth/login",
+      "method": "POST",
+      "folder": "auth-folder",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeNumber\": \"EMP-002\",\n  \"password\": \"password123\"\n}"
+      }
+    },
+    {
+      "name": "Login - Finance Staff",
+      "url": "http://localhost:5000/api/v1/auth/login",
+      "method": "POST",
+      "folder": "auth-folder",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeNumber\": \"EMP-003\",\n  \"password\": \"password123\"\n}"
+      }
+    },
+    {
+      "name": "Get Pre-Initiation Validation",
+      "url": "http://localhost:5000/api/v1/payroll/pre-initiation-validation",
+      "method": "GET",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ]
+    },
+    {
+      "name": "Process Payroll Initiation - Normal",
+      "url": "http://localhost:5000/api/v1/payroll/process-initiation",
+      "method": "POST",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"currency\": \"USD\"\n}"
+      }
+    },
+    {
+      "name": "Process Payroll Initiation - Multi-Currency EUR",
+      "url": "http://localhost:5000/api/v1/payroll/process-initiation",
+      "method": "POST",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"European Branch\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"currency\": \"EUR\"\n}"
+      }
+    },
+    {
+      "name": "Process Payroll Initiation - Edge Case Future Date",
+      "url": "http://localhost:5000/api/v1/payroll/process-initiation",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2026-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\"\n}"
+      },
+      "tests": [
+        {
+          "name": "Should fail for future date > 3 months",
+          "code": "expect(res.getStatus()).to.be.oneOf([400, 500]);"
+        }
+      ]
+    },
+    {
+      "name": "Review Payroll Initiation - Approve",
+      "url": "http://localhost:5000/api/v1/payroll/review-initiation/{{runId}}",
+      "method": "POST",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"approved\": true,\n  \"reviewerId\": \"{{payrollSpecialistId}}\"\n}"
+      }
+    },
+    {
+      "name": "Review Payroll Initiation - Reject",
+      "url": "http://localhost:5000/api/v1/payroll/review-initiation/{{runId}}",
+      "method": "POST",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"approved\": false,\n  \"reviewerId\": \"{{payrollSpecialistId}}\",\n  \"rejectionReason\": \"Contract violations detected\"\n}"
+      }
+    },
+    {
+      "name": "Edit Payroll Initiation",
+      "url": "http://localhost:5000/api/v1/payroll/edit-initiation/{{runId}}",
+      "method": "PUT",
+      "folder": "initiation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-02-28T00:00:00.000Z\",\n  \"entity\": \"Updated Entity Name\"\n}"
+      }
+    },
+    {
+      "name": "Process Signing Bonuses",
+      "url": "http://localhost:5000/api/v1/payroll/process-signing-bonuses",
+      "method": "POST",
+      "folder": "signing-bonus-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Review Signing Bonus - Approve",
+      "url": "http://localhost:5000/api/v1/payroll/review-signing-bonus",
+      "method": "POST",
+      "folder": "signing-bonus-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"status\": \"approved\",\n  \"paymentDate\": \"2025-02-15T00:00:00.000Z\"\n}"
+      }
+    },
+    {
+      "name": "Review Signing Bonus - Reject",
+      "url": "http://localhost:5000/api/v1/payroll/review-signing-bonus",
+      "method": "POST",
+      "folder": "signing-bonus-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"status\": \"rejected\"\n}"
+      }
+    },
+    {
+      "name": "Edit Signing Bonus - Amount Only",
+      "url": "http://localhost:5000/api/v1/payroll/edit-signing-bonus",
+      "method": "PUT",
+      "folder": "signing-bonus-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"givenAmount\": 7500\n}"
+      }
+    },
+    {
+      "name": "Edit Signing Bonus - Edge Case Negative Amount",
+      "url": "http://localhost:5000/api/v1/payroll/edit-signing-bonus",
+      "method": "PUT",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"givenAmount\": -1000\n}"
+      },
+      "tests": [
+        {
+          "name": "Should fail validation",
+          "code": "expect(res.getStatus()).to.equal(400);"
+        }
+      ]
+    },
+    {
+      "name": "Process Termination Benefits",
+      "url": "http://localhost:5000/api/v1/payroll/process-termination-benefits",
+      "method": "POST",
+      "folder": "termination-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Review Termination Benefit - Approve",
+      "url": "http://localhost:5000/api/v1/payroll/review-termination-benefit",
+      "method": "POST",
+      "folder": "termination-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeTerminationResignationId\": \"{{employeeTerminationResignationId}}\",\n  \"status\": \"approved\"\n}"
+      }
+    },
+    {
+      "name": "Review Termination Benefit - Reject",
+      "url": "http://localhost:5000/api/v1/payroll/review-termination-benefit",
+      "method": "POST",
+      "folder": "termination-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeTerminationResignationId\": \"{{employeeTerminationResignationId}}\",\n  \"status\": \"rejected\"\n}"
+      }
+    },
+    {
+      "name": "Edit Termination Benefit",
+      "url": "http://localhost:5000/api/v1/payroll/edit-termination-benefit",
+      "method": "PUT",
+      "folder": "termination-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeTerminationResignationId\": \"{{employeeTerminationResignationId}}\",\n  \"givenAmount\": 15000\n}"
+      }
+    },
+    {
+      "name": "Calculate Payroll - With Base Salary",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-payroll",
+      "method": "POST",
+      "folder": "calculation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"baseSalary\": 5000\n}"
+      }
+    },
+    {
+      "name": "Calculate Payroll - Auto Fetch from PayGrade",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-payroll",
+      "method": "POST",
+      "folder": "calculation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"payrollRunId\": \"{{payrollRunId}}\"\n}"
+      }
+    },
+    {
+      "name": "Calculate Payroll - Edge Case Zero Salary",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-payroll",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"baseSalary\": 0\n}"
+      },
+      "tests": [
+        {
+          "name": "Should flag exception",
+          "code": "// Should create payroll details but flag exception"
+        }
+      ]
+    },
+    {
+      "name": "Calculate Prorated Salary - Mid-Month Hire",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-prorated-salary",
+      "method": "POST",
+      "folder": "calculation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"baseSalary\": 5000,\n  \"startDate\": \"2025-01-15T00:00:00.000Z\",\n  \"endDate\": \"2025-01-31T23:59:59.999Z\",\n  \"payrollPeriodEnd\": \"2025-01-31T23:59:59.999Z\"\n}"
+      }
+    },
+    {
+      "name": "Calculate Prorated Salary - Edge Case Invalid Date Range",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-prorated-salary",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"baseSalary\": 5000,\n  \"startDate\": \"2025-01-31T00:00:00.000Z\",\n  \"endDate\": \"2025-01-01T00:00:00.000Z\",\n  \"payrollPeriodEnd\": \"2025-01-31T23:59:59.999Z\"\n}"
+      },
+      "tests": [
+        {
+          "name": "Should fail for invalid date range",
+          "code": "expect(res.getStatus()).to.equal(400);"
+        }
+      ]
+    },
+    {
+      "name": "Apply Statutory Rules",
+      "url": "http://localhost:5000/api/v1/payroll/apply-statutory-rules",
+      "method": "POST",
+      "folder": "calculation-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"baseSalary\": 5000,\n  \"employeeId\": \"{{employeeId}}\"\n}"
+      }
+    },
+    {
+      "name": "Apply Statutory Rules - Edge Case High Salary",
+      "url": "http://localhost:5000/api/v1/payroll/apply-statutory-rules",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"baseSalary\": 50000,\n  \"employeeId\": \"{{employeeId}}\"\n}"
+      }
+    },
+    {
+      "name": "Generate Draft Payroll Run",
+      "url": "http://localhost:5000/api/v1/payroll/generate-draft",
+      "method": "POST",
+      "folder": "draft-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"currency\": \"USD\"\n}"
+      }
+    },
+    {
+      "name": "Flag Payroll Exception - With Employee",
+      "url": "http://localhost:5000/api/v1/payroll/flag-exception",
+      "method": "POST",
+      "folder": "irregularities-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"code\": \"MISSING_BANK_ACCOUNT\",\n  \"message\": \"Employee bank account details are missing\"\n}"
+      }
+    },
+    {
+      "name": "Flag Payroll Exception - General",
+      "url": "http://localhost:5000/api/v1/payroll/flag-exception",
+      "method": "POST",
+      "folder": "irregularities-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"code\": \"SYSTEM_ERROR\",\n  \"message\": \"Database connection timeout\"\n}"
+      }
+    },
+    {
+      "name": "Detect Irregularities",
+      "url": "http://localhost:5000/api/v1/payroll/detect-irregularities/{{payrollRunId}}",
+      "method": "POST",
+      "folder": "irregularities-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Get Payroll Preview",
+      "url": "http://localhost:5000/api/v1/payroll/preview/{{payrollRunId}}",
+      "method": "GET",
+      "folder": "preview-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Payroll Preview - With Currency Conversion",
+      "url": "http://localhost:5000/api/v1/payroll/preview/{{payrollRunId}}?currency=EUR",
+      "method": "GET",
+      "folder": "preview-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ]
+    },
+    {
+      "name": "Send for Approval",
+      "url": "http://localhost:5000/api/v1/payroll/send-for-approval",
+      "method": "POST",
+      "folder": "approval-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"managerId\": \"{{managerId}}\",\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Manager Approval - Approve",
+      "url": "http://localhost:5000/api/v1/payroll/manager-approval",
+      "method": "POST",
+      "folder": "approval-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"managerDecision\": \"approved\",\n  \"managerComments\": \"All calculations verified\",\n  \"payrollManagerId\": \"{{managerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Manager Approval - Reject",
+      "url": "http://localhost:5000/api/v1/payroll/manager-approval",
+      "method": "POST",
+      "folder": "approval-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"managerDecision\": \"rejected\",\n  \"managerComments\": \"Multiple irregularities detected\"\n}"
+      }
+    },
+    {
+      "name": "Finance Approval - Approve",
+      "url": "http://localhost:5000/api/v1/payroll/finance-approval",
+      "method": "POST",
+      "folder": "approval-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{financeStaffToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"decision\": \"approve\",\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Finance Approval - Reject",
+      "url": "http://localhost:5000/api/v1/payroll/finance-approval",
+      "method": "POST",
+      "folder": "approval-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{financeStaffToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"decision\": \"reject\",\n  \"reason\": \"Insufficient funds\"\n}"
+      }
+    },
+    {
+      "name": "Lock Payroll",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/lock",
+      "method": "POST",
+      "folder": "lock-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Unlock Payroll",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/unlock",
+      "method": "POST",
+      "folder": "lock-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"unlockReason\": \"Correction needed for employee EMP-001\"\n}"
+      }
+    },
+    {
+      "name": "Unlock Payroll - Edge Case Empty Reason",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/unlock",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"unlockReason\": \"\"\n}"
+      },
+      "tests": [
+        {
+          "name": "Should fail validation",
+          "code": "expect(res.getStatus()).to.equal(400);"
+        }
+      ]
+    },
+    {
+      "name": "Freeze Payroll",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/freeze",
+      "method": "POST",
+      "folder": "lock-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Unfreeze Payroll",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/unfreeze",
+      "method": "POST",
+      "folder": "lock-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"unlockReason\": \"Need to correct termination benefit\"\n}"
+      }
+    },
+    {
+      "name": "Resolve Irregularity",
+      "url": "http://localhost:5000/api/v1/payroll/resolve-irregularity",
+      "method": "POST",
+      "folder": "exception-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollManagerToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"exceptionCode\": \"MISSING_BANK_ACCOUNT\",\n  \"resolution\": \"Bank account details updated\",\n  \"managerId\": \"{{managerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Employee Exceptions",
+      "url": "http://localhost:5000/api/v1/payroll/employee-exceptions/{{employeeId}}/{{payrollRunId}}",
+      "method": "GET",
+      "folder": "exception-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ]
+    },
+    {
+      "name": "Get All Payroll Exceptions",
+      "url": "http://localhost:5000/api/v1/payroll/payroll-exceptions/{{payrollRunId}}",
+      "method": "GET",
+      "folder": "exception-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        }
+      ]
+    },
+    {
+      "name": "Generate Payslips - PORTAL",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "method": "POST",
+      "folder": "payslip-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"distributionMethod\": \"PORTAL\"\n}"
+      }
+    },
+    {
+      "name": "Generate Payslips - PDF",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "method": "POST",
+      "folder": "payslip-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"distributionMethod\": \"PDF\"\n}"
+      }
+    },
+    {
+      "name": "Generate Payslips - EMAIL",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "method": "POST",
+      "folder": "payslip-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"distributionMethod\": \"EMAIL\"\n}"
+      }
+    },
+    {
+      "name": "Generate Payslips - Edge Case Non-Locked",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "method": "POST",
+      "folder": "edge-cases-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{payrollSpecialistToken}}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{draftPayrollRunId}}\",\n  \"distributionMethod\": \"PORTAL\"\n}"
+      },
+      "tests": [
+        {
+          "name": "Should fail for non-locked payroll",
+          "code": "expect(res.getStatus()).to.equal(400);"
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "name": "Local Development",
+      "data": [
+        {
+          "name": "baseUrl",
+          "value": "http://localhost:5000/api/v1"
+        },
+        {
+          "name": "payrollSpecialistToken",
+          "value": ""
+        },
+        {
+          "name": "payrollManagerToken",
+          "value": ""
+        },
+        {
+          "name": "financeStaffToken",
+          "value": ""
+        },
+        {
+          "name": "payrollSpecialistId",
+          "value": ""
+        },
+        {
+          "name": "managerId",
+          "value": ""
+        },
+        {
+          "name": "financeStaffId",
+          "value": ""
+        },
+        {
+          "name": "employeeId",
+          "value": ""
+        },
+        {
+          "name": "payrollRunId",
+          "value": ""
+        },
+        {
+          "name": "runId",
+          "value": ""
+        },
+        {
+          "name": "employeeSigningBonusId",
+          "value": ""
+        },
+        {
+          "name": "employeeTerminationResignationId",
+          "value": ""
+        },
+        {
+          "name": "draftPayrollRunId",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}
+

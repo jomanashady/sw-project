@@ -16,6 +16,7 @@ import { TimeManagementModule } from '../time-management/time-management.module'
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { LeavesModule } from '../leaves/leaves.module';
 import { RecruitmentModule } from '../recruitment/recruitment.module';
+import { EmployeeSystemRole, EmployeeSystemRoleSchema } from '../employee-profile/models/employee-system-role.schema';
 
 @Module({ 
   imports: [
@@ -37,7 +38,7 @@ import { RecruitmentModule } from '../recruitment/recruitment.module';
     { name: EmployeeTerminationResignation.name, schema: EmployeeTerminationResignationSchema },
     { name: terminationAndResignationBenefits.name, schema: terminationAndResignationBenefitsSchema },
     { name: employeePenalties.name, schema: employeePenaltiesSchema },
-
+    { name: EmployeeSystemRole.name, schema: EmployeeSystemRoleSchema },
   ])],
   controllers: [PayrollExecutionController],
   providers: [PayrollExecutionService],

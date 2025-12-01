@@ -13,6 +13,8 @@ import { LockPayrollDto } from './dto/LockPayrollDto.dto';
 import { UnlockPayrollDto } from './dto/UnlockPayrollDto.dto';
 import { SigningBonusReviewDto } from './dto/SigningBonusReviewDto.dto';
 import { SigningBonusEditDto } from './dto/SigningBonusEditDto.dto';
+import { CreateEmployeeTerminationBenefitDto } from './dto/CreateEmployeeTerminationBenefitDto.dto';
+import { CreateEmployeeSigningBonusDto } from './dto/CreateEmployeeSigningBonusDto.dto';
 import { TerminationBenefitReviewDto } from './dto/TerminationBenefitReviewDto.dto';
 import { TerminationBenefitEditDto } from './dto/TerminationBenefitEditDto.dto';
 import { GeneratePayrollDraftDto } from './dto/GeneratePayrollDraftDto.dto';
@@ -106,6 +108,7 @@ export class PayrollExecutionController {
     entity: string; 
     payrollSpecialistId: string;
     currency?: string; // Optional currency code (e.g., 'USD', 'EUR', 'GBP')
+    payrollManagerId?: string; // Optional - if not provided, system will find a default payroll manager
   }, @CurrentUser() user: any) {
     // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
     return this.payrollService.processPayrollInitiation(
@@ -113,7 +116,8 @@ export class PayrollExecutionController {
       body.entity,
       body.payrollSpecialistId,
       body.currency,
-      user.userId
+      user.userId,
+      body.payrollManagerId
     );
   }
 
@@ -151,6 +155,14 @@ export class PayrollExecutionController {
     return this.payrollService.processSigningBonuses(user.userId);
   }
 
+  // Create employee signing bonus manually
+  @Post('create-signing-bonus')
+  @UsePipes(ValidationPipe)
+  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can create signing bonuses
+  async createEmployeeSigningBonus(@Body() createDto: CreateEmployeeSigningBonusDto, @CurrentUser() user: any) {
+    return this.payrollService.createEmployeeSigningBonus(createDto, user.userId);
+  }
+
   // REQ-PY-28: Allow PAYROLL_SPECIALIST to review and approve processed signing bonuses
   @Post('review-signing-bonus')
   @UsePipes(ValidationPipe)
@@ -173,6 +185,14 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can process termination benefits
   async processTerminationResignationBenefits(@CurrentUser() user: any) {
     return this.payrollService.processTerminationResignationBenefits(user.userId);
+  }
+
+  // Create employee termination benefit manually
+  @Post('create-termination-benefit')
+  @UsePipes(ValidationPipe)
+  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can create termination benefits
+  async createEmployeeTerminationBenefit(@Body() createDto: CreateEmployeeTerminationBenefitDto, @CurrentUser() user: any) {
+    return this.payrollService.createEmployeeTerminationBenefit(createDto, user.userId);
   }
 
   // REQ-PY-31: Allow PAYROLL_SPECIALIST to review and approve processed benefits upon resignation
@@ -238,6 +258,7 @@ export class PayrollExecutionController {
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async generateDraftPayrollRun(@Body() body: {
+    payrollManagerId?: string; // Optional - if not provided, system will find a default payroll manager
     payrollPeriod: string;
     entity: string;
     payrollSpecialistId: string;
@@ -249,7 +270,8 @@ export class PayrollExecutionController {
       body.entity,
       body.payrollSpecialistId,
       body.currency,
-      user.userId
+      user.userId,
+      body.payrollManagerId
     );
   }
 
