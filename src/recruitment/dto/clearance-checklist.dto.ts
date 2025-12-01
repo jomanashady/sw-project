@@ -3,7 +3,10 @@ import {
   IsString,
   IsOptional,
   IsEnum,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApprovalStatus } from '../enums/approval-status.enum';
 
 export class CreateClearanceChecklistDto {
@@ -32,4 +35,20 @@ export class UpdateClearanceItemStatusDto {
 
   @IsString()
   actorRole: string;             // must match department or be 'HR_MANAGER'
+
+  // When Facilities reports equipment returns, the controller may pass these
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EquipmentReturnDto)
+  equipmentReturns?: EquipmentReturnDto[];
+}
+
+export class EquipmentReturnDto {
+  @IsString()
+  equipmentId: string;
+
+  @IsOptional()
+  @IsString()
+  condition?: string;
 }

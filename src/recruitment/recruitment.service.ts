@@ -124,6 +124,8 @@ import {
   EmployeeProfileDocument,
 } from '../employee-profile/models/employee-profile.schema';
 
+import { EmployeeSystemRole, EmployeeSystemRoleDocument } from '../employee-profile/models/employee-system-role.schema';
+
 // NEW – performance linkage
 import {
   AppraisalRecord,
@@ -204,6 +206,9 @@ export class RecruitmentService {
 
     @InjectModel(AppraisalRecord.name)
     private appraisalRecordModel: Model<AppraisalRecordDocument>,
+
+    @InjectModel(EmployeeSystemRole.name)
+    private readonly employeeSystemRoleModel: Model<EmployeeSystemRoleDocument>,
   ) {}
 
 
@@ -1090,7 +1095,7 @@ export class RecruitmentService {
    * @param options - Additional options (nonBlocking, etc.)
    */
   async sendNotification(
-    notificationType: 'application_status' | 'interview_scheduled' | 'offer_letter' | 'onboarding_welcome' | 'onboarding_reminder' | 'panel_invitation',
+    notificationType: 'application_status' | 'interview_scheduled' | 'offer_letter' | 'onboarding_welcome' | 'onboarding_reminder' | 'panel_invitation' | 'clearance_reminder' | 'access_revoked',
     recipientEmail: string,
     context: any,
     options?: { nonBlocking?: boolean }
@@ -1241,6 +1246,32 @@ export class RecruitmentService {
           text += `Interview Method: ${panelMethod}${panelVideoLink}\n\n`;
           text += `Please confirm your availability.\n\n`;
           text += `Best regards,\nHR Team`;
+          break;
+
+        case 'clearance_reminder':
+          // OFF-REMIND: Clearance reminder notifications
+          // context should include: employeeName, checklistId, department, itemName, dueDate (optional), comment
+          subject = `Clearance Reminder - ${context.department || 'Department'} Approval Required`;
+          const name = context.employeeName || 'Employee';
+          const dept = context.department || 'Department';
+          const itemName = context.itemName || dept;
+          const due = context.dueDate ? `
+Due: ${context.dueDate}` : '';
+
+          text = `Dear ${context.recipientName || 'Approver'},\n\n`;
+          text += `${name} requires your attention to complete the clearance step for ${itemName} (Department: ${dept}).${due}\n\n`;
+          if (context.note) text += `Note: ${context.note}\n\n`;
+          text += `Please review and take action via the HR system (clearance checklist ID: ${context.checklistId}).\n\n`;
+          text += `Best regards,\nHR Team`;
+          break;
+
+        case 'access_revoked':
+          // OFF-007: notification confirming account/system access revocation
+          subject = `Access Revoked - ${context.employeeName || context.employeeNumber || 'Employee'}`;
+          text = `Dear ${context.employeeName || 'Employee'},\n\n`;
+          text += `Your system access has been revoked for security/compliance reasons.${context.reason ? '\n\nReason: ' + context.reason : ''}\n\n`;
+          text += `If you believe this was done in error please contact HR or IT immediately.\n\n`;
+          text += `Best regards,\nSecurity Team`;
           break;
 
         default:
@@ -3232,7 +3263,7 @@ export class RecruitmentService {
       return termination;
     }
 
-    // --- B) HR TERMINATION BASED ON PERFORMANCE ---
+    // --- B) HR TERMINATION BASED ON PERFORMANCE AND WARNINGS ---
     if (
       dto.initiator === TerminationInitiation.HR ||
       dto.initiator === TerminationInitiation.MANAGER
@@ -3243,6 +3274,25 @@ export class RecruitmentService {
           'Only HR Manager can initiate termination based on performance.',
         );
       }
+
+      // ============================================================================
+      // OFF-001: WARNINGS/DISCIPLINARY CHECK (PLACEHOLDER)
+      // ============================================================================
+      // TODO: Integrate with Warnings/Disciplinary Service when available
+      // The Warnings Service does not exist yet. When implemented, uncomment below:
+      //
+      // let warningsCount = 0;
+      // let warningsInfo = '';
+      // try {
+      //   const warnings = await this.warningsService.getActiveWarnings(employee._id);
+      //   if (warnings && warnings.length > 0) {
+      //     warningsCount = warnings.length;
+      //     warningsInfo = ` with ${warningsCount} active warning(s)`;
+      //   }
+      // } catch (err) {
+      //   console.warn('Failed to fetch warnings for employee:', err?.message || err);
+      // }
+      // ============================================================================
 
       // Get latest performance appraisal for this employee
       const latestRecord = await this.appraisalRecordModel
@@ -3266,6 +3316,8 @@ export class RecruitmentService {
       }
 
       // Example rule: only allow termination if totalScore < 2.5
+      // TODO: When warnings integration is available, also allow termination based on warnings count
+      // e.g., if (latestRecord.totalScore >= 2.5 && warningsCount < 3) { throw... }
       if (latestRecord.totalScore >= 2.5) {
         throw new ForbiddenException(
           'Cannot terminate: performance score is not low enough for termination.',
@@ -3305,6 +3357,31 @@ export class RecruitmentService {
     }
 
     return termination;
+  }
+
+  // 2b) GET MY RESIGNATION REQUESTS (for employees)
+  async getMyResignationRequests(user: any) {
+    if (!user || !user.role) {
+      throw new ForbiddenException('Unauthorized');
+    }
+
+    // Only EMPLOYEE role can call this endpoint to fetch their own resignations
+    if (user.role !== SystemRole.EMPLOYEE) {
+      throw new ForbiddenException('Only employees can access their resignation requests.');
+    }
+
+    const employeeNumber = user.employeeNumber;
+    if (!employeeNumber) {
+      throw new BadRequestException('Employee number not present in token');
+    }
+
+    const employee = await this.employeeModel.findOne({ employeeNumber }).exec();
+    if (!employee) {
+      throw new NotFoundException('Employee profile not found');
+    }
+
+    const requests = await this.terminationModel.find({ employeeId: employee._id }).sort({ createdAt: -1 }).exec();
+    return requests;
   }
 
   // 3) HR UPDATES TERMINATION STATUS
@@ -3411,9 +3488,10 @@ export class RecruitmentService {
       if (isNaN(terminationDate.getTime())) {
         throw new BadRequestException('Invalid termination date format. Expected ISO 8601 date string.');
       }
-      // Validate termination date is not in the past (optional business rule)
-      if (terminationDate < new Date()) {
-        throw new BadRequestException('Termination date cannot be in the past');
+      // OFF-004 FIX: Only validate future dates for HR/Manager-initiated terminations
+      // Allow past dates for employee-initiated resignations (employee may have already left)
+      if (terminationDate < new Date() && termination.initiator !== TerminationInitiation.EMPLOYEE) {
+        throw new BadRequestException('Termination date cannot be in the past for HR/Manager initiated terminations');
       }
     }
 
@@ -3468,21 +3546,153 @@ export class RecruitmentService {
       throw new BadRequestException('Clearance checklist already exists for this termination request');
     }
 
+    // Build the clearance checklist.
+    // 1) Add a LINE_MANAGER step (mapped to department manager) — assigned when resolvable
+    // 2) Auto-populate equipmentList using Onboarding reservation notes (best-effort)
+    // 3) Keep existing department items intact
+
+    // find employee record referenced by the termination (guarded — may be missing)
+    const employee = await this.employeeModel.findById(termination.employeeId).exec();
+    if (!employee) {
+      // Employee unexpectedly missing — create checklist without department manager/equipment
+      const checklistFallback = new this.clearanceModel({
+        terminationId: new Types.ObjectId(dto.terminationId),
+        items: [
+          { department: 'LINE_MANAGER', assignedTo: null, status: ApprovalStatus.PENDING },
+          { department: 'HR', status: ApprovalStatus.PENDING },
+          { department: 'IT', status: ApprovalStatus.PENDING },
+          { department: 'FINANCE', status: ApprovalStatus.PENDING },
+          { department: 'FACILITIES', status: ApprovalStatus.PENDING },
+          { department: 'ADMIN', status: ApprovalStatus.PENDING },
+        ],
+        equipmentList: [],
+        cardReturned: false,
+      });
+
+      return checklistFallback.save();
+    }
+
+    // Determine the department manager (LINE_MANAGER) by inspecting the employee's primary department
+    // We use OrganizationStructureService.getDepartmentById() to get the department's head position and
+    // then pick the active assignment for that position to resolve the manager's employeeProfileId.
+    let departmentManagerId: Types.ObjectId | null = null;
+    try {
+      const manager = await this._findDepartmentManagerForEmployee(employee);
+      if (manager && manager._id) departmentManagerId = manager._id;
+    } catch (err) {
+      // non-fatal — checklist should still be created
+      console.warn('createClearanceChecklist: failed to resolve department manager:', err?.message || err);
+    }
+
+    // Auto-populate equipment list where possible by reading onboarding reservation notes
+    // (reserveEquipment saves a note like `Reserved: {...}` which we parse)
+    let equipmentList: any[] = [];
+    try {
+      const onboarding = await this.onboardingModel.findOne({ employeeId: employee._id }).exec();
+      equipmentList = this._extractEquipmentFromOnboarding(onboarding);
+    } catch (err) {
+      // fallback - leave equipmentList empty
+      console.warn('createClearanceChecklist: failed to extract onboarding equipment:', err?.message || err);
+    }
+
+    // Default checklist order: LINE_MANAGER (assigned), HR, IT, FINANCE, FACILITIES, ADMIN
+    const items = [
+      { department: 'LINE_MANAGER', assignedTo: departmentManagerId, status: ApprovalStatus.PENDING },
+      { department: 'HR', status: ApprovalStatus.PENDING },
+      { department: 'IT', status: ApprovalStatus.PENDING },
+      { department: 'FINANCE', status: ApprovalStatus.PENDING },
+      { department: 'FACILITIES', status: ApprovalStatus.PENDING },
+      { department: 'ADMIN', status: ApprovalStatus.PENDING },
+    ];
+
     const checklist = new this.clearanceModel({
       terminationId: new Types.ObjectId(dto.terminationId),
-      items: [
-        { department: 'HR', status: ApprovalStatus.PENDING },
-        { department: 'IT', status: ApprovalStatus.PENDING },
-        { department: 'FINANCE', status: ApprovalStatus.PENDING },
-        { department: 'FACILITIES', status: ApprovalStatus.PENDING },
-        { department: 'ADMIN', status: ApprovalStatus.PENDING },
-      ],
-      equipmentList: [],
+      items,
+      equipmentList,
       cardReturned: false,
     });
 
     return checklist.save();
   }
+
+  // ---------------------------- Helper functions ----------------------------
+  // Helper: Resolve department manager (LINE_MANAGER) based on employee.primaryDepartmentId
+  // This uses OrganizationStructureService.getDepartmentById() to find the head position and
+  // then gets position assignments to resolve the employee who holds that position currently.
+  private async _findDepartmentManagerForEmployee(employee: any) {
+    if (!employee || !employee.primaryDepartmentId) return null;
+
+    try {
+      const department = await this.organizationStructureService.getDepartmentById(employee.primaryDepartmentId.toString());
+      if (!department || !department.headPositionId) return null;
+
+      // Get assignments for the head position and pick the active assignment
+      const assignments = await this.organizationStructureService.getPositionAssignments(department.headPositionId.toString());
+      if (!assignments || assignments.length === 0) return null;
+
+      // prefer active assignment (endDate not set) or last assignment
+      const active = assignments.find((a: any) => !a.endDate) || assignments[0];
+      if (!active || !active.employeeProfileId) return null;
+
+      // load the manager employee profile
+      const manager = await this.employeeModel.findById(active.employeeProfileId).select('-password').exec();
+      return manager || null;
+    } catch (err) {
+      // fail safely
+      return null;
+    }
+  }
+
+  // Helper: extract equipment reservation entries from onboarding's admin tasks notes
+  // Format expected: reserveEquipment() writes notes with "Reserved: <JSON>" which we parse
+  private _extractEquipmentFromOnboarding(onboarding: any): any[] {
+    if (!onboarding || !Array.isArray(onboarding.tasks)) return [];
+    const found: any[] = [];
+    for (const task of onboarding.tasks) {
+      if ((task as any).department !== 'Admin') continue;
+      const notes = (task as any).notes || '';
+      // capture 'Reserved: {...}' or 'Reserved: [{...}]'
+      const matches = Array.from(notes.matchAll(/Reserved:\s*(\{.*?\}|\[.*?\])/g)) as RegExpMatchArray[];
+      for (const m of matches) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          if (Array.isArray(parsed)) {
+            for (const p of parsed) {
+              found.push({ equipmentId: p.id || null, name: p.name || p.type || 'Unknown', returned: false, condition: null });
+            }
+          } else {
+            found.push({ equipmentId: parsed.id || null, name: parsed.name || parsed.type || 'Unknown', returned: false, condition: null });
+          }
+        } catch (err) {
+          // ignore parse error
+        }
+      }
+    }
+    return found;
+  }
+
+  // Helper: internal access revocation placeholder
+  // This function marks employee status to INACTIVE and records a lightweight audit note.
+  private async _internalRevokeSystemAccess(employee: any) {
+    if (!employee) return;
+    try {
+      // set the employee status to INACTIVE and update effective date
+      employee.status = EmployeeStatus.INACTIVE;
+      employee.statusEffectiveFrom = new Date();
+      await employee.save();
+
+      // best-effort: record the change on the termination record(s) if present
+      // (this is a non-invasive placeholder; real integrations should call IT services)
+      await this.terminationModel.updateMany({ employeeId: employee._id }, { $set: { 'hrComments': (await this.terminationModel.findOne({ employeeId: employee._id }))?.hrComments + `\n[ACCESS_REVOKED:${new Date().toISOString()}]` } }).exec();
+      console.log(`_internalRevokeSystemAccess: marked employee ${employee.employeeNumber} INACTIVE`);
+    } catch (err) {
+      console.warn('_internalRevokeSystemAccess failed:', err?.message || err);
+    }
+  }
+
+  // NOTE: _queueFinalSettlement() was removed - final settlement is now handled by
+  // triggerFinalSettlement() which is called when ALL clearances are approved.
+  // This ensures proper workflow: all departments must sign off before final pay processing.
 
   // 6) GET CHECKLIST BY EMPLOYEE (employeeNumber)
   async getChecklistByEmployee(employeeId: string) {
@@ -3521,9 +3731,9 @@ export class RecruitmentService {
     dto: UpdateClearanceItemStatusDto,
     user: any,
   ) {
-    // For now: only HR Manager can perform department sign-offs
-    if (!user || user.role !== SystemRole.HR_MANAGER) {
-      throw new ForbiddenException('Unauthorized clearance update.');
+    // Authorization and department-specific rules
+    if (!user || !user.role) {
+      throw new ForbiddenException('Unauthorized clearance update. missing user/role');
     }
 
     // Validate checklistId format
@@ -3553,6 +3763,53 @@ export class RecruitmentService {
       throw new BadRequestException(`Department '${dto.department}' not found in clearance checklist`);
     }
 
+    // Department-specific permissions/authorization
+    const dept = dto.department;
+    const role = user.role;
+
+    const hasPermission = (() => {
+      switch (dept) {
+        case 'LINE_MANAGER':
+          // allowed if user is department head or assignedTo matches user
+          if (departmentItem.assignedTo && user.id && departmentItem.assignedTo.toString() === user.id.toString()) return true;
+          return role === SystemRole.DEPARTMENT_HEAD || role === SystemRole.HR_MANAGER;
+        case 'IT':
+          return role === SystemRole.SYSTEM_ADMIN || role === SystemRole.HR_MANAGER;
+        case 'FINANCE':
+          return role === SystemRole.FINANCE_STAFF || role === SystemRole.PAYROLL_MANAGER || role === SystemRole.PAYROLL_SPECIALIST || role === SystemRole.HR_MANAGER;
+        case 'FACILITIES':
+          return role === SystemRole.HR_ADMIN || role === SystemRole.SYSTEM_ADMIN || role === SystemRole.HR_MANAGER;
+        case 'ADMIN':
+          return role === SystemRole.HR_ADMIN || role === SystemRole.HR_MANAGER || role === SystemRole.SYSTEM_ADMIN;
+        case 'HR':
+          // HR employees can update, but final APPROVED must be performed by HR_MANAGER
+          return role === SystemRole.HR_EMPLOYEE || role === SystemRole.HR_MANAGER || role === SystemRole.SYSTEM_ADMIN;
+        default:
+          return role === SystemRole.HR_MANAGER || role === SystemRole.SYSTEM_ADMIN;
+      }
+    })();
+
+    if (!hasPermission) {
+      throw new ForbiddenException('User does not have permission to update this department clearance item');
+    }
+
+    // Enforce core approval sequence for final workflow: LINE_MANAGER -> FINANCE -> HR
+    const coreOrder = ['LINE_MANAGER', 'FINANCE', 'HR'];
+    const deptIndex = coreOrder.indexOf(dept);
+    if (deptIndex > 0) {
+      for (let i = 0; i < deptIndex; i++) {
+        const prev = checklist.items.find((it: any) => it.department === coreOrder[i]);
+        if (!prev || prev.status !== ApprovalStatus.APPROVED) {
+          throw new BadRequestException(`Cannot approve '${dept}' before '${coreOrder[i]}' is approved`);
+        }
+      }
+    }
+
+    // Special enforcement: HR final APPROVED must be by HR_MANAGER explicitly
+    if (dept === 'HR' && dto.status === ApprovalStatus.APPROVED && role !== SystemRole.HR_MANAGER) {
+      throw new ForbiddenException('Only HR Manager can finalize HR approval');
+    }
+
     // Update the item
     await this.clearanceModel.updateOne(
       { _id: checklistId, 'items.department': dto.department },
@@ -3572,6 +3829,54 @@ export class RecruitmentService {
       throw new NotFoundException('Checklist not found.');
     }
 
+    // Run department-specific side-effects when a department marks APPROVED
+    if (dto.status === ApprovalStatus.APPROVED) {
+      try {
+        // find termination and employee linked to this checklist
+        const termination = await this.terminationModel.findById(updatedChecklist.terminationId);
+        const employee = termination ? await this.employeeModel.findById(termination.employeeId) : null;
+
+        // IT approval → trigger internal access revocation placeholder
+        if (dept === 'IT') {
+          // mark account revocation (internal, safe placeholder)
+          if (employee) await this._internalRevokeSystemAccess(employee);
+        }
+
+        // FACILITIES approval → mark equipment items as returned and annotate onboarding
+        if (dept === 'FACILITIES' && Array.isArray((dto as any).equipmentReturns)) {
+          const returns = (dto as any).equipmentReturns;
+          for (const r of returns) {
+            const idx = updatedChecklist.equipmentList.findIndex((e: any) => e.equipmentId?.toString?.() === r.equipmentId?.toString?.() || e.name === r.equipmentId);
+            if (idx >= 0) {
+              updatedChecklist.equipmentList[idx].returned = true;
+              if (r.condition) updatedChecklist.equipmentList[idx].condition = r.condition;
+            }
+          }
+          await updatedChecklist.save();
+
+          // Append notes to onboarding admin task when present
+          if (employee) {
+            const onboarding = await this.onboardingModel.findOne({ employeeId: employee._id });
+            if (onboarding) {
+              onboarding.tasks = onboarding.tasks.map((t: any) => {
+                if (t.department === 'Admin') {
+                  t.notes = (t.notes || '') + `\n[${new Date().toISOString()}] Equipment returned: ${JSON.stringify((dto as any).equipmentReturns)}`;
+                }
+                return t;
+              });
+              await onboarding.save();
+            }
+          }
+        }
+
+        // FINANCE approval: Final settlement is now triggered when ALL clearances are approved
+        // (see triggerFinalSettlement() call below in the allApproved block)
+        // This ensures proper sequencing: all departments must sign off before final pay is processed
+      } catch (err) {
+        console.warn('Post-approval side-effects failed:', err?.message || err);
+      }
+    }
+
     const allApproved = updatedChecklist.items.every(
       (i: any) => i.status === ApprovalStatus.APPROVED,
     );
@@ -3583,6 +3888,20 @@ export class RecruitmentService {
       await this.terminationModel.findByIdAndUpdate(updatedChecklist.terminationId, {
         status: TerminationStatus.APPROVED,
       });
+
+      // OFF-013: Trigger final settlement when all clearances are approved
+      try {
+        const termination = await this.terminationModel.findById(updatedChecklist.terminationId);
+        if (termination && termination.employeeId) {
+          await this.triggerFinalSettlement(
+            termination.employeeId.toString(),
+            updatedChecklist.terminationId.toString()
+          );
+        }
+      } catch (err) {
+        // Non-blocking - log but don't fail the clearance update
+        console.warn('Failed to trigger final settlement after all clearances approved:', err?.message || err);
+      }
     }
 
     return { message: 'Clearance item updated.' };
@@ -3618,6 +3937,385 @@ export class RecruitmentService {
     }
 
     return updated;
+  }
+
+  // ---------------------------------------------------
+  // OFF-013: FINAL SETTLEMENT TRIGGER
+  // ---------------------------------------------------
+  /**
+   * OFF-013: Trigger Benefits Termination and Final Pay Calculation
+   * 
+   * This method is called when all clearances are approved to initiate:
+   * 1. Unused leave balance calculation and encashment
+   * 2. Final pay calculation (outstanding salary, deductions, severance)
+   * 3. Benefits plan termination
+   * 4. Final payroll queue
+   * 
+   * INTEGRATIONS (commented out - uncomment when services are ready):
+   * - LeavesService: For leave balance calculation
+   * - PayrollExecutionService: For final pay calculation and processing
+   * - BenefitsManagementService: For benefits termination (service doesn't exist yet)
+   */
+  async triggerFinalSettlement(employeeId: string, terminationId: string) {
+    // Validate inputs
+    if (!employeeId || !Types.ObjectId.isValid(employeeId)) {
+      throw new BadRequestException('Invalid employee ID for final settlement');
+    }
+    if (!terminationId || !Types.ObjectId.isValid(terminationId)) {
+      throw new BadRequestException('Invalid termination ID for final settlement');
+    }
+
+    // Find employee
+    const employee = await this.employeeModel.findById(employeeId).exec();
+    if (!employee) {
+      throw new NotFoundException('Employee not found for final settlement');
+    }
+
+    // Find termination
+    const termination = await this.terminationModel.findById(terminationId).exec();
+    if (!termination) {
+      throw new NotFoundException('Termination request not found for final settlement');
+    }
+
+    // Initialize settlement data
+    const settlementData: any = {
+      employeeId: employee._id,
+      employeeNumber: employee.employeeNumber,
+      terminationId: termination._id,
+      terminationDate: termination.terminationDate,
+      initiatedAt: new Date().toISOString(),
+      status: 'INITIATED',
+      components: {
+        leaveEncashment: null,
+        finalPay: null,
+        benefitsTermination: null,
+        deductions: null,
+        severance: null,
+      },
+      errors: [],
+    };
+
+    // ============================================================================
+    // STEP 1: LEAVE BALANCE CALCULATION (LEAVES SERVICE INTEGRATION)
+    // ============================================================================
+    // TODO: Uncomment when LeavesService is injected and ready
+    //
+    // try {
+    //   // Get unused leave balance for the employee
+    //   const leaveBalance = await this.leavesService.getLeaveBalance(employee._id.toString());
+    //   
+    //   if (leaveBalance && leaveBalance.unusedDays > 0) {
+    //     // Calculate leave encashment based on daily rate
+    //     // const dailyRate = employee.grossSalary / 30; // Approximate daily rate
+    //     // const encashmentAmount = leaveBalance.unusedDays * dailyRate;
+    //     
+    //     settlementData.components.leaveEncashment = {
+    //       unusedDays: leaveBalance.unusedDays,
+    //       // encashmentAmount: encashmentAmount,
+    //       calculatedAt: new Date().toISOString(),
+    //     };
+    //   }
+    // } catch (err) {
+    //   console.warn('triggerFinalSettlement: Failed to calculate leave balance:', err?.message || err);
+    //   settlementData.errors.push({ step: 'leaveBalance', error: err?.message || String(err) });
+    // }
+    // ============================================================================
+
+    // ============================================================================
+    // STEP 2: FINAL PAY CALCULATION (PAYROLL EXECUTION SERVICE INTEGRATION)
+    // ============================================================================
+    // TODO: Uncomment when PayrollExecutionService is injected and ready
+    //
+    // try {
+    //   // Calculate final pay including:
+    //   // - Outstanding salary (prorated for partial month)
+    //   // - Leave encashment (from step 1)
+    //   // - Deductions (loans, advances, etc.)
+    //   // - Severance pay (if applicable based on termination type and tenure)
+    //   
+    //   const finalPayRequest = {
+    //     employeeId: employee._id.toString(),
+    //     terminationDate: termination.terminationDate,
+    //     includeLeaveEncashment: true,
+    //     leaveEncashmentAmount: settlementData.components.leaveEncashment?.encashmentAmount || 0,
+    //   };
+    //   
+    //   const finalPayResult = await this.payrollExecutionService.calculateFinalPay(finalPayRequest);
+    //   
+    //   settlementData.components.finalPay = {
+    //     grossAmount: finalPayResult?.grossAmount,
+    //     deductions: finalPayResult?.deductions,
+    //     netAmount: finalPayResult?.netAmount,
+    //     calculatedAt: new Date().toISOString(),
+    //   };
+    //   
+    //   // Queue the final payroll for processing
+    //   // await this.payrollExecutionService.queueFinalPayroll(employee._id.toString(), finalPayResult);
+    //   
+    // } catch (err) {
+    //   console.warn('triggerFinalSettlement: Failed to calculate final pay:', err?.message || err);
+    //   settlementData.errors.push({ step: 'finalPay', error: err?.message || String(err) });
+    // }
+    // ============================================================================
+
+    // ============================================================================
+    // STEP 3: BENEFITS TERMINATION (BENEFITS MANAGEMENT SERVICE - PLACEHOLDER)
+    // ============================================================================
+    // NOTE: BenefitsManagementService does NOT exist yet. This is a placeholder.
+    //
+    // try {
+    //   // Terminate all active benefits plans for the employee
+    //   // Schedule termination for the notice period end date
+    //   
+    //   const benefitsTerminationRequest = {
+    //     employeeId: employee._id.toString(),
+    //     effectiveDate: termination.terminationDate,
+    //     reason: 'EMPLOYMENT_TERMINATION',
+    //   };
+    //   
+    //   const benefitsResult = await this.benefitsManagementService.terminateAllBenefits(benefitsTerminationRequest);
+    //   
+    //   settlementData.components.benefitsTermination = {
+    //     terminatedPlans: benefitsResult?.terminatedPlans || [],
+    //     effectiveDate: termination.terminationDate,
+    //     processedAt: new Date().toISOString(),
+    //   };
+    //   
+    // } catch (err) {
+    //   console.warn('triggerFinalSettlement: Failed to terminate benefits:', err?.message || err);
+    //   settlementData.errors.push({ step: 'benefitsTermination', error: err?.message || String(err) });
+    // }
+    // ============================================================================
+
+    // Mark settlement as processed (placeholder - actual status depends on integrations)
+    settlementData.status = settlementData.errors.length > 0 ? 'PARTIAL' : 'QUEUED';
+    settlementData.completedAt = new Date().toISOString();
+
+    // Store settlement data on termination record metadata
+    try {
+      await this.terminationModel.updateOne(
+        { _id: terminationId },
+        {
+          $set: {
+            '_meta.finalSettlement': settlementData,
+          },
+        },
+      ).exec();
+    } catch (err) {
+      console.warn('triggerFinalSettlement: Failed to save settlement metadata:', err?.message || err);
+    }
+
+    // Append note to HR comments
+    const settlementNote = `[FINAL_SETTLEMENT_TRIGGERED:${new Date().toISOString()}] Status: ${settlementData.status}`;
+    termination.hrComments = (termination.hrComments || '') + '\n' + settlementNote;
+    await termination.save();
+
+    // Send notification to HR about final settlement initiation
+    // TODO: Add 'final_settlement_initiated' to sendNotification allowed types when ready
+    // For now, this is commented out as the notification type doesn't exist yet
+    //
+    // try {
+    //   const hrManagers = await this.employeeSystemRoleModel.find({ 
+    //     roles: { $in: [SystemRole.HR_MANAGER] }, 
+    //     isActive: true 
+    //   }).exec();
+    //
+    //   for (const hr of hrManagers) {
+    //     const hrEmployee = await this.employeeModel.findById(hr.employeeProfileId).exec();
+    //     if (hrEmployee && hrEmployee.workEmail) {
+    //       await this.sendNotification('final_settlement_initiated', hrEmployee.workEmail, {
+    //         employeeName: employee.fullName || employee.employeeNumber || 'Employee',
+    //         employeeNumber: employee.employeeNumber,
+    //         terminationDate: termination.terminationDate?.toISOString(),
+    //         settlementStatus: settlementData.status,
+    //       }, { nonBlocking: true });
+    //     }
+    //   }
+    // } catch (err) {
+    //   console.warn('triggerFinalSettlement: Failed to send notifications:', err?.message || err);
+    // }
+
+    console.log(`triggerFinalSettlement: Initiated for employee ${employee.employeeNumber}, status: ${settlementData.status}`);
+
+    return {
+      message: 'Final settlement process initiated',
+      settlementData,
+    };
+  }
+
+  // ---------------------------------------------------
+  // CLEARANCE REMINDERS
+  // ---------------------------------------------------
+  /**
+   * Send reminders for pending clearance checklist items.
+   * - Stores metadata on checklist._meta.reminders to track lastSent, count, firstSent, escalated
+   * - Uses employeeSystemRoleModel and employeeModel to resolve recipients for role-based departments
+   * - Defaults: intervalDays=3, escalationAfterDays=7, maxReminders=3
+   */
+  async sendClearanceReminders(options?: { force?: boolean }) {
+    const REMINDER_INTERVAL_DAYS = 3;
+    const ESCALATION_AFTER_DAYS = 7;
+    const MAX_REMINDERS = 3;
+
+    // Find checklists that have at least one pending item
+    const pendingChecklists = await this.clearanceModel.find({ 'items.status': ApprovalStatus.PENDING }).exec();
+
+    for (const checklist of pendingChecklists) {
+      try {
+        // Load termination & employee
+        const termination = await this.terminationModel.findById(checklist.terminationId).exec();
+        const employee = termination ? await this.employeeModel.findById(termination.employeeId).exec() : null;
+
+        // ensure dynamic meta holder exists
+        const meta: any = (checklist as any)._meta || {};
+        meta.reminders = meta.reminders || {};
+
+        const now = new Date();
+
+        for (const item of checklist.items || []) {
+          if (item.status !== ApprovalStatus.PENDING) continue;
+
+          const dept = item.department;
+          meta.reminders[dept] = meta.reminders[dept] || { count: 0, lastSent: null, firstSent: null, escalated: false };
+          const dmeta = meta.reminders[dept];
+
+          // compute days since last and since first
+          const lastSent = dmeta.lastSent ? new Date(dmeta.lastSent) : null;
+          const firstSent = dmeta.firstSent ? new Date(dmeta.firstSent) : null;
+
+          const daysSinceLast = lastSent ? Math.floor((now.getTime() - lastSent.getTime()) / (1000 * 60 * 60 * 24)) : Infinity;
+          const daysSinceFirst = firstSent ? Math.floor((now.getTime() - firstSent.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+          // skip if we've reached max reminders
+          if (dmeta.count >= MAX_REMINDERS && !options?.force) continue;
+
+          // skip if not enough days have passed since last reminder
+          if (lastSent && daysSinceLast < REMINDER_INTERVAL_DAYS && !options?.force) continue;
+
+          // resolve recipients
+          const recipients = await this._resolveRecipientsForClearanceDept(item, checklist, employee);
+          if (!recipients || recipients.length === 0) {
+            // nothing to notify
+            continue;
+          }
+
+          // send reminders to each recipient (non-blocking)
+          for (const r of recipients) {
+            try {
+              await this.sendNotification('clearance_reminder', r.email, {
+                recipientName: r.name,
+                employeeName: employee ? employee.employeeNumber || employee.workEmail || 'Employee' : 'Employee',
+                checklistId: checklist._id?.toString(),
+                department: dept,
+                itemName: dept,
+                note: `Pending since ${item.updatedAt ? new Date(item.updatedAt).toISOString() : 'unknown'}`,
+              }, { nonBlocking: true });
+            } catch (err) {
+              console.warn(`Failed to send clearance reminder to ${r.email}:`, err?.message || err);
+            }
+          }
+
+          // Update meta
+          dmeta.count = (dmeta.count || 0) + 1;
+          dmeta.lastSent = now.toISOString();
+          if (!dmeta.firstSent) dmeta.firstSent = now.toISOString();
+
+          // Escalation logic
+          if (!dmeta.escalated && firstSent && daysSinceFirst >= ESCALATION_AFTER_DAYS) {
+            // escalate to HR Manager + department head (best-effort)
+            const escalationRecipients = [] as any[];
+
+            // HR managers
+            const hrRoles = await this.employeeSystemRoleModel.find({ roles: { $in: [SystemRole.HR_MANAGER] }, isActive: true }).exec();
+            for (const r of hrRoles) {
+              const emp = await this.employeeModel.findById(r.employeeProfileId).exec();
+              if (emp && emp.workEmail) escalationRecipients.push({ name: emp.employeeNumber || emp.workEmail, email: emp.workEmail });
+            }
+
+            // department manager (if resolvable)
+            try {
+              const manager = await this._findDepartmentManagerForEmployee(employee);
+              if (manager && manager.workEmail) escalationRecipients.push({ name: manager.employeeNumber || manager.workEmail, email: manager.workEmail });
+            } catch (err) {
+              // ignore
+            }
+
+            // send escalation notices
+            for (const e of escalationRecipients) {
+              try {
+                await this.sendNotification('clearance_reminder', e.email, {
+                  recipientName: e.name,
+                  employeeName: employee ? employee.employeeNumber || employee.workEmail || 'Employee' : 'Employee',
+                  checklistId: checklist._id?.toString(),
+                  department: dept,
+                  itemName: dept,
+                  note: `ESCALATION: ${dmeta.count} reminder(s) sent with no resolution. Please intervene.`,
+                }, { nonBlocking: true });
+              } catch (err) {
+                console.warn('Failed to send escalation reminder:', err?.message || err);
+              }
+            }
+
+            dmeta.escalated = true;
+          }
+
+        }
+
+        // persist meta back to document (no schema change)
+        await this.clearanceModel.updateOne({ _id: checklist._id }, { $set: { '_meta.reminders': meta.reminders } }).exec();
+      } catch (err) {
+        console.warn('sendClearanceReminders: failed for checklist', checklist._id?.toString(), err?.message || err);
+      }
+    }
+
+    return { message: 'Clearance reminders processed.' };
+  }
+
+  // Helper: resolve recipients for a pending department item
+  private async _resolveRecipientsForClearanceDept(item: any, checklist: any, employee: any): Promise<Array<{ name: string, email: string }>> {
+    const dept = item.department;
+    const recipients: Array<{ name: string, email: string }> = [];
+
+    // If assignedTo is present (LINE_MANAGER), try to notify that user specifically
+    if (item.assignedTo) {
+      try {
+        const manager = await this.employeeModel.findById(item.assignedTo).exec();
+        if (manager && manager.workEmail) return [{ name: manager.employeeNumber || manager.workEmail, email: manager.workEmail }];
+      } catch (_) {
+        // continue to role-based resolution
+      }
+    }
+
+    // role mapping for departments (best-effort)
+    const roleMap: Record<string, SystemRole[]> = {
+      'LINE_MANAGER': [SystemRole.DEPARTMENT_HEAD],
+      'HR': [SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.HR_ADMIN],
+      'IT': [SystemRole.SYSTEM_ADMIN],
+      'FINANCE': [SystemRole.FINANCE_STAFF, SystemRole.PAYROLL_MANAGER, SystemRole.PAYROLL_SPECIALIST],
+      'FACILITIES': [SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN],
+      'ADMIN': [SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN],
+    };
+
+    const roles = roleMap[dept] || [SystemRole.HR_MANAGER];
+
+    // Find system role assignments and extract their employee email addresses
+    for (const r of roles) {
+      try {
+        const matches = await this.employeeSystemRoleModel.find({ roles: { $in: [r] }, isActive: true }).exec();
+        for (const m of matches) {
+          const emp = await this.employeeModel.findById(m.employeeProfileId).exec();
+          if (emp && emp.workEmail) recipients.push({ name: emp.employeeNumber || emp.workEmail, email: emp.workEmail });
+        }
+      } catch (err) {
+        // ignore lookup errors
+      }
+    }
+
+    // remove duplicates
+    const uniq = new Map<string, { name: string, email: string }>();
+    for (const r of recipients) uniq.set(r.email, r);
+
+    return Array.from(uniq.values());
   }
 
   // 9) GET LATEST APPRAISAL FOR AN EMPLOYEE (by employeeNumber)
@@ -3708,22 +4406,151 @@ export class RecruitmentService {
       throw new NotFoundException('Employee not found.');
     }
 
-    // Check if employee is already inactive
+    // Check if employee is already inactive -> idempotent behavior: return existing revocation metadata
     if (employee.status === EmployeeStatus.INACTIVE) {
-      throw new BadRequestException('Employee is already inactive. System access has already been revoked.');
+      // Try to surface existing revocation log if present
+      const termination = await this.terminationModel.findOne({ employeeId: employee._id }).lean();
+      const existingLog = termination ? (termination as any)._meta?.revocationLog || null : null;
+      return {
+        message: 'Employee is already inactive. No further action taken.',
+        employeeId: employee._id,
+        employeeNumber: employee.employeeNumber,
+        previousStatus: EmployeeStatus.INACTIVE,
+        newStatus: EmployeeStatus.INACTIVE,
+        revocationLog: existingLog,
+      };
     }
 
-    // Update status to INACTIVE
+    // Capture previous status and Update status to INACTIVE
+    const previousStatus = employee.status;
     employee.status = EmployeeStatus.INACTIVE;
     await employee.save();
 
+    // Try to find a termination for audit logging
+    const termination = await this.terminationModel.findOne({ employeeId: employee._id }).exec();
+
+    // append a top-level access revoked note to termination.hrComments (if termination exists)
+    const note = `[ACCESS_REVOKED:${new Date().toISOString()}] by ${user?.id || user?.employeeNumber || 'SYSTEM'}`;
+    if (termination) {
+      termination.hrComments = (termination.hrComments || '') + '\n' + note;
+      // ensure _meta.revocationLog exists and append starter entry
+      (termination as any)._meta = (termination as any)._meta || {};
+      (termination as any)._meta.revocationLog = (termination as any)._meta.revocationLog || [];
+      (termination as any)._meta.revocationLog.push({ at: new Date().toISOString(), by: user?.id || user?.employeeNumber || 'SYSTEM', reason: dto?.reason || 'manual_revoke', actions: [] });
+      await termination.save();
+    }
+
+    // Perform actual de-provisioning actions (non-blocking placeholders)
+    const actions: any[] = [];
+
+    // 1) Identity provider / SSO revoke (placeholder)
+    try {
+      const result = await this._revokeIdentityProvider(employee);
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    } catch (err) {
+      const result = { service: 'idp', success: false, details: err?.message || String(err) };
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    }
+
+    // 2) Email mailbox deactivation (placeholder)
+    try {
+      const result = await this._deactivateMailbox(employee);
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    } catch (err) {
+      const result = { service: 'mail', success: false, details: err?.message || String(err) };
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    }
+
+    // 3) Application de-provisioning (placeholder)
+    try {
+      const result = await this._deprovisionApplications(employee);
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    } catch (err) {
+      const result = { service: 'apps', success: false, details: err?.message || String(err) };
+      actions.push(result);
+      if (termination) await this._appendRevocationAction(termination._id, result);
+    }
+
+    // Send notification to the employee (if email exists) and notify system admins
+    try {
+      if (employee.workEmail) {
+        await this.sendNotification('access_revoked', employee.workEmail, {
+          employeeName: employee.fullName || employee.employeeNumber || 'Employee',
+          employeeNumber: employee.employeeNumber,
+          reason: dto?.reason || 'Manual revocation by System Admin',
+        }, { nonBlocking: true });
+      }
+
+      const admins = await this.employeeSystemRoleModel.find({ roles: { $in: [SystemRole.SYSTEM_ADMIN] }, isActive: true }).exec();
+      for (const a of admins) {
+        const admin = await this.employeeModel.findById(a.employeeProfileId).exec();
+        if (admin && admin.workEmail) {
+          await this.sendNotification('access_revoked', admin.workEmail, {
+            employeeName: employee.fullName || employee.employeeNumber || 'Employee',
+            employeeNumber: employee.employeeNumber,
+            reason: dto?.reason || 'Manual revocation requested',
+          }, { nonBlocking: true });
+        }
+      }
+    } catch (err) {
+      console.warn('revokeSystemAccess notifications failed:', err?.message || err);
+    }
+
     return {
-      message: 'System access revoked. Employee made inactive.',
+      message: 'System access revoked (employee status set to INACTIVE). De-provisioning actions initiated.',
       employeeId: employee._id,
       employeeNumber: employee.employeeNumber,
-      previousStatus: employee.status,
+      previousStatus,
       newStatus: EmployeeStatus.INACTIVE,
+      actions,
     };
+  }
+
+  // Append a revocation action entry into termination._meta.revocationLog (non-destructive)
+  private async _appendRevocationAction(terminationId: any, entry: any) {
+    try {
+      if (!terminationId) return;
+      await this.terminationModel.updateOne({ _id: terminationId }, { $push: { '_meta.revocationLog': entry } }).exec();
+    } catch (err) {
+      console.warn('_appendRevocationAction failed:', err?.message || err);
+    }
+  }
+
+  // Placeholder: revoke identity provider account (SSO/IdP)
+  // Replace with a real integration when available (IdP SDK / HTTP calls)
+  private async _revokeIdentityProvider(employee: any): Promise<any> {
+    try {
+      // Simulate provisioning action
+      console.log(`_revokeIdentityProvider: (placeholder) revoking IdP access for ${employee.employeeNumber || employee._id}`);
+      return { service: 'idp', success: true, details: `IdP revoke queued for ${employee.employeeNumber || employee._id}` };
+    } catch (err) {
+      return { service: 'idp', success: false, details: err?.message || String(err) };
+    }
+  }
+
+  // Placeholder: deactivate mailbox (e.g., Google Workspace / Microsoft Graph)
+  private async _deactivateMailbox(employee: any): Promise<any> {
+    try {
+      console.log(`_deactivateMailbox: (placeholder) deactivating mailbox for ${employee.workEmail || employee.employeeNumber}`);
+      return { service: 'mail', success: true, details: `Mailbox deactivation queued for ${employee.workEmail || employee.employeeNumber}` };
+    } catch (err) {
+      return { service: 'mail', success: false, details: err?.message || String(err) };
+    }
+  }
+
+  // Placeholder: deprovision application access for common apps (Slack, Jira, etc.)
+  private async _deprovisionApplications(employee: any): Promise<any> {
+    try {
+      console.log(`_deprovisionApplications: (placeholder) deprovisioning apps for ${employee.employeeNumber || employee._id}`);
+      return { service: 'apps', success: true, details: 'Applications deprovisioning queued (placeholder)' };
+    } catch (err) {
+      return { service: 'apps', success: false, details: err?.message || String(err) };
+    }
   }
 
 

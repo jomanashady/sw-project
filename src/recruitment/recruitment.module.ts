@@ -17,6 +17,7 @@ import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance
 import { Onboarding, OnboardingSchema } from './models/onboarding.schema'; // Make sure this import exists
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
+import { EmployeeSystemRole, EmployeeSystemRoleSchema } from '../employee-profile/models/employee-system-role.schema';
 //NEW FOR OFFBOARDING
 import { AppraisalRecord, AppraisalRecordSchema } from '../performance/models/appraisal-record.schema';
 import { Candidate, CandidateSchema } from '../employee-profile/models/candidate.schema';
@@ -50,6 +51,7 @@ import { OrganizationStructureModule } from '../organization-structure/organizat
       { name: Candidate.name, schema: CandidateSchema }, // For creating employees from candidates
       //new for offboarding
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+      { name: EmployeeSystemRole.name, schema: EmployeeSystemRoleSchema },
       { name: AppraisalRecord.name, schema: AppraisalRecordSchema },
     ]),
     // ============= INTEGRATED MODULES =============

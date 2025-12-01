@@ -735,6 +735,14 @@ export class RecruitmentController {
     return this.service.createTerminationRequest(dto, req.user);
   }
 
+  // Employee-facing: get my resignation/termination requests
+  @UseGuards(RolesGuard)
+  @Get('offboarding/my-resignation')
+  @Roles(SystemRole.EMPLOYEE)
+  getMyResignationRequests(@Req() req: any) {
+    return this.service.getMyResignationRequests(req.user);
+  }
+
   @Get('offboarding/termination/:id')
   @Roles(SystemRole.HR_MANAGER) // only HR can view details
   getTerminationRequest(@Param('id') id: string) {
@@ -772,6 +780,14 @@ export class RecruitmentController {
     return this.service.createClearanceChecklist(dto, req.user);
   }
 
+  // Manual trigger for clearance reminders (HR Manager / System Admin)
+  @UseGuards(RolesGuard)
+  @Post('offboarding/clearance/send-reminders')
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  sendClearanceReminders(@Body() opts: { force?: boolean } = { force: false }) {
+    return this.service.sendClearanceReminders(opts);
+  }
+
   @Get('offboarding/clearance/employee/:employeeId')
   @Roles(SystemRole.HR_MANAGER)
   getChecklistByEmployee(@Param('employeeId') employeeId: string) {
@@ -779,7 +795,16 @@ export class RecruitmentController {
   }
 
   @Patch('offboarding/clearance/:id/item')
-  @Roles(SystemRole.HR_MANAGER) // HR updates each dept status
+  // Allow department-specific roles to call endpoint (service enforces detailed permission checks)
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
   updateClearanceItem(
     @Param('id') checklistId: string,
     @Body() dto: UpdateClearanceItemStatusDto,
@@ -808,5 +833,4 @@ export class RecruitmentController {
     return this.service.revokeSystemAccess(dto, req.user);
   }
 }
-
 
