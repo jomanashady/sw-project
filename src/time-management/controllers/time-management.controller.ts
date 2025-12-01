@@ -238,6 +238,7 @@ export class TimeManagementController {
   @Roles(
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.FINANCE_STAFF,
     SystemRole.SYSTEM_ADMIN,
