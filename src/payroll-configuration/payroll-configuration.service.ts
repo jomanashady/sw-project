@@ -163,6 +163,11 @@ interface FilterDto {
 
 @Injectable()
 export class PayrollConfigurationService {
+  // Helper method for case-insensitive status comparison
+  private normalizeStatus(status: string | ConfigStatus): string {
+    return status?.toString().toLowerCase() || '';
+  }
+
   constructor(
     @InjectModel(payGrade.name) private payGradeModel: Model<payGrade>,
     @InjectModel(payrollPolicies.name)
@@ -226,7 +231,7 @@ export class PayrollConfigurationService {
     }
 
     // Draft-only edit enforcement
-    if (payGrade.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update pay grade with status ${payGrade.status}. Only DRAFT items can be edited.`,
       );
@@ -315,7 +320,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay grade with ID ${id} not found`);
     }
 
-    if (payGrade.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve pay grade with status ${payGrade.status}. Only DRAFT items can be approved.`,
       );
@@ -338,7 +343,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay grade with ID ${id} not found`);
     }
 
-    if (payGrade.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject pay grade with status ${payGrade.status}. Only DRAFT items can be rejected.`,
       );
@@ -361,7 +366,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay grade with ID ${id} not found`);
     }
 
-    if (payGrade.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(payGrade.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete pay grade with status ${payGrade.status}.`,
       );
@@ -400,7 +405,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Allowance with ID ${id} not found`);
     }
 
-    if (allowance.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update allowance with status ${allowance.status}. Only DRAFT items can be edited.`,
       );
@@ -467,7 +472,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Allowance with ID ${id} not found`);
     }
 
-    if (allowance.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve allowance with status ${allowance.status}. Only DRAFT items can be approved.`,
       );
@@ -487,7 +492,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Allowance with ID ${id} not found`);
     }
 
-    if (allowance.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject allowance with status ${allowance.status}. Only DRAFT items can be rejected.`,
       );
@@ -496,6 +501,9 @@ export class PayrollConfigurationService {
     allowance.status = ConfigStatus.REJECTED;
     allowance.approvedBy = new Types.ObjectId(userId);
     allowance.approvedAt = new Date();
+    if (rejectionDto.comment) {
+      // Store rejection comment if needed (you may need to add a comment field to the schema)
+    }
 
     return await allowance.save();
   }
@@ -507,7 +515,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Allowance with ID ${id} not found`);
     }
 
-    if (allowance.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(allowance.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete allowance with status ${allowance.status}.`,
       );
@@ -542,7 +550,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay type with ID ${id} not found`);
     }
 
-    if (payType.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update pay type with status ${payType.status}. Only DRAFT items can be edited.`,
       );
@@ -609,7 +617,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay type with ID ${id} not found`);
     }
 
-    if (payType.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve pay type with status ${payType.status}. Only DRAFT items can be approved.`,
       );
@@ -629,7 +637,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay type with ID ${id} not found`);
     }
 
-    if (payType.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject pay type with status ${payType.status}. Only DRAFT items can be rejected.`,
       );
@@ -649,7 +657,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Pay type with ID ${id} not found`);
     }
 
-    if (payType.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(payType.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete pay type with status ${payType.status}.`,
       );
@@ -684,7 +692,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Tax rule with ID ${id} not found`);
     }
 
-    if (taxRule.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update tax rule with status ${taxRule.status}. Only DRAFT items can be edited.`,
       );
@@ -751,7 +759,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Tax rule with ID ${id} not found`);
     }
 
-    if (taxRule.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve tax rule with status ${taxRule.status}. Only DRAFT items can be approved.`,
       );
@@ -771,7 +779,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Tax rule with ID ${id} not found`);
     }
 
-    if (taxRule.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject tax rule with status ${taxRule.status}. Only DRAFT items can be rejected.`,
       );
@@ -791,7 +799,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Tax rule with ID ${id} not found`);
     }
 
-    if (taxRule.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(taxRule.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete tax rule with status ${taxRule.status}.`,
       );
@@ -850,7 +858,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (insuranceBracket.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be edited.`,
       );
@@ -937,7 +945,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (insuranceBracket.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be approved.`,
       );
@@ -960,7 +968,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (insuranceBracket.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be rejected.`,
       );
@@ -980,7 +988,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (insuranceBracket.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(insuranceBracket.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete insurance bracket with status ${insuranceBracket.status}.`,
       );
@@ -1021,7 +1029,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Signing bonus with ID ${id} not found`);
     }
 
-    if (signingBonus.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update signing bonus with status ${signingBonus.status}. Only DRAFT items can be edited.`,
       );
@@ -1090,7 +1098,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Signing bonus with ID ${id} not found`);
     }
 
-    if (signingBonus.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve signing bonus with status ${signingBonus.status}. Only DRAFT items can be approved.`,
       );
@@ -1110,7 +1118,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Signing bonus with ID ${id} not found`);
     }
 
-    if (signingBonus.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject signing bonus with status ${signingBonus.status}. Only DRAFT items can be rejected.`,
       );
@@ -1130,7 +1138,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Signing bonus with ID ${id} not found`);
     }
 
-    if (signingBonus.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot delete signing bonus with status ${signingBonus.status}. Only DRAFT items can be deleted.`,
       );
@@ -1176,7 +1184,7 @@ export class PayrollConfigurationService {
       );
     }
 
-    if (benefit.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update termination benefit with status ${benefit.status}. Only DRAFT items can be edited.`,
       );
@@ -1249,7 +1257,7 @@ export class PayrollConfigurationService {
       );
     }
 
-    if (benefit.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve termination benefit with status ${benefit.status}. Only DRAFT items can be approved.`,
       );
@@ -1271,7 +1279,7 @@ export class PayrollConfigurationService {
       );
     }
 
-    if (benefit.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject termination benefit with status ${benefit.status}. Only DRAFT items can be rejected.`,
       );
@@ -1293,7 +1301,7 @@ export class PayrollConfigurationService {
       );
     }
 
-    if (benefit.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(benefit.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete termination benefit with status ${benefit.status}.`,
       );
@@ -1343,7 +1351,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Payroll policy with ID ${id} not found`);
     }
 
-    if (policy.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot update payroll policy with status ${policy.status}. Only DRAFT items can be edited.`,
       );
@@ -1424,7 +1432,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Payroll policy with ID ${id} not found`);
     }
 
-    if (policy.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot approve payroll policy with status ${policy.status}. Only DRAFT items can be approved.`,
       );
@@ -1444,7 +1452,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Payroll policy with ID ${id} not found`);
     }
 
-    if (policy.status !== ConfigStatus.DRAFT) {
+    if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
         `Cannot reject payroll policy with status ${policy.status}. Only DRAFT items can be rejected.`,
       );
@@ -1464,7 +1472,7 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Payroll policy with ID ${id} not found`);
     }
 
-    if (policy.status === ConfigStatus.REJECTED) {
+    if (this.normalizeStatus(policy.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
         `Cannot delete payroll policy with status ${policy.status}.`,
       );
