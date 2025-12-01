@@ -71,7 +71,7 @@ interface UpdateTaxRuleDto {
 
 interface CreateInsuranceBracketDto {
   name: string;
-  amount: number;
+  // amount: number;
   minSalary: number;
   maxSalary: number;
   employeeRate: number;
@@ -80,7 +80,7 @@ interface CreateInsuranceBracketDto {
 
 interface UpdateInsuranceBracketDto {
   name?: string;
-  amount?: number;
+  // amount?: number;
   minSalary?: number;
   maxSalary?: number;
   employeeRate?: number;
@@ -815,9 +815,9 @@ export class PayrollConfigurationService {
     userId: string,
   ) {
     // Validation
-    if (createDto.amount < 0) {
-      throw new BadRequestException('Insurance amount must be non-negative');
-    }
+    // if (createDto.amount < 0) {
+    //   throw new BadRequestException('Insurance amount must be non-negative');
+    // }
 
     if (createDto.minSalary >= createDto.maxSalary) {
       throw new BadRequestException('Min salary must be less than max salary');
