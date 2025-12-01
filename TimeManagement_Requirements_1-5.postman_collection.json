@@ -1,0 +1,1990 @@
+{
+	"info": {
+		"_postman_id": "req-1-5-comprehensive-test",
+		"name": "Time Management - Requirements 1-5 Comprehensive Tests",
+		"description": "Comprehensive test collection for Requirements 1-5: Shift Assignment, Shift Configuration, Custom Scheduling Rules, Shift Expiry Notifications, and Clock-In/Out",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:6000/api/v1"
+		},
+		{
+			"key": "token_system_admin",
+			"value": "YOUR_SYSTEM_ADMIN_TOKEN"
+		},
+		{
+			"key": "token_hr_admin",
+			"value": "YOUR_HR_ADMIN_TOKEN"
+		},
+		{
+			"key": "token_hr_manager",
+			"value": "YOUR_HR_MANAGER_TOKEN"
+		},
+		{
+			"key": "token_employee",
+			"value": "YOUR_EMPLOYEE_TOKEN"
+		},
+		{
+			"key": "token_department_head",
+			"value": "YOUR_DEPT_HEAD_TOKEN"
+		},
+		{
+			"key": "token_wrong_role",
+			"value": "YOUR_WRONG_ROLE_TOKEN"
+		},
+		{
+			"key": "employeeId",
+			"value": "000000000000000000000001"
+		},
+		{
+			"key": "departmentId",
+			"value": "dept-id-here"
+		},
+		{
+			"key": "positionId",
+			"value": "position-id-here"
+		},
+		{
+			"key": "shiftTypeId",
+			"value": "shift-type-id-here"
+		},
+		{
+			"key": "shiftId",
+			"value": "shift-id-here"
+		},
+		{
+			"key": "scheduleRuleId",
+			"value": "schedule-rule-id-here"
+		},
+		{
+			"key": "shiftAssignmentId",
+			"value": "assignment-id-here"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Shift Assignment Management",
+			"item": [
+				{
+					"name": "Assign Shift to Employee",
+					"item": [
+						{
+							"name": "✅ Happy Path - Assign with APPROVED status",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 201\", function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"pm.test(\"Response has assignment ID\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id || jsonData.id).to.exist;",
+											"    pm.collectionVariables.set(\"shiftAssignmentId\", jsonData._id || jsonData.id);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionId\": \"{{positionId}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "✅ Happy Path - Assign with PENDING status",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-02-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"PENDING\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Missing required field (employeeId)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 400\", function () {",
+											"    pm.response.to.have.status(400);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid date range (endDate before startDate)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 400\", function () {",
+											"    pm.response.to.have.status(400);",
+											"});",
+											"pm.test(\"Error mentions endDate\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(JSON.stringify(jsonData)).to.include(\"endDate\");",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid calendar date (Nov 31)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 400\", function () {",
+											"    pm.response.to.have.status(400);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-11-31T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid status enum",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 400\", function () {",
+											"    pm.response.to.have.status(400);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"INVALID_STATUS\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "🔒 Role Test - Wrong Role (HR Manager - should fail)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 403\", function () {",
+											"    pm.response.to.have.status(403);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						},
+						{
+							"name": "🔒 Role Test - No Auth Token",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 401\", function () {",
+											"    pm.response.to.have.status(401);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Assign Shift to Department",
+					"item": [
+						{
+							"name": "✅ Happy Path - Assign to Department",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"includePositions\": [\"{{positionId}}\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign/department",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign", "department"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid date range",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.000Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign/department",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign", "department"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Assign Shift to Position",
+					"item": [
+						{
+							"name": "✅ Happy Path - Assign to Position",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"positionId\": \"{{positionId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign/position",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign", "position"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Shift Assignment",
+					"item": [
+						{
+							"name": "✅ Update Status to CANCELLED",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"CANCELLED\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+								}
+							}
+						},
+						{
+							"name": "✅ Update Status to EXPIRED",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"EXPIRED\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Get All Shift Assignments",
+					"item": [
+						{
+							"name": "✅ Filter by Status APPROVED",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=APPROVED",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [
+										{
+											"key": "status",
+											"value": "APPROVED"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Filter by Status PENDING",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=PENDING",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [
+										{
+											"key": "status",
+											"value": "PENDING"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Filter by Status CANCELLED",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=CANCELLED",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [
+										{
+											"key": "status",
+											"value": "CANCELLED"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Filter by Status EXPIRED",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=EXPIRED",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [
+										{
+											"key": "status",
+											"value": "EXPIRED"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Filter by Employee ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?employeeId={{employeeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [
+										{
+											"key": "employeeId",
+											"value": "{{employeeId}}"
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Renew Shift Assignment",
+					"item": [
+						{
+							"name": "✅ Renew with new end date",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"newEndDate\": \"2026-12-31T23:59:59.000Z\",\n  \"note\": \"Extended for another year\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/renew",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "renew"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancel Shift Assignment",
+					"item": [
+						{
+							"name": "✅ Cancel with reason",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"reason\": \"Employee transferred to different department\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/cancel",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "cancel"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Postpone Shift Assignment",
+					"item": [
+						{
+							"name": "✅ Postpone until future date",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"postponeUntil\": \"2025-06-01T00:00:00.000Z\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/postpone",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "postpone"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Check Expired Assignments",
+					"item": [
+						{
+							"name": "✅ Check and update expired",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments/check-expired",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments", "check-expired"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "2. Shift Configuration & Types",
+			"item": [
+				{
+					"name": "Shift Type Management",
+					"item": [
+						{
+							"name": "✅ Create Shift Type - Normal",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 201\", function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"pm.test(\"Response has shift type ID\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id || jsonData.id).to.exist;",
+											"    pm.collectionVariables.set(\"shiftTypeId\", jsonData._id || jsonData.id);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Normal Shift\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift Type - Split",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Split Shift\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift Type - Overnight",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Overnight Shift\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift Type - Rotational",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Rotational Shift\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift Type - Mission",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Mission Shift\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Missing name field",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "🔒 Role Test - Wrong Role (Employee)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_employee}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Test Shift Type\",\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							}
+						},
+						{
+							"name": "✅ Get All Shift Types",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/types",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "types"]
+								}
+							}
+						},
+						{
+							"name": "✅ Get Active Shift Types Only",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/types?active=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "types"],
+									"query": [
+										{
+											"key": "active",
+											"value": "true"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Update Shift Type",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Normal Shift\",\n  \"active\": false\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type/{{shiftTypeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type", "{{shiftTypeId}}"]
+								}
+							}
+						},
+						{
+							"name": "✅ Delete Shift Type",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type/{{shiftTypeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type", "{{shiftTypeId}}"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Shift Management",
+					"item": [
+						{
+							"name": "✅ Create Shift - FIRST_LAST Policy",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 201\", function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"pm.test(\"Response has shift ID\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id || jsonData.id).to.exist;",
+											"    pm.collectionVariables.set(\"shiftId\", jsonData._id || jsonData.id);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Standard 9-5 Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"17:00\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 15,\n  \"graceOutMinutes\": 15,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift - MULTIPLE Policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Flexible Multi-Punch Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"08:00\",\n  \"endTime\": \"18:00\",\n  \"punchPolicy\": \"MULTIPLE\",\n  \"graceInMinutes\": 10,\n  \"graceOutMinutes\": 10,\n  \"requiresApprovalForOvertime\": false,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Shift - ONLY_FIRST Policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Single Punch Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"10:00\",\n  \"endTime\": \"16:00\",\n  \"punchPolicy\": \"ONLY_FIRST\",\n  \"graceInMinutes\": 5,\n  \"graceOutMinutes\": 5,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "✅ Create Overnight Shift",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Night Shift 10PM-6AM\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"22:00\",\n  \"endTime\": \"06:00\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 20,\n  \"graceOutMinutes\": 20,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid punch policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Invalid Policy Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"17:00\",\n  \"punchPolicy\": \"INVALID_POLICY\",\n  \"graceInMinutes\": 15,\n  \"graceOutMinutes\": 15,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "❌ Error - Invalid time format",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Invalid Time Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"25:00\",\n  \"endTime\": \"17:00\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 15,\n  \"graceOutMinutes\": 15,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							}
+						},
+						{
+							"name": "✅ Get All Shifts",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shifts",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shifts"]
+								}
+							}
+						},
+						{
+							"name": "✅ Get Active Shifts Only",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shifts?active=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shifts"],
+									"query": [
+										{
+											"key": "active",
+											"value": "true"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "✅ Get Shifts by Type",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_admin}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shifts/type/{{shiftTypeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shifts", "type", "{{shiftTypeId}}"]
+								}
+							}
+						},
+						{
+							"name": "✅ Update Shift",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Standard 9-5 Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"09:30\",\n  \"endTime\": \"17:30\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 20,\n  \"graceOutMinutes\": 20,\n  \"requiresApprovalForOvertime\": false,\n  \"active\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "{{shiftId}}"]
+								}
+							}
+						},
+						{
+							"name": "✅ Delete Shift",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "{{shiftId}}"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "3. Custom Scheduling Rules",
+			"item": [
+				{
+					"name": "✅ Create Schedule Rule - Mon-Fri",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test(\"Response has schedule rule ID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData._id || jsonData.id).to.exist;",
+									"    pm.collectionVariables.set(\"scheduleRuleId\", jsonData._id || jsonData.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_manager}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Standard Week Mon-Fri\",\n  \"pattern\": \"Mon-Fri\",\n  \"active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule"]
+						}
+					}
+				},
+				{
+					"name": "✅ Create Flexible Schedule - 4 Days On/3 Off",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_manager}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Flexible 4/3 Pattern\",\n  \"pattern\": \"4 days on, 3 days off\",\n  \"active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/flexible",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "flexible"]
+						}
+					}
+				},
+				{
+					"name": "✅ Create Flexible Schedule - Flex In/Out Hours",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_manager}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Flex-Time Hours\",\n  \"pattern\": \"Flex-in: 7-10 AM, Flex-out: 4-7 PM\",\n  \"active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/flexible",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "flexible"]
+						}
+					}
+				},
+				{
+					"name": "✅ Get All Schedule Rules",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedules",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedules"]
+						}
+					}
+				},
+				{
+					"name": "✅ Validate Schedule Rule",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scheduleRuleId\": \"{{scheduleRuleId}}\",\n  \"assignmentDate\": \"2025-01-15T00:00:00.000Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/validate",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "validate"]
+						}
+					}
+				},
+				{
+					"name": "✅ Check Working Day",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_employee}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scheduleRuleId\": \"{{scheduleRuleId}}\",\n  \"checkDate\": \"2025-01-15T00:00:00.000Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/check-working-day",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "check-working-day"]
+						}
+					}
+				},
+				{
+					"name": "✅ Apply Schedule Rule to Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shiftAssignmentId\": \"{{shiftAssignmentId}}\",\n  \"scheduleRuleId\": \"{{scheduleRuleId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule/apply-to-assignment",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule", "apply-to-assignment"]
+						}
+					}
+				},
+				{
+					"name": "❌ Error - Missing pattern field",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_manager}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Invalid Schedule Rule\",\n  \"active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/schedule",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "schedule"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Shift Expiry Notifications",
+			"item": [
+				{
+					"name": "✅ Send Shift Expiry Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientId\": \"{{employeeId}}\",\n  \"shiftAssignmentId\": \"{{shiftAssignmentId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"daysRemaining\": 30\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/shift-expiry/notify",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "shift-expiry", "notify"]
+						}
+					}
+				},
+				{
+					"name": "✅ Send Bulk Shift Expiry Notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"hrAdminIds\": [\"hr-admin-id-1\", \"hr-admin-id-2\"],\n  \"expiringAssignments\": [\n    {\n      \"assignmentId\": \"{{shiftAssignmentId}}\",\n      \"employeeId\": \"{{employeeId}}\",\n      \"employeeName\": \"John Doe\",\n      \"shiftName\": \"Standard 9-5 Shift\",\n      \"endDate\": \"2025-12-31T23:59:59.000Z\",\n      \"daysRemaining\": 30\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/shift-expiry/notify-bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "shift-expiry", "notify-bulk"]
+						}
+					}
+				},
+				{
+					"name": "✅ Get Shift Expiry Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/shift-expiry/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "shift-expiry", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Send Shift Renewal Confirmation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientId\": \"{{employeeId}}\",\n  \"shiftAssignmentId\": \"{{shiftAssignmentId}}\",\n  \"newEndDate\": \"2026-12-31T23:59:59.000Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/shift-renewal/confirm",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "shift-renewal", "confirm"]
+						}
+					}
+				},
+				{
+					"name": "✅ Send Shift Archive Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientId\": \"{{employeeId}}\",\n  \"shiftAssignmentId\": \"{{shiftAssignmentId}}\",\n  \"employeeId\": \"{{employeeId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-sync/shift-archive/notify",
+							"host": ["{{baseUrl}}"],
+							"path": ["notification-sync", "shift-archive", "notify"]
+						}
+					}
+				},
+				{
+					"name": "🔒 Role Test - Wrong Role (HR Manager)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_hr_manager}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"recipientId\": \"{{employeeId}}\",\n  \"shiftAssignmentId\": \"{{shiftAssignmentId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"daysRemaining\": 30\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/notification-sync/shift-expiry/notify",
+									"host": ["{{baseUrl}}"],
+									"path": ["notification-sync", "shift-expiry", "notify"]
+								}
+							}
+				}
+			]
+		},
+		{
+			"name": "5. Clock-In/Out",
+			"item": [
+				{
+					"name": "✅ Clock In - Employee (Self)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test(\"Response has attendance record\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.exist;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_employee}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Clock Out - Employee (Self)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_employee}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-out/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-out", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Clock In - HR Admin (for employee)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Clock In - HR Manager (for employee)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_manager}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Clock In - Finance Staff (for employee)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_employee}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "❌ Error - Employee trying to clock in for another employee",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 500 or 403\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([500, 403]);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_employee}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/different-employee-id",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "different-employee-id"]
+						}
+					}
+				},
+				{
+					"name": "❌ Error - Invalid employee ID format",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/invalid-id",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "invalid-id"]
+						}
+					}
+				},
+				{
+					"name": "🔒 Role Test - No Auth Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{baseUrl}}/time-management/clock-in/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "clock-in", "{{employeeId}}"]
+						}
+					}
+				},
+				{
+					"name": "✅ Record Punch from Device",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"punchType\": \"IN\",\n  \"deviceId\": \"DEVICE-001\",\n  \"location\": \"Building A, Floor 2\",\n  \"terminalId\": \"TERMINAL-001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/time-management/attendance/punch/device",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "attendance", "punch", "device"]
+						}
+					}
+				},
+				{
+					"name": "✅ Record Punch OUT from Device",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_hr_admin}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"punchType\": \"OUT\",\n  \"deviceId\": \"DEVICE-001\",\n  \"location\": \"Building A, Floor 2\",\n  \"terminalId\": \"TERMINAL-001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/time-management/attendance/punch/device",
+							"host": ["{{baseUrl}}"],
+							"path": ["time-management", "attendance", "punch", "device"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
+

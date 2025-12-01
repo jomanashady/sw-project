@@ -239,32 +239,11 @@ export class AssignShiftToEmployeeDto {
 
   @IsNotEmpty()
   @IsDateString()
-  @Transform(({ value }) => {
-    // Validate before transforming - this runs before @Type()
-    if (typeof value === 'string' && !isValidCalendarDateString(value)) {
-      // Return a value that will fail validation
-      return 'INVALID_DATE';
-    }
-    return value;
-  })
-  @Validate(IsValidCalendarDateConstraint)
-  @Type(() => Date)
-  startDate: Date;  // Start date for the shift assignment (required)
+  startDate: string;  // Start date for the shift assignment (required)
 
   @IsNotEmpty()
   @IsDateString()
-  @Transform(({ value }) => {
-    // Validate before transforming - this runs before @Type()
-    if (typeof value === 'string' && !isValidCalendarDateString(value)) {
-      // Return a value that will fail validation
-      return 'INVALID_DATE';
-    }
-    return value;
-  })
-  @Validate(IsValidCalendarDateConstraint)
-  @Validate(IsEndDateAfterStartDateConstraint)
-  @Type(() => Date)
-  endDate: Date;  // End date for the shift assignment (required)
+  endDate: string;  // End date for the shift assignment (required)
 
   @IsNotEmpty()
   @IsEnum(ShiftAssignmentStatus)
