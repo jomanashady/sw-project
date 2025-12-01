@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TimeManagementController } from './time-management.controller';
+import { TimeManagementController } from './controllers/time-management.controller';
 
 describe('TimeManagementController', () => {
   let controller: TimeManagementController;
