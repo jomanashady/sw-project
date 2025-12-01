@@ -9,16 +9,16 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
 import {
   EmployeeProfile,
   EmployeeProfileDocument,
 } from './models/employee-profile.schema';
-import {
-  EmployeeProfileChangeRequest, // Use base class only
-} from './models/ep-change-request.schema';
+import { EmployeeProfileChangeRequest } from './models/ep-change-request.schema';
 import { Candidate, CandidateDocument } from './models/candidate.schema';
 import { EmployeeSystemRole } from './models/employee-system-role.schema';
-import { EmployeeQualification } from './models/qualification.schema'; // Use base class only
+import { EmployeeQualification } from './models/qualification.schema';
 import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
@@ -45,11 +45,11 @@ export class EmployeeProfileService {
     @InjectModel(Candidate.name)
     private candidateModel: Model<CandidateDocument>,
     @InjectModel(EmployeeProfileChangeRequest.name)
-    private changeRequestModel: Model<EmployeeProfileChangeRequest>, // Remove Document suffix
+    private changeRequestModel: Model<EmployeeProfileChangeRequest>,
     @InjectModel(EmployeeSystemRole.name)
     private systemRoleModel: Model<EmployeeSystemRole>,
     @InjectModel(EmployeeQualification.name)
-    private qualificationModel: Model<EmployeeQualification>, // Remove Document suffix
+    private qualificationModel: Model<EmployeeQualification>,
   ) {}
 
   // ==================== EMPLOYEE CRUD ====================
@@ -278,6 +278,51 @@ export class EmployeeProfileService {
     return updatedEmployee;
   }
 
+  async updateBankingInfo(
+    id: string,
+    bankingData: { bankName?: string; bankAccountNumber?: string },
+  ): Promise<EmployeeProfile> {
+    await this.findOne(id);
+
+    const updatedEmployee = await this.employeeModel
+      .findByIdAndUpdate(id, { $set: bankingData }, { new: true })
+      .select('-password')
+      .exec();
+
+    return updatedEmployee;
+  }
+
+  async updateBiography(
+    id: string,
+    biography: string,
+  ): Promise<EmployeeProfile> {
+    await this.findOne(id);
+
+    const updatedEmployee = await this.employeeModel
+      .findByIdAndUpdate(id, { $set: { biography } }, { new: true })
+      .select('-password')
+      .exec();
+
+    return updatedEmployee;
+  }
+
+  async uploadProfilePhoto(
+    id: string,
+    photo: Express.Multer.File,
+  ): Promise<string> {
+    await this.findOne(id);
+
+    // In a real application, you would upload to cloud storage (AWS S3, Cloudinary, etc.)
+    // For now, we'll simulate returning a URL
+    const profilePictureUrl = `https://storage.example.com/profiles/${id}/photo.jpg`;
+
+    await this.employeeModel
+      .findByIdAndUpdate(id, { $set: { profilePictureUrl } }, { new: true })
+      .exec();
+
+    return profilePictureUrl;
+  }
+
   async remove(id: string): Promise<void> {
     const employee = await this.findOne(id);
 
@@ -312,6 +357,7 @@ export class EmployeeProfileService {
     if (existingRole) {
       existingRole.roles = roles;
       existingRole.permissions = permissions;
+      existingRole.isActive = true;
       return existingRole.save();
     }
 
@@ -327,6 +373,55 @@ export class EmployeeProfileService {
     return this.systemRoleModel
       .findOne({ employeeProfileId: new Types.ObjectId(employeeId) })
       .exec();
+  }
+
+  async updateSystemRoles(
+    employeeId: string,
+    roles?: SystemRole[],
+    permissions?: string[],
+  ): Promise<EmployeeSystemRole> {
+    await this.findOne(employeeId);
+
+    const existingRole = await this.systemRoleModel
+      .findOne({ employeeProfileId: new Types.ObjectId(employeeId) })
+      .exec();
+
+    if (!existingRole) {
+      throw new NotFoundException('System roles not found for employee');
+    }
+
+    const updateData: any = {};
+    if (roles) updateData.roles = roles;
+    if (permissions) updateData.permissions = permissions;
+
+    const updatedRole = await this.systemRoleModel
+      .findOneAndUpdate(
+        { employeeProfileId: new Types.ObjectId(employeeId) },
+        { $set: updateData },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedRole) {
+      throw new NotFoundException('Failed to update system roles');
+    }
+
+    return updatedRole;
+  }
+
+  async deactivateSystemRoles(employeeId: string): Promise<void> {
+    await this.findOne(employeeId);
+
+    const result = await this.systemRoleModel
+      .updateOne(
+        { employeeProfileId: new Types.ObjectId(employeeId) },
+        { $set: { isActive: false } },
+      )
+      .exec();
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('System roles not found for employee');
+    }
   }
 
   // ==================== CANDIDATE MANAGEMENT ====================
@@ -371,6 +466,37 @@ export class EmployeeProfileService {
   async findAllCandidates(): Promise<Candidate[]> {
     return this.candidateModel
       .find()
+      .populate('departmentId', 'name code')
+      .populate('positionId', 'title code')
+      .exec();
+  }
+
+  async findAllCandidatesWithFilters(query: any): Promise<Candidate[]> {
+    const filter: any = {};
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    if (query.departmentId) {
+      filter.departmentId = new Types.ObjectId(query.departmentId);
+    }
+
+    if (query.positionId) {
+      filter.positionId = new Types.ObjectId(query.positionId);
+    }
+
+    if (query.search) {
+      filter.$or = [
+        { firstName: { $regex: query.search, $options: 'i' } },
+        { lastName: { $regex: query.search, $options: 'i' } },
+        { candidateNumber: { $regex: query.search, $options: 'i' } },
+        { personalEmail: { $regex: query.search, $options: 'i' } },
+      ];
+    }
+
+    return this.candidateModel
+      .find(filter)
       .populate('departmentId', 'name code')
       .populate('positionId', 'title code')
       .exec();
@@ -431,6 +557,19 @@ export class EmployeeProfileService {
     return updatedCandidate;
   }
 
+  async updateCandidateStatus(
+    id: string,
+    status: CandidateStatus,
+  ): Promise<Candidate> {
+    const candidate = await this.findCandidateById(id);
+
+    const updatedCandidate = await this.candidateModel
+      .findByIdAndUpdate(id, { $set: { status } }, { new: true })
+      .exec();
+
+    return updatedCandidate;
+  }
+
   async removeCandidate(id: string): Promise<void> {
     const candidate = await this.findCandidateById(id);
     await this.candidateModel.findByIdAndDelete(id).exec();
@@ -448,9 +587,24 @@ export class EmployeeProfileService {
       primaryPositionId?: string;
     },
   ): Promise<EmployeeProfile> {
+    if (!employeeData?.workEmail) {
+      throw new BadRequestException('workEmail is required in request body');
+    }
+
+    if (!employeeData?.dateOfHire) {
+      throw new BadRequestException('dateOfHire is required in request body');
+    }
+
+    if (!employeeData?.contractType) {
+      throw new BadRequestException('contractType is required in request body');
+    }
+
+    if (!employeeData?.workType) {
+      throw new BadRequestException('workType is required in request body');
+    }
+
     const candidate = await this.findCandidateById(candidateId);
 
-    // Create employee from candidate data
     const createEmployeeDto: CreateEmployeeDto = {
       firstName: candidate.firstName,
       lastName: candidate.lastName,
@@ -472,10 +626,8 @@ export class EmployeeProfileService {
       password: employeeData.password,
     };
 
-    // Create employee
     const employee = await this.create(createEmployeeDto);
 
-    // Update candidate status to HIRED
     await this.candidateModel
       .findByIdAndUpdate(candidateId, {
         $set: {
@@ -495,7 +647,6 @@ export class EmployeeProfileService {
   ): Promise<EmployeeProfileChangeRequest> {
     await this.findOne(employeeId);
 
-    // Generate request ID
     const requestId = await this.generateChangeRequestId();
 
     const changeRequest = new this.changeRequestModel({
@@ -525,6 +676,37 @@ export class EmployeeProfileService {
     const filter: any = {};
     if (status) {
       filter.status = status;
+    }
+
+    return this.changeRequestModel
+      .find(filter)
+      .populate('employeeProfileId', 'firstName lastName employeeNumber')
+      .sort({ submittedAt: -1 })
+      .exec();
+  }
+
+  async getAllProfileChangeRequestsWithFilters(
+    query: any,
+  ): Promise<EmployeeProfileChangeRequest[]> {
+    const filter: any = {};
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    if (query.employeeId) {
+      filter.employeeProfileId = new Types.ObjectId(query.employeeId);
+    }
+
+    if (query.startDate) {
+      filter.submittedAt = { $gte: new Date(query.startDate) };
+    }
+
+    if (query.endDate) {
+      filter.submittedAt = {
+        ...filter.submittedAt,
+        $lte: new Date(query.endDate),
+      };
     }
 
     return this.changeRequestModel
@@ -587,6 +769,45 @@ export class EmployeeProfileService {
     return updatedRequest;
   }
 
+  async cancelProfileChangeRequest(
+    id: string,
+    employeeId: string,
+  ): Promise<EmployeeProfileChangeRequest> {
+    const request = await this.getProfileChangeRequestById(id);
+
+    // Check if the request belongs to the employee
+    if (request.employeeProfileId.toString() !== employeeId.toString()) {
+      throw new ForbiddenException(
+        'You are not authorized to cancel this change request',
+      );
+    }
+
+    if (request.status !== ProfileChangeStatus.PENDING) {
+      throw new BadRequestException(
+        'Only pending change requests can be cancelled',
+      );
+    }
+
+    const updatedRequest = await this.changeRequestModel
+      .findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            status: ProfileChangeStatus.CANCELED,
+            processedAt: new Date(),
+          },
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedRequest) {
+      throw new NotFoundException('Change request not found after update');
+    }
+
+    return updatedRequest;
+  }
+
   // ==================== QUALIFICATION MANAGEMENT ====================
 
   async addQualification(
@@ -615,6 +836,45 @@ export class EmployeeProfileService {
       .exec();
   }
 
+  async updateQualification(
+    qualificationId: string,
+    employeeId: string,
+    qualificationData: {
+      establishmentName?: string;
+      graduationType?: string;
+    },
+  ): Promise<EmployeeQualification> {
+    const qualification =
+      await this.qualificationModel.findById(qualificationId);
+
+    if (!qualification) {
+      throw new NotFoundException(
+        `Qualification with ID ${qualificationId} not found`,
+      );
+    }
+
+    // Check if the qualification belongs to the employee
+    if (qualification.employeeProfileId.toString() !== employeeId.toString()) {
+      throw new ForbiddenException(
+        'You are not authorized to update this qualification',
+      );
+    }
+
+    const updatedQualification = await this.qualificationModel
+      .findByIdAndUpdate(
+        qualificationId,
+        { $set: qualificationData },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedQualification) {
+      throw new NotFoundException('Qualification not found after update');
+    }
+
+    return updatedQualification;
+  }
+
   async removeQualification(
     qualificationId: string,
     employeeId: string,
@@ -628,7 +888,6 @@ export class EmployeeProfileService {
       );
     }
 
-    // Check if the qualification belongs to the employee
     if (qualification.employeeProfileId.toString() !== employeeId.toString()) {
       throw new ForbiddenException(
         'You are not authorized to delete this qualification',
@@ -636,6 +895,203 @@ export class EmployeeProfileService {
     }
 
     await this.qualificationModel.findByIdAndDelete(qualificationId).exec();
+  }
+
+  // ==================== SEARCH & EXPORT METHODS ====================
+
+  async advancedSearch(searchCriteria: any): Promise<any[]> {
+    const {
+      firstName,
+      lastName,
+      employeeNumber,
+      departmentId,
+      positionId,
+      status,
+      dateOfHireFrom,
+      dateOfHireTo,
+    } = searchCriteria;
+
+    const filter: any = {};
+
+    if (firstName) {
+      filter.firstName = { $regex: firstName, $options: 'i' };
+    }
+
+    if (lastName) {
+      filter.lastName = { $regex: lastName, $options: 'i' };
+    }
+
+    if (employeeNumber) {
+      filter.employeeNumber = { $regex: employeeNumber, $options: 'i' };
+    }
+
+    if (departmentId) {
+      filter.primaryDepartmentId = new Types.ObjectId(departmentId);
+    }
+
+    if (positionId) {
+      filter.primaryPositionId = new Types.ObjectId(positionId);
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (dateOfHireFrom || dateOfHireTo) {
+      filter.dateOfHire = {};
+      if (dateOfHireFrom) filter.dateOfHire.$gte = new Date(dateOfHireFrom);
+      if (dateOfHireTo) filter.dateOfHire.$lte = new Date(dateOfHireTo);
+    }
+
+    return this.employeeModel
+      .find(filter)
+      .populate('primaryDepartmentId', 'name code')
+      .populate('primaryPositionId', 'title code')
+      .select('-password')
+      .limit(100) // Limit results for performance
+      .exec();
+  }
+
+  async exportToExcel(query: QueryEmployeeDto): Promise<Buffer> {
+    const { data: employees } = await this.findAll(query);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Employees');
+
+    // Add headers
+    worksheet.columns = [
+      { header: 'Employee Number', key: 'employeeNumber', width: 20 },
+      { header: 'Full Name', key: 'fullName', width: 30 },
+      { header: 'Work Email', key: 'workEmail', width: 25 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Department', key: 'department', width: 25 },
+      { header: 'Position', key: 'position', width: 25 },
+      { header: 'Date of Hire', key: 'dateOfHire', width: 15 },
+      { header: 'Contract Type', key: 'contractType', width: 15 },
+    ];
+
+    // Add rows
+    employees.forEach((employee: any) => {
+      worksheet.addRow({
+        employeeNumber: employee.employeeNumber,
+        fullName: employee.fullName,
+        workEmail: employee.workEmail,
+        status: employee.status,
+        department: employee.primaryDepartmentId?.name || 'N/A',
+        position: employee.primaryPositionId?.title || 'N/A',
+        dateOfHire: employee.dateOfHire
+          ? new Date(employee.dateOfHire).toLocaleDateString()
+          : 'N/A',
+        contractType: employee.contractType || 'N/A',
+      });
+    });
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' },
+    };
+
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  async exportToPdf(employeeId: string): Promise<Buffer> {
+    const employee = await this.findOne(employeeId);
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Add content to PDF
+      doc.fontSize(20).text('Employee Profile', { align: 'center' });
+      doc.moveDown();
+
+      doc.fontSize(12).text(`Employee Number: ${employee.employeeNumber}`);
+      doc.text(`Full Name: ${employee.fullName}`);
+      doc.text(`Work Email: ${employee.workEmail || 'N/A'}`);
+      doc.text(`Status: ${employee.status}`);
+      doc.text(`Date of Hire: ${employee.dateOfHire.toLocaleDateString()}`);
+
+      if (
+        employee.primaryDepartmentId &&
+        typeof employee.primaryDepartmentId !== 'string'
+      ) {
+        const department = employee.primaryDepartmentId as any;
+        doc.text(`Department: ${department.name || 'N/A'}`);
+      }
+
+      if (
+        employee.primaryPositionId &&
+        typeof employee.primaryPositionId !== 'string'
+      ) {
+        const position = employee.primaryPositionId as any;
+        doc.text(`Position: ${position.title || 'N/A'}`);
+      }
+
+      doc.moveDown();
+      doc.text('Contact Information:');
+      doc.text(`Personal Email: ${employee.personalEmail || 'N/A'}`);
+      doc.text(`Mobile Phone: ${employee.mobilePhone || 'N/A'}`);
+
+      if (employee.address) {
+        doc.text(
+          `Address: ${employee.address.streetAddress || ''}, ${
+            employee.address.city || ''
+          }, ${employee.address.country || ''}`,
+        );
+      }
+
+      doc.end();
+    });
+  }
+
+  // ==================== TEAM MANAGEMENT ====================
+
+  async getTeamMembers(managerId: string): Promise<EmployeeProfile[]> {
+    // Find manager's position
+    const manager = await this.findOne(managerId);
+
+    if (!manager.primaryPositionId) {
+      return [];
+    }
+
+    // Find all employees where supervisorPositionId matches manager's position
+    return this.employeeModel
+      .find({
+        supervisorPositionId: manager.primaryPositionId,
+        status: { $in: [EmployeeStatus.ACTIVE, EmployeeStatus.PROBATION] },
+      })
+      .populate('primaryDepartmentId', 'name code')
+      .populate('primaryPositionId', 'title code')
+      .select('-password')
+      .exec();
+  }
+
+  async getTeamStatistics(managerId: string): Promise<any> {
+    const teamMembers = await this.getTeamMembers(managerId);
+
+    const stats = {
+      totalMembers: teamMembers.length,
+      byStatus: teamMembers.reduce((acc, member) => {
+        acc[member.status] = (acc[member.status] || 0) + 1;
+        return acc;
+      }, {}),
+      byDepartment: teamMembers.reduce((acc, member) => {
+        const deptName = (member.primaryDepartmentId as any)?.name || 'Unknown';
+        acc[deptName] = (acc[deptName] || 0) + 1;
+        return acc;
+      }, {}),
+    };
+
+    return stats;
   }
 
   // ==================== HELPER METHODS ====================

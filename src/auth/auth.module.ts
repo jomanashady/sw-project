@@ -1,3 +1,4 @@
+// src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -18,14 +19,26 @@ import {
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    // ✅ Option 1: Use registerAsync() (async configuration)
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'your-secret-key',
-        signOptions: { expiresIn: '24h' },
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET')!,
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRATION', '24h') as any,
+        },
       }),
       inject: [ConfigService],
     }),
+
+    // OR ✅ Option 2: Use register() (static configuration - simpler)
+    // JwtModule.register({
+    //   secret: process.env.JWT_SECRET || 'fallback-secret',
+    //   signOptions: {
+    //     expiresIn: process.env.JWT_EXPIRATION || '24h',
+    //   },
+    // }),
+
     MongooseModule.forFeature([
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
       { name: EmployeeSystemRole.name, schema: EmployeeSystemRoleSchema },
