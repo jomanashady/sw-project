@@ -163,6 +163,109 @@ export class NotificationAndSyncController {
     );
   }
 
+  // ===== US9: ATTENDANCE-TO-PAYROLL SYNC =====
+  // BR-TM-22: All time management data must sync daily with payroll, benefits, and leave modules
+
+  @Post('sync/daily-batch')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async runDailyPayrollSync(
+    @Body() body: { syncDate: Date },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.runDailyPayrollSync(
+      new Date(body.syncDate),
+      user.userId,
+    );
+  }
+
+  @Get('sync/pending')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async getPendingPayrollSyncData(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('departmentId') departmentId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    const filters: { startDate?: Date; endDate?: Date; departmentId?: string } = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (departmentId) filters.departmentId = departmentId;
+    return this.notificationService.getPendingPayrollSyncData(filters, user.userId);
+  }
+
+  @Post('sync/finalize')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async finalizeRecordsForPayroll(
+    @Body() body: { recordIds: string[] },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.finalizeRecordsForPayroll(
+      body.recordIds,
+      user.userId,
+    );
+  }
+
+  @Post('sync/validate')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async validateDataForPayrollSync(
+    @Body() body: { startDate: Date; endDate: Date },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.validateDataForPayrollSync(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+      },
+      user.userId,
+    );
+  }
+
+  @Get('sync/exceptions')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async getExceptionDataForPayrollSync(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('employeeId') employeeId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    const filters: { startDate?: Date; endDate?: Date; employeeId?: string } = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (employeeId) filters.employeeId = employeeId;
+    return this.notificationService.getExceptionDataForPayrollSync(filters, user.userId);
+  }
+
+  @Get('sync/history')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async getPayrollSyncHistory(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: any,
+  ) {
+    const filters: { startDate?: Date; endDate?: Date; limit?: number } = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (limit) filters.limit = parseInt(limit, 10);
+    return this.notificationService.getPayrollSyncHistory(filters, user.userId);
+  }
+
+  @Post('sync/comprehensive')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async getComprehensivePayrollData(
+    @Body() body: { startDate: Date; endDate: Date; departmentId?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.getComprehensivePayrollData(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        departmentId: body.departmentId,
+      },
+      user.userId,
+    );
+  }
+
   // ===== US4: SHIFT EXPIRY NOTIFICATIONS =====
   // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
 
@@ -270,6 +373,202 @@ export class NotificationAndSyncController {
   ) {
     return this.notificationService.getAllShiftNotifications(
       hrAdminId,
+      user.userId,
+    );
+  }
+
+  // ===== US8: MISSED PUNCH MANAGEMENT & ALERTS =====
+  // BR-TM-14: Missed punches/late sign-ins must be handled via auto-flagging, notifications, or payroll blocking
+
+  @Post('missed-punch/alert/employee')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async sendMissedPunchAlertToEmployee(
+    @Body() body: {
+      employeeId: string;
+      attendanceRecordId: string;
+      missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
+      date: Date;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendMissedPunchAlertToEmployee(
+      body.employeeId,
+      body.attendanceRecordId,
+      body.missedPunchType,
+      new Date(body.date),
+      user.userId,
+    );
+  }
+
+  @Post('missed-punch/alert/manager')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+  )
+  async sendMissedPunchAlertToManager(
+    @Body() body: {
+      managerId: string;
+      employeeId: string;
+      employeeName: string;
+      attendanceRecordId: string;
+      missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
+      date: Date;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendMissedPunchAlertToManager(
+      body.managerId,
+      body.employeeId,
+      body.employeeName,
+      body.attendanceRecordId,
+      body.missedPunchType,
+      new Date(body.date),
+      user.userId,
+    );
+  }
+
+  @Post('missed-punch/alert/bulk')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async sendBulkMissedPunchAlerts(
+    @Body() body: {
+      alerts: Array<{
+        employeeId: string;
+        managerId?: string;
+        employeeName?: string;
+        attendanceRecordId: string;
+        missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
+        date: Date;
+      }>;
+    },
+    @CurrentUser() user: any,
+  ) {
+    const alerts = body.alerts.map(a => ({
+      ...a,
+      date: new Date(a.date),
+    }));
+    return this.notificationService.sendBulkMissedPunchAlerts(
+      alerts,
+      user.userId,
+    );
+  }
+
+  @Get('missed-punch/employee/:employeeId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getMissedPunchNotificationsByEmployee(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check
+    if (
+      user.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      user.userId !== employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.notificationService.getMissedPunchNotificationsByEmployee(
+      employeeId,
+      user.userId,
+    );
+  }
+
+  @Get('missed-punch/manager/:managerId')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getMissedPunchNotificationsByManager(
+    @Param('managerId') managerId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check for managers
+    if (
+      user.roles?.includes(SystemRole.DEPARTMENT_HEAD) &&
+      user.userId !== managerId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.notificationService.getMissedPunchNotificationsByManager(
+      managerId,
+      user.userId,
+    );
+  }
+
+  @Get('missed-punch/all')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+  async getAllMissedPunchNotifications(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    const filters: { startDate?: Date; endDate?: Date } = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    return this.notificationService.getAllMissedPunchNotifications(
+      filters,
+      user.userId,
+    );
+  }
+
+  @Post('missed-punch/flag-with-notification')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async flagMissedPunchWithNotification(
+    @Body() body: {
+      attendanceRecordId: string;
+      employeeId: string;
+      managerId: string;
+      employeeName: string;
+      missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.flagMissedPunchWithNotification(
+      body.attendanceRecordId,
+      body.employeeId,
+      body.managerId,
+      body.employeeName,
+      body.missedPunchType,
+      user.userId,
+    );
+  }
+
+  @Get('missed-punch/statistics')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async getMissedPunchStatistics(
+    @Query('employeeId') employeeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    const filters: { employeeId?: string; startDate?: Date; endDate?: Date } = {};
+    if (employeeId) filters.employeeId = employeeId;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    return this.notificationService.getMissedPunchStatistics(
+      filters,
       user.userId,
     );
   }

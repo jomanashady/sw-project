@@ -90,6 +90,332 @@ export class PolicyConfigService {
     return this.overtimeRuleModel.findByIdAndDelete(id).exec();
   }
 
+  // ===== US10: OVERTIME & SHORT TIME CONFIGURATION =====
+  // BR-TM-08: Overtime/Short Time must be calculated according to organizational policies
+
+  /**
+   * Get applicable overtime rules for a specific date
+   * BR-TM-08: Determines which rules apply based on date type (weekday/weekend/holiday)
+   */
+  async getApplicableOvertimeRules(
+    date: Date,
+    currentUserId: string,
+  ) {
+    // Check if date is a holiday
+    const holidayCheck = await this.checkHoliday({ date }, currentUserId);
+    
+    // Check if date is weekend (Saturday = 6, Sunday = 0)
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    // Get all active and approved overtime rules
+    const allRules = await this.overtimeRuleModel
+      .find({ active: true, approved: true })
+      .exec();
+    
+    return {
+      date,
+      isHoliday: holidayCheck.isHoliday,
+      holidayName: holidayCheck.holiday?.name || null,
+      isWeekend,
+      dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+      applicableRules: allRules,
+      recommendation: holidayCheck.isHoliday 
+        ? 'Apply HOLIDAY overtime multiplier' 
+        : isWeekend 
+          ? 'Apply WEEKEND overtime multiplier' 
+          : 'Apply REGULAR overtime multiplier',
+    };
+  }
+
+  /**
+   * Calculate overtime for an attendance record
+   * BR-TM-08: Calculate based on organizational policies
+   */
+  async calculateOvertimeForAttendance(
+    params: {
+      attendanceRecordId: string;
+      totalWorkMinutes: number;
+      standardWorkMinutes?: number;
+      date: Date;
+    },
+    currentUserId: string,
+  ) {
+    const { totalWorkMinutes, standardWorkMinutes = 480, date } = params; // Default 8 hours standard
+    
+    // Get applicable rules for this date
+    const applicableRules = await this.getApplicableOvertimeRules(date, currentUserId);
+    
+    // Calculate overtime minutes
+    const overtimeMinutes = Math.max(0, totalWorkMinutes - standardWorkMinutes);
+    const overtimeHours = Math.round((overtimeMinutes / 60) * 100) / 100;
+    
+    // Calculate short-time (undertime) minutes
+    const shortTimeMinutes = Math.max(0, standardWorkMinutes - totalWorkMinutes);
+    const shortTimeHours = Math.round((shortTimeMinutes / 60) * 100) / 100;
+    
+    // Determine overtime type and multiplier based on date
+    let overtimeType = 'REGULAR';
+    let multiplier = 1.5; // Default 1.5x for regular overtime
+    
+    if (applicableRules.isHoliday) {
+      overtimeType = 'HOLIDAY';
+      multiplier = 2.5; // 2.5x for holiday overtime
+    } else if (applicableRules.isWeekend) {
+      overtimeType = 'WEEKEND';
+      multiplier = 2.0; // 2x for weekend overtime
+    }
+    
+    return {
+      attendanceRecordId: params.attendanceRecordId,
+      date,
+      standardWorkMinutes,
+      actualWorkMinutes: totalWorkMinutes,
+      overtime: {
+        minutes: overtimeMinutes,
+        hours: overtimeHours,
+        type: overtimeType,
+        multiplier,
+        compensationMinutes: Math.round(overtimeMinutes * multiplier),
+      },
+      shortTime: {
+        minutes: shortTimeMinutes,
+        hours: shortTimeHours,
+        hasShortTime: shortTimeMinutes > 0,
+      },
+      applicableRules: {
+        isHoliday: applicableRules.isHoliday,
+        isWeekend: applicableRules.isWeekend,
+        dayOfWeek: applicableRules.dayOfWeek,
+      },
+    };
+  }
+
+  /**
+   * Get short-time (undertime) configuration
+   * BR-TM-08: Short time calculation rules
+   */
+  async getShortTimeConfig(currentUserId: string) {
+    // Return standard short-time configuration
+    // These could be made configurable via database in future
+    return {
+      standardWorkMinutes: 480, // 8 hours
+      minimumWorkMinutes: 240, // 4 hours (half day)
+      shortTimeThresholdMinutes: 30, // Ignore short-time under 30 minutes
+      deductionPerMinute: 0, // Or could be salary/480 for per-minute deduction
+      policies: {
+        allowHalfDay: true,
+        allowQuarterDay: false,
+        requiresApproval: true,
+        deductFromLeave: false,
+        deductFromSalary: true,
+      },
+    };
+  }
+
+  /**
+   * Calculate short-time (undertime) for an attendance record
+   * BR-TM-08: Short time must be calculated according to policies
+   */
+  async calculateShortTimeForAttendance(
+    params: {
+      attendanceRecordId: string;
+      totalWorkMinutes: number;
+      standardWorkMinutes?: number;
+      date: Date;
+    },
+    currentUserId: string,
+  ) {
+    const config = await this.getShortTimeConfig(currentUserId);
+    const { totalWorkMinutes, standardWorkMinutes = config.standardWorkMinutes, date } = params;
+    
+    const shortTimeMinutes = Math.max(0, standardWorkMinutes - totalWorkMinutes);
+    const shortTimeHours = Math.round((shortTimeMinutes / 60) * 100) / 100;
+    
+    // Determine if short-time should be applied (threshold check)
+    const applyShortTime = shortTimeMinutes >= config.shortTimeThresholdMinutes;
+    
+    // Determine work type
+    let workType = 'FULL_DAY';
+    if (totalWorkMinutes < config.minimumWorkMinutes) {
+      workType = 'LESS_THAN_HALF_DAY';
+    } else if (totalWorkMinutes < standardWorkMinutes) {
+      workType = 'HALF_DAY';
+    }
+    
+    return {
+      attendanceRecordId: params.attendanceRecordId,
+      date,
+      standardWorkMinutes,
+      actualWorkMinutes: totalWorkMinutes,
+      shortTime: {
+        minutes: shortTimeMinutes,
+        hours: shortTimeHours,
+        applyShortTime,
+        belowThreshold: shortTimeMinutes < config.shortTimeThresholdMinutes,
+      },
+      workType,
+      config,
+      recommendation: applyShortTime 
+        ? 'Apply short-time deduction or require leave request' 
+        : 'Short-time below threshold, no deduction required',
+    };
+  }
+
+  /**
+   * Validate if overtime requires pre-approval
+   * BR-TM-08: Pre-approval types enforcement
+   */
+  async validateOvertimePreApproval(
+    params: {
+      employeeId: string;
+      date: Date;
+      expectedOvertimeMinutes: number;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, date, expectedOvertimeMinutes } = params;
+    
+    // Get applicable rules to check if pre-approval is required
+    const applicableRules = await this.getApplicableOvertimeRules(date, currentUserId);
+    
+    // Pre-approval thresholds (could be configurable)
+    const preApprovalThresholdMinutes = 60; // Require pre-approval for overtime > 1 hour
+    const requiresPreApproval = expectedOvertimeMinutes > preApprovalThresholdMinutes;
+    
+    // Holiday/Weekend work typically requires pre-approval
+    const requiresDueToDateType = applicableRules.isHoliday || applicableRules.isWeekend;
+    
+    return {
+      employeeId,
+      date,
+      expectedOvertimeMinutes,
+      expectedOvertimeHours: Math.round((expectedOvertimeMinutes / 60) * 100) / 100,
+      preApprovalRequired: requiresPreApproval || requiresDueToDateType,
+      reason: requiresDueToDateType 
+        ? `Pre-approval required for ${applicableRules.isHoliday ? 'holiday' : 'weekend'} work`
+        : requiresPreApproval 
+          ? `Pre-approval required for overtime exceeding ${preApprovalThresholdMinutes} minutes`
+          : 'Pre-approval not required',
+      dateInfo: {
+        isHoliday: applicableRules.isHoliday,
+        isWeekend: applicableRules.isWeekend,
+        dayOfWeek: applicableRules.dayOfWeek,
+      },
+    };
+  }
+
+  /**
+   * Get overtime limits/caps configuration
+   * BR-TM-08: Overtime caps based on organizational policies
+   */
+  async getOvertimeLimitsConfig(currentUserId: string) {
+    // Return standard overtime limits configuration
+    return {
+      daily: {
+        maxOvertimeMinutes: 180, // 3 hours max per day
+        maxOvertimeHours: 3,
+        softLimitMinutes: 120, // 2 hours soft limit (warning)
+      },
+      weekly: {
+        maxOvertimeMinutes: 720, // 12 hours max per week
+        maxOvertimeHours: 12,
+        softLimitMinutes: 600, // 10 hours soft limit
+      },
+      monthly: {
+        maxOvertimeMinutes: 2880, // 48 hours max per month
+        maxOvertimeHours: 48,
+        softLimitMinutes: 2400, // 40 hours soft limit
+      },
+      policies: {
+        enforceHardLimits: true,
+        requireApprovalAboveSoftLimit: true,
+        carryOverAllowed: false,
+      },
+    };
+  }
+
+  /**
+   * Check if employee is within overtime limits
+   * BR-TM-08: Enforce overtime caps
+   */
+  async checkOvertimeLimits(
+    params: {
+      employeeId: string;
+      currentOvertimeMinutes: number;
+      period: 'daily' | 'weekly' | 'monthly';
+      additionalOvertimeMinutes?: number;
+    },
+    currentUserId: string,
+  ) {
+    const config = await this.getOvertimeLimitsConfig(currentUserId);
+    const periodConfig = config[params.period];
+    
+    const currentMinutes = params.currentOvertimeMinutes;
+    const additionalMinutes = params.additionalOvertimeMinutes || 0;
+    const projectedMinutes = currentMinutes + additionalMinutes;
+    
+    const withinSoftLimit = projectedMinutes <= periodConfig.softLimitMinutes;
+    const withinHardLimit = projectedMinutes <= periodConfig.maxOvertimeMinutes;
+    
+    return {
+      employeeId: params.employeeId,
+      period: params.period,
+      limits: periodConfig,
+      current: {
+        minutes: currentMinutes,
+        hours: Math.round((currentMinutes / 60) * 100) / 100,
+      },
+      projected: {
+        minutes: projectedMinutes,
+        hours: Math.round((projectedMinutes / 60) * 100) / 100,
+      },
+      remaining: {
+        toSoftLimit: Math.max(0, periodConfig.softLimitMinutes - projectedMinutes),
+        toHardLimit: Math.max(0, periodConfig.maxOvertimeMinutes - projectedMinutes),
+      },
+      status: {
+        withinSoftLimit,
+        withinHardLimit,
+        requiresApproval: !withinSoftLimit && config.policies.requireApprovalAboveSoftLimit,
+        blocked: !withinHardLimit && config.policies.enforceHardLimits,
+      },
+      recommendation: !withinHardLimit 
+        ? 'BLOCKED: Overtime exceeds hard limit'
+        : !withinSoftLimit 
+          ? 'WARNING: Overtime exceeds soft limit, requires approval'
+          : 'OK: Within overtime limits',
+    };
+  }
+
+  /**
+   * Get comprehensive overtime/short-time policy summary
+   * BR-TM-08: Full policy configuration
+   */
+  async getOvertimeShortTimePolicySummary(currentUserId: string) {
+    const overtimeRules = await this.overtimeRuleModel.find({ active: true }).exec();
+    const limits = await this.getOvertimeLimitsConfig(currentUserId);
+    const shortTimeConfig = await this.getShortTimeConfig(currentUserId);
+    
+    return {
+      generatedAt: new Date(),
+      overtime: {
+        rules: overtimeRules,
+        limits,
+        multipliers: {
+          regular: 1.5,
+          weekend: 2.0,
+          holiday: 2.5,
+        },
+        preApprovalThresholdMinutes: 60,
+      },
+      shortTime: shortTimeConfig,
+      weekendDays: ['Saturday', 'Sunday'],
+      standardWorkMinutes: 480,
+      standardWorkHours: 8,
+    };
+  }
+
   // ===== LATENESS RULE METHODS =====
 
   // Create a new lateness rule
@@ -145,6 +471,398 @@ export class PolicyConfigService {
   // Delete a lateness rule
   async deleteLatenessRule(id: string, currentUserId: string) {
     return this.latenessRuleModel.findByIdAndDelete(id).exec();
+  }
+
+  // ===== US11: LATENESS & PENALTY RULES (BR-TM-09) =====
+
+  /**
+   * Get lateness thresholds configuration
+   * BR-TM-09: Early/Lateness per shift must follow HR rules (grace period, penalty thresholds, escalation)
+   */
+  async getLatenessThresholdsConfig(currentUserId: string) {
+    // Return standard lateness thresholds configuration
+    // These could be made configurable via database in future
+    return {
+      gracePeriodMinutes: 15, // Default grace period
+      thresholds: {
+        minor: {
+          minMinutes: 1,
+          maxMinutes: 15,
+          description: 'Minor lateness (within grace period)',
+          action: 'NO_ACTION',
+          deductionMultiplier: 0,
+        },
+        moderate: {
+          minMinutes: 16,
+          maxMinutes: 30,
+          description: 'Moderate lateness',
+          action: 'WARNING',
+          deductionMultiplier: 1.0,
+        },
+        significant: {
+          minMinutes: 31,
+          maxMinutes: 60,
+          description: 'Significant lateness',
+          action: 'DEDUCTION',
+          deductionMultiplier: 1.5,
+        },
+        severe: {
+          minMinutes: 61,
+          maxMinutes: null, // No upper limit
+          description: 'Severe lateness (requires escalation)',
+          action: 'ESCALATION',
+          deductionMultiplier: 2.0,
+        },
+      },
+      escalationPolicy: {
+        escalateAfterMinutes: 60,
+        escalateAfterOccurrences: 3,
+        escalationPeriodDays: 30,
+        notifyManager: true,
+        notifyHR: true,
+      },
+      deductionPolicy: {
+        deductFromSalary: true,
+        deductFromLeave: false,
+        maxDeductionPerDay: 480, // Max 8 hours deduction equivalent
+        currency: 'USD',
+      },
+    };
+  }
+
+  /**
+   * Calculate lateness for an attendance record
+   * BR-TM-09: Apply grace period and calculate deduction based on thresholds
+   */
+  async calculateLatenessForAttendance(
+    params: {
+      attendanceRecordId: string;
+      scheduledStartMinutes: number; // e.g., 540 for 9:00 AM
+      actualArrivalMinutes: number; // e.g., 555 for 9:15 AM
+      gracePeriodMinutes?: number;
+    },
+    currentUserId: string,
+  ) {
+    const { scheduledStartMinutes, actualArrivalMinutes } = params;
+    
+    // Get active lateness rules
+    const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
+    const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
+    
+    // Use rule-specific grace period or default
+    const gracePeriod = params.gracePeriodMinutes ?? 
+      (latenessRules.length > 0 ? latenessRules[0].gracePeriodMinutes : thresholdsConfig.gracePeriodMinutes);
+    
+    // Calculate raw lateness
+    const rawLatenessMinutes = Math.max(0, actualArrivalMinutes - scheduledStartMinutes);
+    
+    // Apply grace period
+    const effectiveLatenessMinutes = Math.max(0, rawLatenessMinutes - gracePeriod);
+    
+    // Determine lateness category
+    let category = 'ON_TIME';
+    let action = 'NO_ACTION';
+    let deductionMultiplier = 0;
+    
+    if (rawLatenessMinutes <= 0) {
+      category = 'EARLY';
+      action = 'NO_ACTION';
+    } else if (rawLatenessMinutes <= gracePeriod) {
+      category = 'WITHIN_GRACE';
+      action = 'NO_ACTION';
+    } else if (rawLatenessMinutes <= 30) {
+      category = 'MODERATE';
+      action = 'WARNING';
+      deductionMultiplier = 1.0;
+    } else if (rawLatenessMinutes <= 60) {
+      category = 'SIGNIFICANT';
+      action = 'DEDUCTION';
+      deductionMultiplier = 1.5;
+    } else {
+      category = 'SEVERE';
+      action = 'ESCALATION';
+      deductionMultiplier = 2.0;
+    }
+    
+    // Calculate deduction amount
+    const deductionPerMinute = latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
+    const baseDeduction = effectiveLatenessMinutes * deductionPerMinute;
+    const totalDeduction = baseDeduction * deductionMultiplier;
+    
+    return {
+      attendanceRecordId: params.attendanceRecordId,
+      scheduledStartMinutes,
+      actualArrivalMinutes,
+      gracePeriodMinutes: gracePeriod,
+      lateness: {
+        rawMinutes: rawLatenessMinutes,
+        effectiveMinutes: effectiveLatenessMinutes,
+        withinGracePeriod: rawLatenessMinutes <= gracePeriod,
+      },
+      category,
+      action,
+      deduction: {
+        perMinuteRate: deductionPerMinute,
+        multiplier: deductionMultiplier,
+        baseAmount: Math.round(baseDeduction * 100) / 100,
+        totalAmount: Math.round(totalDeduction * 100) / 100,
+      },
+      requiresEscalation: action === 'ESCALATION',
+      recommendation: this.getLatenessRecommendation(category, rawLatenessMinutes),
+    };
+  }
+
+  /**
+   * Helper method to get lateness recommendation
+   */
+  private getLatenessRecommendation(category: string, minutes: number): string {
+    switch (category) {
+      case 'EARLY':
+        return 'Employee arrived early - no action required';
+      case 'ON_TIME':
+      case 'WITHIN_GRACE':
+        return 'Within acceptable time - no action required';
+      case 'MODERATE':
+        return 'Issue verbal warning and log incident';
+      case 'SIGNIFICANT':
+        return 'Apply salary deduction and issue written warning';
+      case 'SEVERE':
+        return `Escalate to HR/Manager - ${minutes} minutes late requires review`;
+      default:
+        return 'Review lateness manually';
+    }
+  }
+
+  /**
+   * Check if lateness requires escalation based on thresholds
+   * BR-TM-09: Penalty thresholds and escalation
+   */
+  async checkLatenessEscalation(
+    params: {
+      employeeId: string;
+      currentLatenessMinutes: number;
+      periodDays?: number;
+    },
+    currentUserId: string,
+  ) {
+    const config = await this.getLatenessThresholdsConfig(currentUserId);
+    const { currentLatenessMinutes, periodDays = 30 } = params;
+    
+    // Check if current lateness exceeds escalation threshold
+    const exceedsTimeThreshold = currentLatenessMinutes > config.escalationPolicy.escalateAfterMinutes;
+    
+    // In a real implementation, we'd query historical lateness data here
+    // For now, return the escalation rules and current status
+    return {
+      employeeId: params.employeeId,
+      currentLatenessMinutes,
+      thresholds: {
+        timeThreshold: config.escalationPolicy.escalateAfterMinutes,
+        occurrenceThreshold: config.escalationPolicy.escalateAfterOccurrences,
+        periodDays: config.escalationPolicy.escalationPeriodDays,
+      },
+      status: {
+        exceedsTimeThreshold,
+        requiresEscalation: exceedsTimeThreshold,
+        escalationLevel: exceedsTimeThreshold ? 'HR_REVIEW' : 'NONE',
+      },
+      notifications: {
+        notifyManager: exceedsTimeThreshold && config.escalationPolicy.notifyManager,
+        notifyHR: exceedsTimeThreshold && config.escalationPolicy.notifyHR,
+      },
+      recommendation: exceedsTimeThreshold
+        ? 'Escalate to HR for disciplinary review'
+        : 'Log incident and monitor',
+    };
+  }
+
+  /**
+   * Apply automatic deduction based on lateness
+   * BR-TM-09: Automatic deductions applied fairly and consistently
+   */
+  async applyLatenessDeduction(
+    params: {
+      employeeId: string;
+      attendanceRecordId: string;
+      latenessMinutes: number;
+      latenessRuleId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, attendanceRecordId, latenessMinutes, latenessRuleId } = params;
+    
+    // Get applicable lateness rule
+    let latenessRule;
+    if (latenessRuleId) {
+      latenessRule = await this.latenessRuleModel.findById(latenessRuleId).exec();
+    } else {
+      // Get first active rule
+      const rules = await this.latenessRuleModel.find({ active: true }).exec();
+      latenessRule = rules[0];
+    }
+    
+    if (!latenessRule) {
+      return {
+        success: false,
+        message: 'No active lateness rule found',
+        deductionApplied: false,
+      };
+    }
+    
+    // Calculate effective lateness after grace period
+    const effectiveLatenessMinutes = Math.max(0, latenessMinutes - latenessRule.gracePeriodMinutes);
+    
+    if (effectiveLatenessMinutes <= 0) {
+      return {
+        success: true,
+        message: 'Within grace period - no deduction applied',
+        deductionApplied: false,
+        latenessDetails: {
+          rawMinutes: latenessMinutes,
+          gracePeriod: latenessRule.gracePeriodMinutes,
+          effectiveMinutes: 0,
+        },
+      };
+    }
+    
+    // Calculate deduction
+    const deductionAmount = effectiveLatenessMinutes * latenessRule.deductionForEachMinute;
+    
+    return {
+      success: true,
+      message: 'Deduction calculated successfully',
+      deductionApplied: true,
+      employeeId,
+      attendanceRecordId,
+      latenessDetails: {
+        rawMinutes: latenessMinutes,
+        gracePeriod: latenessRule.gracePeriodMinutes,
+        effectiveMinutes: effectiveLatenessMinutes,
+      },
+      deduction: {
+        ruleId: (latenessRule as any)._id,
+        ruleName: latenessRule.name,
+        ratePerMinute: latenessRule.deductionForEachMinute,
+        amount: Math.round(deductionAmount * 100) / 100,
+      },
+      appliedAt: new Date(),
+      appliedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get comprehensive lateness & penalty summary
+   * BR-TM-09: Full lateness configuration for HR review
+   */
+  async getLatenesPenaltySummary(currentUserId: string) {
+    const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
+    const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
+    
+    return {
+      generatedAt: new Date(),
+      activeRules: latenessRules.map(rule => ({
+        id: (rule as any)._id,
+        name: rule.name,
+        description: rule.description,
+        gracePeriodMinutes: rule.gracePeriodMinutes,
+        deductionPerMinute: rule.deductionForEachMinute,
+      })),
+      thresholds: thresholdsConfig.thresholds,
+      escalationPolicy: thresholdsConfig.escalationPolicy,
+      deductionPolicy: thresholdsConfig.deductionPolicy,
+      summary: {
+        totalActiveRules: latenessRules.length,
+        defaultGracePeriod: thresholdsConfig.gracePeriodMinutes,
+        escalationThresholdMinutes: thresholdsConfig.escalationPolicy.escalateAfterMinutes,
+        escalationOccurrences: thresholdsConfig.escalationPolicy.escalateAfterOccurrences,
+      },
+    };
+  }
+
+  /**
+   * Calculate early leave penalty
+   * BR-TM-09: Early leave penalties follow same rules as lateness
+   */
+  async calculateEarlyLeavePenalty(
+    params: {
+      attendanceRecordId: string;
+      scheduledEndMinutes: number; // e.g., 1020 for 5:00 PM
+      actualDepartureMinutes: number; // e.g., 960 for 4:00 PM
+      gracePeriodMinutes?: number;
+    },
+    currentUserId: string,
+  ) {
+    const { scheduledEndMinutes, actualDepartureMinutes } = params;
+    
+    // Get active lateness rules (early leave uses same rules)
+    const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
+    const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
+    
+    // Use rule-specific grace period or default
+    const gracePeriod = params.gracePeriodMinutes ?? 
+      (latenessRules.length > 0 ? latenessRules[0].gracePeriodMinutes : thresholdsConfig.gracePeriodMinutes);
+    
+    // Calculate raw early leave (if left before scheduled end)
+    const rawEarlyMinutes = Math.max(0, scheduledEndMinutes - actualDepartureMinutes);
+    
+    // Apply grace period
+    const effectiveEarlyMinutes = Math.max(0, rawEarlyMinutes - gracePeriod);
+    
+    // Determine early leave category (using same thresholds as lateness)
+    let category = 'NORMAL';
+    let action = 'NO_ACTION';
+    let deductionMultiplier = 0;
+    
+    if (rawEarlyMinutes <= 0) {
+      category = 'OVERTIME';
+      action = 'NO_ACTION';
+    } else if (rawEarlyMinutes <= gracePeriod) {
+      category = 'WITHIN_GRACE';
+      action = 'NO_ACTION';
+    } else if (rawEarlyMinutes <= 30) {
+      category = 'MODERATE';
+      action = 'WARNING';
+      deductionMultiplier = 1.0;
+    } else if (rawEarlyMinutes <= 60) {
+      category = 'SIGNIFICANT';
+      action = 'DEDUCTION';
+      deductionMultiplier = 1.5;
+    } else {
+      category = 'SEVERE';
+      action = 'ESCALATION';
+      deductionMultiplier = 2.0;
+    }
+    
+    // Calculate deduction amount
+    const deductionPerMinute = latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
+    const baseDeduction = effectiveEarlyMinutes * deductionPerMinute;
+    const totalDeduction = baseDeduction * deductionMultiplier;
+    
+    return {
+      attendanceRecordId: params.attendanceRecordId,
+      scheduledEndMinutes,
+      actualDepartureMinutes,
+      gracePeriodMinutes: gracePeriod,
+      earlyLeave: {
+        rawMinutes: rawEarlyMinutes,
+        effectiveMinutes: effectiveEarlyMinutes,
+        withinGracePeriod: rawEarlyMinutes <= gracePeriod,
+      },
+      category,
+      action,
+      deduction: {
+        perMinuteRate: deductionPerMinute,
+        multiplier: deductionMultiplier,
+        baseAmount: Math.round(baseDeduction * 100) / 100,
+        totalAmount: Math.round(totalDeduction * 100) / 100,
+      },
+      requiresEscalation: action === 'ESCALATION',
+      recommendation: rawEarlyMinutes <= 0 
+        ? 'Employee worked overtime' 
+        : rawEarlyMinutes <= gracePeriod 
+          ? 'Within acceptable range' 
+          : `Early departure by ${rawEarlyMinutes} minutes - apply appropriate action`,
+    };
   }
 
   // ===== HOLIDAY METHODS =====

@@ -352,6 +352,559 @@ export class NotificationService {
     };
   }
 
+  // ===== US9: ATTENDANCE-TO-PAYROLL SYNC =====
+  // BR-TM-22: All time management data must sync daily with payroll, benefits, and leave modules
+
+  /**
+   * Run daily batch sync for all employees
+   * BR-TM-22: Sync all time management data daily
+   */
+  async runDailyPayrollSync(
+    syncDate: Date,
+    currentUserId: string,
+  ) {
+    const startOfDay = this.convertDateToUTCStart(syncDate);
+    const endOfDay = this.convertDateToUTCEnd(syncDate);
+    
+    // Get all attendance records for the day that are not yet finalized
+    const unfinalizedRecords = await this.attendanceRecordModel
+      .find({
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        finalisedForPayroll: { $ne: true },
+      })
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .exec();
+    
+    // Get all approved overtime exceptions for the day
+    const overtimeExceptions = await this.timeExceptionModel
+      .find({
+        type: TimeExceptionType.OVERTIME_REQUEST,
+        status: 'APPROVED',
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+      })
+      .populate('employeeId', 'firstName lastName email')
+      .populate('attendanceRecordId')
+      .exec();
+    
+    // Get all other exceptions (lateness, early leave, etc.)
+    const otherExceptions = await this.timeExceptionModel
+      .find({
+        type: { $ne: TimeExceptionType.OVERTIME_REQUEST },
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+      })
+      .populate('employeeId', 'firstName lastName email')
+      .exec();
+    
+    await this.logTimeManagementChange(
+      'DAILY_PAYROLL_SYNC_RUN',
+      {
+        syncDate,
+        attendanceRecords: unfinalizedRecords.length,
+        overtimeExceptions: overtimeExceptions.length,
+        otherExceptions: otherExceptions.length,
+      },
+      currentUserId,
+    );
+    
+    return {
+      syncDate,
+      syncedAt: new Date(),
+      attendance: {
+        count: unfinalizedRecords.length,
+        records: unfinalizedRecords.map((r: any) => ({
+          recordId: r._id,
+          employeeId: r.employeeId?._id || r.employeeId,
+          employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+          date: r.createdAt,
+          totalWorkMinutes: r.totalWorkMinutes,
+          totalWorkHours: Math.round((r.totalWorkMinutes / 60) * 100) / 100,
+          hasMissedPunch: r.hasMissedPunch,
+          finalisedForPayroll: r.finalisedForPayroll,
+        })),
+      },
+      overtime: {
+        count: overtimeExceptions.length,
+        records: overtimeExceptions.map((e: any) => ({
+          exceptionId: e._id,
+          employeeId: e.employeeId?._id || e.employeeId,
+          status: e.status,
+          attendanceRecordId: e.attendanceRecordId?._id || e.attendanceRecordId,
+        })),
+      },
+      exceptions: {
+        count: otherExceptions.length,
+        byType: this.groupExceptionsByType(otherExceptions),
+      },
+      summary: {
+        totalAttendanceMinutes: unfinalizedRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
+        totalAttendanceHours: Math.round((unfinalizedRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100) / 100,
+        employeesWithMissedPunches: unfinalizedRecords.filter((r: any) => r.hasMissedPunch).length,
+      },
+    };
+  }
+
+  /**
+   * Helper to group exceptions by type
+   */
+  private groupExceptionsByType(exceptions: any[]) {
+    const grouped: Record<string, any[]> = {};
+    exceptions.forEach((e: any) => {
+      const type = e.type || 'UNKNOWN';
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push({
+        exceptionId: e._id,
+        employeeId: e.employeeId?._id || e.employeeId,
+        status: e.status,
+      });
+    });
+    return grouped;
+  }
+
+  /**
+   * Get all pending attendance data ready for payroll sync
+   * BR-TM-22: Batch retrieval for payroll processing
+   */
+  async getPendingPayrollSyncData(
+    filters: { startDate?: Date; endDate?: Date; departmentId?: string },
+    currentUserId: string,
+  ) {
+    const query: any = {
+      finalisedForPayroll: { $ne: true },
+    };
+    
+    if (filters.startDate && filters.endDate) {
+      query.createdAt = {
+        $gte: this.convertDateToUTCStart(filters.startDate),
+        $lte: this.convertDateToUTCEnd(filters.endDate),
+      };
+    }
+    
+    const pendingRecords = await this.attendanceRecordModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    // Filter by department if specified
+    let filteredRecords = pendingRecords;
+    if (filters.departmentId) {
+      filteredRecords = pendingRecords.filter((r: any) => 
+        r.employeeId?.departmentId?.toString() === filters.departmentId
+      );
+    }
+    
+    return {
+      filters,
+      count: filteredRecords.length,
+      records: filteredRecords.map((r: any) => ({
+        recordId: r._id,
+        employeeId: r.employeeId?._id || r.employeeId,
+        employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+        date: r.createdAt,
+        totalWorkMinutes: r.totalWorkMinutes,
+        totalWorkHours: Math.round((r.totalWorkMinutes / 60) * 100) / 100,
+        hasMissedPunch: r.hasMissedPunch,
+        punchCount: r.punches?.length || 0,
+      })),
+      summary: {
+        totalMinutes: filteredRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
+        totalHours: Math.round((filteredRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100) / 100,
+        recordsWithMissedPunches: filteredRecords.filter((r: any) => r.hasMissedPunch).length,
+      },
+    };
+  }
+
+  /**
+   * Mark attendance records as finalized for payroll
+   * BR-TM-22: Track which records have been synced
+   */
+  async finalizeRecordsForPayroll(
+    recordIds: string[],
+    currentUserId: string,
+  ) {
+    const updateResult = await this.attendanceRecordModel.updateMany(
+      { _id: { $in: recordIds } },
+      {
+        finalisedForPayroll: true,
+        updatedBy: currentUserId,
+      },
+    );
+    
+    await this.logTimeManagementChange(
+      'RECORDS_FINALIZED_FOR_PAYROLL',
+      {
+        recordIds,
+        modifiedCount: updateResult.modifiedCount,
+      },
+      currentUserId,
+    );
+    
+    return {
+      success: true,
+      recordsFinalized: updateResult.modifiedCount,
+      recordIds,
+      finalizedAt: new Date(),
+    };
+  }
+
+  /**
+   * Validate data before payroll sync
+   * BR-TM-22: Ensure data consistency
+   */
+  async validateDataForPayrollSync(
+    filters: { startDate: Date; endDate: Date },
+    currentUserId: string,
+  ) {
+    const startDateUTC = this.convertDateToUTCStart(filters.startDate);
+    const endDateUTC = this.convertDateToUTCEnd(filters.endDate);
+    
+    // Get all records in the date range
+    const allRecords = await this.attendanceRecordModel
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .populate('employeeId', 'firstName lastName email')
+      .exec();
+    
+    // Find records with issues
+    const recordsWithMissedPunches = allRecords.filter((r: any) => r.hasMissedPunch);
+    const recordsWithZeroMinutes = allRecords.filter((r: any) => !r.totalWorkMinutes || r.totalWorkMinutes === 0);
+    const recordsWithOddPunches = allRecords.filter((r: any) => r.punches && r.punches.length % 2 !== 0);
+    
+    // Get pending exceptions in the date range
+    const pendingExceptions = await this.timeExceptionModel
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+        status: { $in: ['OPEN', 'PENDING'] },
+      })
+      .populate('employeeId', 'firstName lastName email')
+      .exec();
+    
+    // Get pending correction requests
+    const pendingCorrections = await this.attendanceRecordModel.db
+      .collection('attendancecorrectionrequests')
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+        status: { $in: ['SUBMITTED', 'IN_REVIEW'] },
+      })
+      .toArray();
+    
+    const validationIssues: any[] = [];
+    
+    if (recordsWithMissedPunches.length > 0) {
+      validationIssues.push({
+        type: 'MISSED_PUNCHES',
+        severity: 'WARNING',
+        count: recordsWithMissedPunches.length,
+        message: `${recordsWithMissedPunches.length} record(s) have missed punches`,
+        recordIds: recordsWithMissedPunches.map((r: any) => r._id),
+      });
+    }
+    
+    if (recordsWithZeroMinutes.length > 0) {
+      validationIssues.push({
+        type: 'ZERO_WORK_MINUTES',
+        severity: 'WARNING',
+        count: recordsWithZeroMinutes.length,
+        message: `${recordsWithZeroMinutes.length} record(s) have zero work minutes`,
+        recordIds: recordsWithZeroMinutes.map((r: any) => r._id),
+      });
+    }
+    
+    if (pendingExceptions.length > 0) {
+      validationIssues.push({
+        type: 'PENDING_EXCEPTIONS',
+        severity: 'ERROR',
+        count: pendingExceptions.length,
+        message: `${pendingExceptions.length} unresolved exception(s) need attention before sync`,
+        exceptionIds: pendingExceptions.map((e: any) => e._id),
+      });
+    }
+    
+    if (pendingCorrections.length > 0) {
+      validationIssues.push({
+        type: 'PENDING_CORRECTIONS',
+        severity: 'ERROR',
+        count: pendingCorrections.length,
+        message: `${pendingCorrections.length} pending correction request(s) need resolution`,
+        correctionIds: pendingCorrections.map((c: any) => c._id),
+      });
+    }
+    
+    const isValid = validationIssues.filter(i => i.severity === 'ERROR').length === 0;
+    
+    await this.logTimeManagementChange(
+      'PAYROLL_SYNC_VALIDATION',
+      {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        isValid,
+        issuesCount: validationIssues.length,
+      },
+      currentUserId,
+    );
+    
+    return {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      isValid,
+      validatedAt: new Date(),
+      totalRecords: allRecords.length,
+      issues: validationIssues,
+      summary: {
+        errorCount: validationIssues.filter(i => i.severity === 'ERROR').length,
+        warningCount: validationIssues.filter(i => i.severity === 'WARNING').length,
+        canProceedWithSync: isValid,
+      },
+    };
+  }
+
+  /**
+   * Get exception data for payroll sync
+   * BR-TM-22: Include exception/penalty data in sync
+   */
+  async getExceptionDataForPayrollSync(
+    filters: { startDate?: Date; endDate?: Date; employeeId?: string },
+    currentUserId: string,
+  ) {
+    const query: any = {};
+    
+    if (filters.employeeId) {
+      query.employeeId = filters.employeeId;
+    }
+    
+    if (filters.startDate && filters.endDate) {
+      query.createdAt = {
+        $gte: this.convertDateToUTCStart(filters.startDate),
+        $lte: this.convertDateToUTCEnd(filters.endDate),
+      };
+    }
+    
+    const exceptions = await this.timeExceptionModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .populate('attendanceRecordId')
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    // Group by type
+    const byType: Record<string, any[]> = {};
+    exceptions.forEach((e: any) => {
+      const type = e.type || 'UNKNOWN';
+      if (!byType[type]) byType[type] = [];
+      byType[type].push({
+        exceptionId: e._id,
+        employeeId: e.employeeId?._id || e.employeeId,
+        employeeName: e.employeeId ? `${e.employeeId.firstName || ''} ${e.employeeId.lastName || ''}`.trim() : 'Unknown',
+        type: e.type,
+        status: e.status,
+        reason: e.reason,
+        date: e.createdAt,
+        attendanceRecordId: e.attendanceRecordId?._id || e.attendanceRecordId,
+      });
+    });
+    
+    // Group by status
+    const byStatus: Record<string, number> = {
+      OPEN: 0,
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      ESCALATED: 0,
+      RESOLVED: 0,
+    };
+    exceptions.forEach((e: any) => {
+      const status = e.status || 'OPEN';
+      if (byStatus.hasOwnProperty(status)) {
+        byStatus[status]++;
+      }
+    });
+    
+    return {
+      filters,
+      totalCount: exceptions.length,
+      byType: Object.entries(byType).map(([type, records]) => ({
+        type,
+        count: records.length,
+        records,
+      })),
+      byStatus,
+      payrollRelevant: {
+        approvedOvertime: (byType['OVERTIME_REQUEST'] || []).filter((e: any) => e.status === 'APPROVED'),
+        latenessRecords: byType['LATE'] || [],
+        earlyLeaveRecords: byType['EARLY_LEAVE'] || [],
+      },
+    };
+  }
+
+  /**
+   * Get sync status/history
+   * BR-TM-22: Track sync operations
+   */
+  async getPayrollSyncHistory(
+    filters: { startDate?: Date; endDate?: Date; limit?: number },
+    currentUserId: string,
+  ) {
+    // Get from audit logs (stored in memory for this implementation)
+    const syncLogs = this.auditLogs.filter(log => 
+      log.entity.includes('PAYROLL_SYNC') || 
+      log.entity.includes('RECORDS_FINALIZED') ||
+      log.entity.includes('DAILY_PAYROLL_SYNC')
+    );
+    
+    // Filter by date if provided
+    let filteredLogs = syncLogs;
+    if (filters.startDate && filters.endDate) {
+      const start = this.convertDateToUTCStart(filters.startDate);
+      const end = this.convertDateToUTCEnd(filters.endDate);
+      filteredLogs = syncLogs.filter(log => 
+        log.timestamp >= start && log.timestamp <= end
+      );
+    }
+    
+    // Sort by most recent and limit
+    const sortedLogs = filteredLogs
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, filters.limit || 50);
+    
+    return {
+      count: sortedLogs.length,
+      syncHistory: sortedLogs.map(log => ({
+        operation: log.entity,
+        details: log.changeSet,
+        performedBy: log.actorId,
+        timestamp: log.timestamp,
+      })),
+    };
+  }
+
+  /**
+   * Get comprehensive payroll data package
+   * BR-TM-22: Single endpoint for all payroll-relevant data
+   */
+  async getComprehensivePayrollData(
+    filters: { startDate: Date; endDate: Date; departmentId?: string },
+    currentUserId: string,
+  ) {
+    const startDateUTC = this.convertDateToUTCStart(filters.startDate);
+    const endDateUTC = this.convertDateToUTCEnd(filters.endDate);
+    
+    // Get attendance data
+    const attendanceQuery: any = {
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+    
+    const attendanceRecords = await this.attendanceRecordModel
+      .find(attendanceQuery)
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .exec();
+    
+    // Filter by department if specified
+    let filteredAttendance = attendanceRecords;
+    if (filters.departmentId) {
+      filteredAttendance = attendanceRecords.filter((r: any) => 
+        r.employeeId?.departmentId?.toString() === filters.departmentId
+      );
+    }
+    
+    // Get overtime data
+    const overtimeExceptions = await this.timeExceptionModel
+      .find({
+        type: TimeExceptionType.OVERTIME_REQUEST,
+        status: 'APPROVED',
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .populate('employeeId', 'firstName lastName departmentId')
+      .populate('attendanceRecordId')
+      .exec();
+    
+    // Get lateness data
+    const latenessExceptions = await this.timeExceptionModel
+      .find({
+        type: 'LATE',
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .populate('employeeId', 'firstName lastName departmentId')
+      .exec();
+    
+    // Calculate summaries per employee
+    const employeeSummaries: Record<string, any> = {};
+    
+    filteredAttendance.forEach((r: any) => {
+      const empId = r.employeeId?._id?.toString() || r.employeeId?.toString() || 'unknown';
+      if (!employeeSummaries[empId]) {
+        employeeSummaries[empId] = {
+          employeeId: empId,
+          employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+          totalWorkMinutes: 0,
+          totalWorkHours: 0,
+          daysWorked: 0,
+          missedPunches: 0,
+          overtimeMinutes: 0,
+          latenessCount: 0,
+        };
+      }
+      employeeSummaries[empId].totalWorkMinutes += r.totalWorkMinutes || 0;
+      employeeSummaries[empId].daysWorked++;
+      if (r.hasMissedPunch) employeeSummaries[empId].missedPunches++;
+    });
+    
+    // Add overtime data
+    overtimeExceptions.forEach((e: any) => {
+      const empId = e.employeeId?._id?.toString() || e.employeeId?.toString();
+      if (empId && employeeSummaries[empId]) {
+        const record = e.attendanceRecordId as any;
+        const overtimeMinutes = record?.totalWorkMinutes ? Math.max(0, record.totalWorkMinutes - 480) : 0;
+        employeeSummaries[empId].overtimeMinutes += overtimeMinutes;
+      }
+    });
+    
+    // Add lateness data
+    latenessExceptions.forEach((e: any) => {
+      const empId = e.employeeId?._id?.toString() || e.employeeId?.toString();
+      if (empId && employeeSummaries[empId]) {
+        employeeSummaries[empId].latenessCount++;
+      }
+    });
+    
+    // Convert minutes to hours
+    Object.values(employeeSummaries).forEach((summary: any) => {
+      summary.totalWorkHours = Math.round((summary.totalWorkMinutes / 60) * 100) / 100;
+      summary.overtimeHours = Math.round((summary.overtimeMinutes / 60) * 100) / 100;
+    });
+    
+    await this.logTimeManagementChange(
+      'COMPREHENSIVE_PAYROLL_DATA_RETRIEVED',
+      {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        departmentId: filters.departmentId,
+        employeeCount: Object.keys(employeeSummaries).length,
+        attendanceRecords: filteredAttendance.length,
+      },
+      currentUserId,
+    );
+    
+    return {
+      period: {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      },
+      departmentId: filters.departmentId || 'ALL',
+      generatedAt: new Date(),
+      employeeSummaries: Object.values(employeeSummaries),
+      totals: {
+        totalEmployees: Object.keys(employeeSummaries).length,
+        totalWorkMinutes: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0),
+        totalWorkHours: Math.round((Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60) * 100) / 100,
+        totalOvertimeMinutes: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0),
+        totalOvertimeHours: Math.round((Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60) * 100) / 100,
+        totalLatenessCount: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.latenessCount, 0),
+        totalMissedPunches: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.missedPunches, 0),
+      },
+    };
+  }
+
   // ===== US4: SHIFT EXPIRY NOTIFICATIONS =====
   // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
   // This section handles notifications when shift assignments are nearing expiry
@@ -572,6 +1125,394 @@ export class NotificationService {
       totalCount: notifications.length,
       grouped,
       all: notifications,
+    };
+  }
+
+  // ===== US8: MISSED PUNCH MANAGEMENT & ALERTS =====
+  // BR-TM-14: Missed punches/late sign-ins must be handled via auto-flagging, notifications, or payroll blocking
+
+  /**
+   * Send missed punch alert to employee
+   * BR-TM-14: Notify employee when a missed punch is detected
+   */
+  async sendMissedPunchAlertToEmployee(
+    employeeId: string,
+    attendanceRecordId: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    date: Date,
+    currentUserId: string,
+  ) {
+    const message = `Missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'} detected on ${date.toISOString().split('T')[0]}. Please submit a correction request.`;
+    
+    const notification = new this.notificationLogModel({
+      to: employeeId,
+      type: 'MISSED_PUNCH_EMPLOYEE_ALERT',
+      message,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await notification.save();
+    
+    await this.logTimeManagementChange(
+      'MISSED_PUNCH_EMPLOYEE_ALERT_SENT',
+      {
+        employeeId,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send missed punch alert to manager/line manager
+   * BR-TM-14: Notify manager for correction review
+   */
+  async sendMissedPunchAlertToManager(
+    managerId: string,
+    employeeId: string,
+    employeeName: string,
+    attendanceRecordId: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    date: Date,
+    currentUserId: string,
+  ) {
+    const message = `Employee ${employeeName} (${employeeId}) has a missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'} on ${date.toISOString().split('T')[0]}. Pending correction review.`;
+    
+    const notification = new this.notificationLogModel({
+      to: managerId,
+      type: 'MISSED_PUNCH_MANAGER_ALERT',
+      message,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await notification.save();
+    
+    await this.logTimeManagementChange(
+      'MISSED_PUNCH_MANAGER_ALERT_SENT',
+      {
+        managerId,
+        employeeId,
+        employeeName,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send bulk missed punch alerts
+   * BR-TM-14: Efficiently notify multiple employees/managers
+   */
+  async sendBulkMissedPunchAlerts(
+    alerts: Array<{
+      employeeId: string;
+      managerId?: string;
+      employeeName?: string;
+      attendanceRecordId: string;
+      missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
+      date: Date;
+    }>,
+    currentUserId: string,
+  ) {
+    const notifications: any[] = [];
+    
+    for (const alert of alerts) {
+      // Send to employee
+      const employeeNotification = await this.sendMissedPunchAlertToEmployee(
+        alert.employeeId,
+        alert.attendanceRecordId,
+        alert.missedPunchType,
+        alert.date,
+        currentUserId,
+      );
+      notifications.push({ type: 'employee', notification: employeeNotification });
+      
+      // Send to manager if provided
+      if (alert.managerId) {
+        const managerNotification = await this.sendMissedPunchAlertToManager(
+          alert.managerId,
+          alert.employeeId,
+          alert.employeeName || 'Unknown Employee',
+          alert.attendanceRecordId,
+          alert.missedPunchType,
+          alert.date,
+          currentUserId,
+        );
+        notifications.push({ type: 'manager', notification: managerNotification });
+      }
+    }
+    
+    await this.logTimeManagementChange(
+      'BULK_MISSED_PUNCH_ALERTS_SENT',
+      {
+        alertCount: alerts.length,
+        notificationsSent: notifications.length,
+      },
+      currentUserId,
+    );
+    
+    return {
+      alertsProcessed: alerts.length,
+      notificationsSent: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
+   * Get missed punch notifications for an employee
+   * BR-TM-14: Employee can view their missed punch alerts
+   */
+  async getMissedPunchNotificationsByEmployee(employeeId: string, currentUserId: string) {
+    const notifications = await this.notificationLogModel
+      .find({
+        to: employeeId,
+        type: 'MISSED_PUNCH_EMPLOYEE_ALERT',
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    return {
+      count: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
+   * Get missed punch notifications for a manager
+   * BR-TM-14: Manager can view pending missed punch corrections
+   */
+  async getMissedPunchNotificationsByManager(managerId: string, currentUserId: string) {
+    const notifications = await this.notificationLogModel
+      .find({
+        to: managerId,
+        type: 'MISSED_PUNCH_MANAGER_ALERT',
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    return {
+      count: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
+   * Get all missed punch notifications (for HR Admin)
+   * BR-TM-14: HR Admin oversight of missed punch tracking
+   */
+  async getAllMissedPunchNotifications(
+    filters: { startDate?: Date; endDate?: Date },
+    currentUserId: string,
+  ) {
+    const query: any = {
+      type: { $in: ['MISSED_PUNCH_EMPLOYEE_ALERT', 'MISSED_PUNCH_MANAGER_ALERT'] },
+    };
+    
+    if (filters.startDate && filters.endDate) {
+      query.createdAt = {
+        $gte: this.convertDateToUTCStart(filters.startDate),
+        $lte: this.convertDateToUTCEnd(filters.endDate),
+      };
+    }
+    
+    const notifications = await this.notificationLogModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    // Group by type
+    const employeeAlerts = notifications.filter(n => n.type === 'MISSED_PUNCH_EMPLOYEE_ALERT');
+    const managerAlerts = notifications.filter(n => n.type === 'MISSED_PUNCH_MANAGER_ALERT');
+    
+    return {
+      total: notifications.length,
+      employeeAlerts: {
+        count: employeeAlerts.length,
+        notifications: employeeAlerts,
+      },
+      managerAlerts: {
+        count: managerAlerts.length,
+        notifications: managerAlerts,
+      },
+    };
+  }
+
+  /**
+   * Flag missed punch and create time exception with notifications
+   * BR-TM-14: Core method combining flagging and notification
+   */
+  async flagMissedPunchWithNotification(
+    attendanceRecordId: string,
+    employeeId: string,
+    managerId: string,
+    employeeName: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    currentUserId: string,
+  ) {
+    // Update attendance record
+    const attendanceRecord = await this.attendanceRecordModel.findByIdAndUpdate(
+      attendanceRecordId,
+      {
+        hasMissedPunch: true,
+        updatedBy: currentUserId,
+      },
+      { new: true },
+    );
+    
+    if (!attendanceRecord) {
+      throw new Error('Attendance record not found');
+    }
+    
+    // Create time exception
+    const timeException = new this.timeExceptionModel({
+      employeeId,
+      type: TimeExceptionType.MISSED_PUNCH,
+      attendanceRecordId,
+      assignedTo: managerId,
+      status: 'OPEN',
+      reason: `Auto-detected missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'}`,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await timeException.save();
+    
+    // Send notifications
+    const recordDate = (attendanceRecord as any).createdAt || new Date();
+    const employeeNotification = await this.sendMissedPunchAlertToEmployee(
+      employeeId,
+      attendanceRecordId,
+      missedPunchType,
+      recordDate,
+      currentUserId,
+    );
+    
+    const managerNotification = await this.sendMissedPunchAlertToManager(
+      managerId,
+      employeeId,
+      employeeName,
+      attendanceRecordId,
+      missedPunchType,
+      recordDate,
+      currentUserId,
+    );
+    
+    await this.logTimeManagementChange(
+      'MISSED_PUNCH_FLAGGED_WITH_NOTIFICATION',
+      {
+        attendanceRecordId,
+        employeeId,
+        managerId,
+        missedPunchType,
+        timeExceptionId: timeException._id,
+      },
+      currentUserId,
+    );
+    
+    return {
+      attendanceRecord,
+      timeException,
+      notifications: {
+        employee: employeeNotification,
+        manager: managerNotification,
+      },
+    };
+  }
+
+  /**
+   * Get missed punch statistics/summary
+   * BR-TM-14: Reporting on missed punch trends
+   */
+  async getMissedPunchStatistics(
+    filters: { employeeId?: string; startDate?: Date; endDate?: Date },
+    currentUserId: string,
+  ) {
+    const query: any = { hasMissedPunch: true };
+    
+    if (filters.employeeId) {
+      query.employeeId = filters.employeeId;
+    }
+    
+    if (filters.startDate && filters.endDate) {
+      query.createdAt = {
+        $gte: this.convertDateToUTCStart(filters.startDate),
+        $lte: this.convertDateToUTCEnd(filters.endDate),
+      };
+    }
+    
+    const missedPunchRecords = await this.attendanceRecordModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName email')
+      .exec();
+    
+    // Group by employee
+    const byEmployee: Record<string, { count: number; records: any[] }> = {};
+    missedPunchRecords.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      if (!byEmployee[empId]) {
+        byEmployee[empId] = { count: 0, records: [] };
+      }
+      byEmployee[empId].count++;
+      byEmployee[empId].records.push({
+        recordId: record._id,
+        date: record.createdAt,
+        punchCount: record.punches?.length || 0,
+      });
+    });
+    
+    // Get related time exceptions
+    const exceptionQuery: any = {
+      type: TimeExceptionType.MISSED_PUNCH,
+    };
+    if (filters.startDate && filters.endDate) {
+      exceptionQuery.createdAt = {
+        $gte: this.convertDateToUTCStart(filters.startDate),
+        $lte: this.convertDateToUTCEnd(filters.endDate),
+      };
+    }
+    
+    const missedPunchExceptions = await this.timeExceptionModel
+      .find(exceptionQuery)
+      .exec();
+    
+    const exceptionsByStatus = {
+      open: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      escalated: 0,
+      resolved: 0,
+    };
+    
+    missedPunchExceptions.forEach((exc: any) => {
+      const status = exc.status?.toLowerCase() || 'open';
+      if (exceptionsByStatus.hasOwnProperty(status)) {
+        exceptionsByStatus[status as keyof typeof exceptionsByStatus]++;
+      }
+    });
+    
+    return {
+      period: { startDate: filters.startDate, endDate: filters.endDate },
+      summary: {
+        totalMissedPunchRecords: missedPunchRecords.length,
+        totalExceptions: missedPunchExceptions.length,
+        uniqueEmployees: Object.keys(byEmployee).length,
+      },
+      exceptionsByStatus,
+      byEmployee: Object.entries(byEmployee).map(([empId, data]) => ({
+        employeeId: empId,
+        ...data,
+      })),
     };
   }
 
