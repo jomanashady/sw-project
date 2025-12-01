@@ -39,6 +39,7 @@ import { RecruitmentModule } from '../recruitment/recruitment.module';
     TimeManagementModule,
     EmployeeProfileModule,
     LeavesModule,
+    RecruitmentModule, // Also add this if you're using TerminationRequest
     MongooseModule.forFeature([
       { name: payrollRuns.name, schema: payrollRunsSchema },
       { name: paySlip.name, schema: paySlipSchema },

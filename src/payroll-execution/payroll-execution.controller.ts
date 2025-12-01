@@ -1,11 +1,22 @@
-import { Controller, Post, Body, Param, UsePipes, ValidationPipe, Get, Put, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  UsePipes,
+  ValidationPipe,
+  Get,
+  Put,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SystemRole } from '../employee-profile/enums/employee-profile.enums'; // Enum for roles
-import { PayrollExecutionService } from './payroll-execution.service';  // Make sure this is the correct path
-import { CreatePayrollRunDto } from './dto/CreatePayrollRunDto.dto'; 
+import { PayrollExecutionService } from './payroll-execution.service'; // Make sure this is the correct path
+import { CreatePayrollRunDto } from './dto/CreatePayrollRunDto.dto';
 import { EmployeePayrollDetailsUpsertDto } from './dto/EmployeePayrollDetailsUpsertDto.dto';
 import { PublishRunForApprovalDto } from './dto/PublishRunForApprovalDto.dto';
 import { FlagPayrollExceptionDto } from './dto/FlagPayrollExceptionDto.dto';
@@ -26,47 +37,78 @@ export class PayrollExecutionController {
 
   // REQ-PY-23: Allow PAYROLL_SPECIALIST to create payroll runs
   @Post('create')
-  @UsePipes(ValidationPipe) 
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can create payroll runs
-  async createPayrollRun(@Body() createPayrollRunDto: CreatePayrollRunDto, @CurrentUser() user: any) {
-    return this.payrollService.createPayrollRun(createPayrollRunDto, user.userId);
+  @UsePipes(ValidationPipe)
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can create payroll runs
+  async createPayrollRun(
+    @Body() createPayrollRunDto: CreatePayrollRunDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.createPayrollRun(
+      createPayrollRunDto,
+      user.userId,
+    );
   }
 
   // REQ-PY-24: Allow PAYROLL_MANAGER to review payroll runs
   @Post(':id/review')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_MANAGER)  // Only PAYROLL_MANAGER can review payroll runs
-  async reviewPayroll(@Param('id') id: string, @Body() publishRunForApprovalDto: PublishRunForApprovalDto, @CurrentUser() user: any) {
-    return this.payrollService.reviewPayroll(id, publishRunForApprovalDto, user.userId);
+  @Roles(SystemRole.PAYROLL_MANAGER) // Only PAYROLL_MANAGER can review payroll runs
+  async reviewPayroll(
+    @Param('id') id: string,
+    @Body() publishRunForApprovalDto: PublishRunForApprovalDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.reviewPayroll(
+      id,
+      publishRunForApprovalDto,
+      user.userId,
+    );
   }
 
   // REQ-PY-5: Allow PAYROLL_SPECIALIST to generate payroll details
   @Post('generate-details')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can generate payroll details
-  async generateEmployeePayrollDetails(@Body() employeePayrollDetailsDto: EmployeePayrollDetailsUpsertDto, @CurrentUser() user: any) {
-    return this.payrollService.generateEmployeePayrollDetails(employeePayrollDetailsDto, user.userId);
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can generate payroll details
+  async generateEmployeePayrollDetails(
+    @Body() employeePayrollDetailsDto: EmployeePayrollDetailsUpsertDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.generateEmployeePayrollDetails(
+      employeePayrollDetailsDto,
+      user.userId,
+    );
   }
 
   // REQ-PY-5: Allow PAYROLL_SPECIALIST to flag payroll exceptions
   @Post('flag-exception')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can flag payroll exceptions
-  async flagPayrollException(@Body() flagPayrollExceptionDto: FlagPayrollExceptionDto, @CurrentUser() user: any) {
-    return this.payrollService.flagPayrollException(flagPayrollExceptionDto.payrollRunId, flagPayrollExceptionDto.code, flagPayrollExceptionDto.message, user.userId);
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can flag payroll exceptions
+  async flagPayrollException(
+    @Body() flagPayrollExceptionDto: FlagPayrollExceptionDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.flagPayrollException(
+      flagPayrollExceptionDto.payrollRunId,
+      flagPayrollExceptionDto.code,
+      flagPayrollExceptionDto.message,
+      user.userId,
+    );
   }
 
   // REQ-PY-5: Auto-detect irregularities (salary spikes, missing bank accounts, negative net pay)
   @Post('detect-irregularities/:payrollRunId')
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async detectIrregularities(@Param('payrollRunId') payrollRunId: string, @CurrentUser() user: any) {
+  async detectIrregularities(
+    @Param('payrollRunId') payrollRunId: string,
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.detectIrregularities(payrollRunId, user.userId);
   }
 
   // REQ-PY-7: Allow PAYROLL_MANAGER to lock payroll
   @Post(':id/lock')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_MANAGER)  // Only PAYROLL_MANAGER can lock payroll
+  @Roles(SystemRole.PAYROLL_MANAGER) // Only PAYROLL_MANAGER can lock payroll
   async lockPayroll(@Param('id') id: string, @CurrentUser() user: any) {
     return this.payrollService.lockPayroll(id, user.userId);
   }
@@ -74,15 +116,23 @@ export class PayrollExecutionController {
   // REQ-PY-19: Allow PAYROLL_MANAGER to unlock payroll
   @Post(':id/unlock')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_MANAGER)  // Only PAYROLL_MANAGER can unlock payroll
-  async unlockPayroll(@Param('id') id: string, @Body() unlockPayrollDto: UnlockPayrollDto, @CurrentUser() user: any) {
-    return this.payrollService.unlockPayroll(id, unlockPayrollDto.unlockReason, user.userId);
+  @Roles(SystemRole.PAYROLL_MANAGER) // Only PAYROLL_MANAGER can unlock payroll
+  async unlockPayroll(
+    @Param('id') id: string,
+    @Body() unlockPayrollDto: UnlockPayrollDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.unlockPayroll(
+      id,
+      unlockPayrollDto.unlockReason,
+      user.userId,
+    );
   }
 
   // REQ-PY-7: Freeze finalized payroll (alternative terminology - functionally same as lock)
   // Note: Freeze and Lock are functionally the same - both set status to LOCKED
   @Post(':id/freeze')
-  @Roles(SystemRole.PAYROLL_MANAGER)  // Only PAYROLL_MANAGER can freeze payroll
+  @Roles(SystemRole.PAYROLL_MANAGER) // Only PAYROLL_MANAGER can freeze payroll
   async freezePayroll(@Param('id') id: string, @CurrentUser() user: any) {
     return this.payrollService.freezePayroll(id, user.userId);
   }
@@ -91,29 +141,41 @@ export class PayrollExecutionController {
   // Note: Unfreeze and Unlock are functionally the same - both set status to UNLOCKED
   @Post(':id/unfreeze')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_MANAGER)  // Only PAYROLL_MANAGER can unfreeze payroll
-  async unfreezePayroll(@Param('id') id: string, @Body() unlockPayrollDto: UnlockPayrollDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_MANAGER) // Only PAYROLL_MANAGER can unfreeze payroll
+  async unfreezePayroll(
+    @Param('id') id: string,
+    @Body() unlockPayrollDto: UnlockPayrollDto,
+    @CurrentUser() user: any,
+  ) {
     // Unfreeze uses the same DTO as unlock (both require a reason)
-    return this.payrollService.unfreezePayroll(id, unlockPayrollDto.unlockReason, user.userId);
+    return this.payrollService.unfreezePayroll(
+      id,
+      unlockPayrollDto.unlockReason,
+      user.userId,
+    );
   }
 
   // REQ-PY-23: Allow PAYROLL_SPECIALIST to process payroll initiation
   @Post('process-initiation')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can process payroll initiation
-  async processPayrollInitiation(@Body() body: { 
-    payrollPeriod: string; 
-    entity: string; 
-    payrollSpecialistId: string;
-    currency?: string; // Optional currency code (e.g., 'USD', 'EUR', 'GBP')
-  }, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can process payroll initiation
+  async processPayrollInitiation(
+    @Body()
+    body: {
+      payrollPeriod: string;
+      entity: string;
+      payrollSpecialistId: string;
+      currency?: string; // Optional currency code (e.g., 'USD', 'EUR', 'GBP')
+    },
+    @CurrentUser() user: any,
+  ) {
     // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
     return this.payrollService.processPayrollInitiation(
       new Date(body.payrollPeriod),
       body.entity,
       body.payrollSpecialistId,
       body.currency,
-      user.userId
+      user.userId,
     );
   }
 
@@ -122,31 +184,42 @@ export class PayrollExecutionController {
   // REQ-PY-26: Edit payroll initiation (period) if rejected - rejected payrolls can be re-edited
   @Post('review-initiation/:runId')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // As per REQ-PY-24: "As a Payroll Specialist, I want to review and approve processed payroll initiation"
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-24: "As a Payroll Specialist, I want to review and approve processed payroll initiation"
   async reviewPayrollInitiation(
     @Param('runId') runId: string,
-    @Body() body: { approved: boolean; reviewerId: string; rejectionReason?: string },
-    @CurrentUser() user: any
+    @Body()
+    body: { approved: boolean; reviewerId: string; rejectionReason?: string },
+    @CurrentUser() user: any,
   ) {
-    return this.payrollService.reviewPayrollInitiation(runId, body.approved, body.reviewerId, body.rejectionReason, user.userId);
+    return this.payrollService.reviewPayrollInitiation(
+      runId,
+      body.approved,
+      body.reviewerId,
+      body.rejectionReason,
+      user.userId,
+    );
   }
 
   // REQ-PY-26: Allow PAYROLL_SPECIALIST to manually edit payroll initiation when needed
   @Put('edit-initiation/:runId')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // As per REQ-PY-26: "As a Payroll Specialist, I want to manually edit payroll initiation when needed"
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-26: "As a Payroll Specialist, I want to manually edit payroll initiation when needed"
   async editPayrollInitiation(
     @Param('runId') runId: string,
     @Body() updates: Partial<CreatePayrollRunDto>,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    return this.payrollService.editPayrollInitiation(runId, updates, user.userId);
+    return this.payrollService.editPayrollInitiation(
+      runId,
+      updates,
+      user.userId,
+    );
   }
 
   // REQ-PY-27: Allow PAYROLL_SPECIALIST to process signing bonuses
   @Post('process-signing-bonuses')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can process signing bonuses
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can process signing bonuses
   async processSigningBonuses(@CurrentUser() user: any) {
     return this.payrollService.processSigningBonuses(user.userId);
   }
@@ -154,40 +227,54 @@ export class PayrollExecutionController {
   // REQ-PY-28: Allow PAYROLL_SPECIALIST to review and approve processed signing bonuses
   @Post('review-signing-bonus')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // As per REQ-PY-28: "As a Payroll Specialist, I want to review and approve processed signing bonuses"
-  async reviewSigningBonus(@Body() reviewDto: SigningBonusReviewDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-28: "As a Payroll Specialist, I want to review and approve processed signing bonuses"
+  async reviewSigningBonus(
+    @Body() reviewDto: SigningBonusReviewDto,
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.reviewSigningBonus(reviewDto, user.userId);
   }
 
   // REQ-PY-29: Allow PAYROLL_SPECIALIST to edit signing bonus
   @Put('edit-signing-bonus')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can edit signing bonus
-  async editSigningBonus(@Body() editDto: SigningBonusEditDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can edit signing bonus
+  async editSigningBonus(
+    @Body() editDto: SigningBonusEditDto,
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.editSigningBonus(editDto, user.userId);
   }
 
   // REQ-PY-30 & REQ-PY-33: Allow PAYROLL_SPECIALIST to process benefits upon resignation/termination
   @Post('process-termination-benefits')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can process termination benefits
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can process termination benefits
   async processTerminationResignationBenefits(@CurrentUser() user: any) {
-    return this.payrollService.processTerminationResignationBenefits(user.userId);
+    return this.payrollService.processTerminationResignationBenefits(
+      user.userId,
+    );
   }
 
   // REQ-PY-31: Allow PAYROLL_SPECIALIST to review and approve processed benefits upon resignation
   @Post('review-termination-benefit')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // As per REQ-PY-31: "As a Payroll Specialist, I want to review and approve processed benefits upon resignation"
-  async reviewTerminationBenefit(@Body() reviewDto: TerminationBenefitReviewDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-31: "As a Payroll Specialist, I want to review and approve processed benefits upon resignation"
+  async reviewTerminationBenefit(
+    @Body() reviewDto: TerminationBenefitReviewDto,
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.reviewTerminationBenefit(reviewDto, user.userId);
   }
 
   // REQ-PY-32: Allow PAYROLL_SPECIALIST to manually edit termination benefits
   @Put('edit-termination-benefit')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can edit termination benefits
-  async editTerminationBenefit(@Body() editDto: TerminationBenefitEditDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can edit termination benefits
+  async editTerminationBenefit(
+    @Body() editDto: TerminationBenefitEditDto,
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.editTerminationBenefit(editDto, user.userId);
   }
 
@@ -196,28 +283,41 @@ export class PayrollExecutionController {
   @Post('calculate-payroll')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async calculatePayroll(@Body() body: { employeeId: string; payrollRunId: string; baseSalary?: number }, @CurrentUser() user: any) {
-    return this.payrollService.calculatePayroll(body.employeeId, body.payrollRunId, body.baseSalary, user.userId);
+  async calculatePayroll(
+    @Body()
+    body: { employeeId: string; payrollRunId: string; baseSalary?: number },
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.calculatePayroll(
+      body.employeeId,
+      body.payrollRunId,
+      body.baseSalary,
+      user.userId,
+    );
   }
 
   // REQ-PY-2: Calculate prorated salaries for mid-month hires, terminations
   @Post('calculate-prorated-salary')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async calculateProratedSalary(@Body() body: {
-    employeeId: string;
-    baseSalary: number;
-    startDate: string;
-    endDate: string;
-    payrollPeriodEnd: string;
-  }, @CurrentUser() user: any) {
+  async calculateProratedSalary(
+    @Body()
+    body: {
+      employeeId: string;
+      baseSalary: number;
+      startDate: string;
+      endDate: string;
+      payrollPeriodEnd: string;
+    },
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.calculateProratedSalary(
       body.employeeId,
       body.baseSalary,
       new Date(body.startDate),
       new Date(body.endDate),
       new Date(body.payrollPeriodEnd),
-      user.userId
+      user.userId,
     );
   }
 
@@ -226,8 +326,15 @@ export class PayrollExecutionController {
   @Post('apply-statutory-rules')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async applyStatutoryRules(@Body() body: { baseSalary: number; employeeId: string }, @CurrentUser() user: any) {
-    return this.payrollService.applyStatutoryRules(body.baseSalary, body.employeeId, user.userId);
+  async applyStatutoryRules(
+    @Body() body: { baseSalary: number; employeeId: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.applyStatutoryRules(
+      body.baseSalary,
+      body.employeeId,
+      user.userId,
+    );
   }
 
   // REQ-PY-4: Generate draft payroll runs automatically at the end of each cycle
@@ -237,19 +344,23 @@ export class PayrollExecutionController {
   @Post('generate-draft')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async generateDraftPayrollRun(@Body() body: {
-    payrollPeriod: string;
-    entity: string;
-    payrollSpecialistId: string;
-    currency?: string; // Optional currency code (e.g., 'USD', 'EUR', 'GBP')
-  }, @CurrentUser() user: any) {
+  async generateDraftPayrollRun(
+    @Body()
+    body: {
+      payrollPeriod: string;
+      entity: string;
+      payrollSpecialistId: string;
+      currency?: string; // Optional currency code (e.g., 'USD', 'EUR', 'GBP')
+    },
+    @CurrentUser() user: any,
+  ) {
     // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
     return this.payrollService.generateDraftPayrollRun(
       new Date(body.payrollPeriod),
       body.entity,
       body.payrollSpecialistId,
       body.currency,
-      user.userId
+      user.userId,
     );
   }
 
@@ -260,9 +371,13 @@ export class PayrollExecutionController {
   async getPayrollPreview(
     @Param('payrollRunId') payrollRunId: string,
     @CurrentUser() user: any,
-    @Query('currency') currency?: string // Optional query parameter for currency conversion
+    @Query('currency') currency?: string, // Optional query parameter for currency conversion
   ) {
-    return this.payrollService.getPayrollPreview(payrollRunId, currency, user.userId);
+    return this.payrollService.getPayrollPreview(
+      payrollRunId,
+      currency,
+      user.userId,
+    );
   }
 
   // Requirement 0: Get pre-initiation validation status
@@ -277,14 +392,18 @@ export class PayrollExecutionController {
   @Post('generate-payslips')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async generateAndDistributePayslips(@Body() body: {
-    payrollRunId: string;
-    distributionMethod?: 'PDF' | 'EMAIL' | 'PORTAL';
-  }, @CurrentUser() user: any) {
+  async generateAndDistributePayslips(
+    @Body()
+    body: {
+      payrollRunId: string;
+      distributionMethod?: 'PDF' | 'EMAIL' | 'PORTAL';
+    },
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.generateAndDistributePayslips(
       body.payrollRunId,
       body.distributionMethod || 'PORTAL',
-      user.userId
+      user.userId,
     );
   }
 
@@ -292,20 +411,35 @@ export class PayrollExecutionController {
   @Post('send-for-approval')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async sendForApproval(@Body() body: {
-    payrollRunId: string;
-    managerId: string;
-    financeStaffId: string;
-  }, @CurrentUser() user: any) {
-    return this.payrollService.sendForApproval(body.payrollRunId, body.managerId, body.financeStaffId, user.userId);
+  async sendForApproval(
+    @Body()
+    body: {
+      payrollRunId: string;
+      managerId: string;
+      financeStaffId: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.sendForApproval(
+      body.payrollRunId,
+      body.managerId,
+      body.financeStaffId,
+      user.userId,
+    );
   }
 
   // REQ-PY-15: Finance Staff approve payroll disbursements before execution
   @Post('finance-approval')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.FINANCE_STAFF)
-  async approvePayrollDisbursement(@Body() financeDecisionDto: FinanceDecisionDto, @CurrentUser() user: any) {
-    return this.payrollService.approvePayrollDisbursement(financeDecisionDto, user.userId);
+  async approvePayrollDisbursement(
+    @Body() financeDecisionDto: FinanceDecisionDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.approvePayrollDisbursement(
+      financeDecisionDto,
+      user.userId,
+    );
   }
 
   // REQ-PY-20: Payroll Manager resolve escalated irregularities
@@ -313,20 +447,24 @@ export class PayrollExecutionController {
   @Post('resolve-irregularity')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_MANAGER)
-  async resolveIrregularity(@Body() body: {
-    payrollRunId: string;
-    employeeId: string;
-    exceptionCode: string;
-    resolution: string;
-    managerId: string;
-  }, @CurrentUser() user: any) {
+  async resolveIrregularity(
+    @Body()
+    body: {
+      payrollRunId: string;
+      employeeId: string;
+      exceptionCode: string;
+      resolution: string;
+      managerId: string;
+    },
+    @CurrentUser() user: any,
+  ) {
     return this.payrollService.resolveIrregularity(
       body.payrollRunId,
       body.employeeId,
       body.exceptionCode,
       body.resolution,
       body.managerId,
-      user.userId
+      user.userId,
     );
   }
 
@@ -336,23 +474,39 @@ export class PayrollExecutionController {
   async getEmployeeExceptions(
     @Param('employeeId') employeeId: string,
     @Param('payrollRunId') payrollRunId: string,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    return this.payrollService.getEmployeeExceptions(employeeId, payrollRunId, user.userId);
+    return this.payrollService.getEmployeeExceptions(
+      employeeId,
+      payrollRunId,
+      user.userId,
+    );
   }
 
   // BR 9: Get all exceptions for a payroll run
   @Get('payroll-exceptions/:payrollRunId')
   @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER)
-  async getAllPayrollExceptions(@Param('payrollRunId') payrollRunId: string, @CurrentUser() user: any) {
-    return this.payrollService.getAllPayrollExceptions(payrollRunId, user.userId);
+  async getAllPayrollExceptions(
+    @Param('payrollRunId') payrollRunId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.getAllPayrollExceptions(
+      payrollRunId,
+      user.userId,
+    );
   }
 
   // REQ-PY-22: Payroll Manager approve payroll runs
   @Post('manager-approval')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_MANAGER)
-  async approvePayrollRun(@Body() managerApprovalDto: ManagerApprovalReviewDto, @CurrentUser() user: any) {
-    return this.payrollService.approvePayrollRun(managerApprovalDto, user.userId);
+  async approvePayrollRun(
+    @Body() managerApprovalDto: ManagerApprovalReviewDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.payrollService.approvePayrollRun(
+      managerApprovalDto,
+      user.userId,
+    );
   }
 }

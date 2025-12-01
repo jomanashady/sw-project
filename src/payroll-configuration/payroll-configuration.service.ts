@@ -485,7 +485,11 @@ export class PayrollConfigurationService {
     return await allowance.save();
   }
 
-  async rejectAllowance(id: string, rejectionDto: RejectionDto, userId: string) {
+  async rejectAllowance(
+    id: string,
+    rejectionDto: RejectionDto,
+    userId: string,
+  ) {
     const allowance = await this.allowanceModel.findById(id);
 
     if (!allowance) {
@@ -938,7 +942,11 @@ export class PayrollConfigurationService {
     return insuranceBracket;
   }
 
-  async approveInsuranceBracket(id: string, approvalDto: ApprovalDto, userId: string) {
+  async approveInsuranceBracket(
+    id: string,
+    approvalDto: ApprovalDto,
+    userId: string,
+  ) {
     const insuranceBracket = await this.insuranceBracketsModel.findById(id);
 
     if (!insuranceBracket) {
@@ -961,7 +969,11 @@ export class PayrollConfigurationService {
     return await insuranceBracket.save();
   }
 
-  async rejectInsuranceBracket(id: string, rejectionDto: RejectionDto, userId: string) {
+  async rejectInsuranceBracket(
+    id: string,
+    rejectionDto: RejectionDto,
+    userId: string,
+  ) {
     const insuranceBracket = await this.insuranceBracketsModel.findById(id);
 
     if (!insuranceBracket) {
@@ -1091,7 +1103,11 @@ export class PayrollConfigurationService {
     return signingBonus;
   }
 
-  async approveSigningBonus(id: string, approvalDto: ApprovalDto, userId: string) {
+  async approveSigningBonus(
+    id: string,
+    approvalDto: ApprovalDto,
+    userId: string,
+  ) {
     const signingBonus = await this.signingBonusModel.findById(id);
 
     if (!signingBonus) {
@@ -1111,7 +1127,11 @@ export class PayrollConfigurationService {
     return await signingBonus.save();
   }
 
-  async rejectSigningBonus(id: string, rejectionDto: RejectionDto, userId: string) {
+  async rejectSigningBonus(
+    id: string,
+    rejectionDto: RejectionDto,
+    userId: string,
+  ) {
     const signingBonus = await this.signingBonusModel.findById(id);
 
     if (!signingBonus) {
@@ -1248,7 +1268,11 @@ export class PayrollConfigurationService {
     return benefit;
   }
 
-  async approveTerminationBenefit(id: string, approvalDto: ApprovalDto, userId: string) {
+  async approveTerminationBenefit(
+    id: string,
+    approvalDto: ApprovalDto,
+    userId: string,
+  ) {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
@@ -1270,7 +1294,11 @@ export class PayrollConfigurationService {
     return await benefit.save();
   }
 
-  async rejectTerminationBenefit(id: string, rejectionDto: RejectionDto, userId: string) {
+  async rejectTerminationBenefit(
+    id: string,
+    rejectionDto: RejectionDto,
+    userId: string,
+  ) {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
@@ -1425,7 +1453,11 @@ export class PayrollConfigurationService {
     return policy;
   }
 
-  async approvePayrollPolicy(id: string, approvalDto: ApprovalDto, userId: string) {
+  async approvePayrollPolicy(
+    id: string,
+    approvalDto: ApprovalDto,
+    userId: string,
+  ) {
     const policy = await this.payrollPoliciesModel.findById(id);
 
     if (!policy) {
@@ -1445,7 +1477,11 @@ export class PayrollConfigurationService {
     return await policy.save();
   }
 
-  async rejectPayrollPolicy(id: string, rejectionDto: RejectionDto, userId: string) {
+  async rejectPayrollPolicy(
+    id: string,
+    rejectionDto: RejectionDto,
+    userId: string,
+  ) {
     const policy = await this.payrollPoliciesModel.findById(id);
 
     if (!policy) {
@@ -1486,7 +1522,10 @@ export class PayrollConfigurationService {
   // COMPANY WIDE SETTINGS OPERATIONS (No approval workflow needed)
   // ============================================================================
 
-  async createCompanySettings(createDto: CreateCompanySettingsDto, userId: string) {
+  async createCompanySettings(
+    createDto: CreateCompanySettingsDto,
+    userId: string,
+  ) {
     // Check if settings already exist (only one record should exist)
     const existingSettings = await this.companySettingsModel.findOne();
 
@@ -1508,7 +1547,10 @@ export class PayrollConfigurationService {
     return await settings.save();
   }
 
-  async updateCompanySettings(updateDto: UpdateCompanySettingsDto, userId: string) {
+  async updateCompanySettings(
+    updateDto: UpdateCompanySettingsDto,
+    userId: string,
+  ) {
     const settings = await this.companySettingsModel.findOne();
 
     if (!settings) {

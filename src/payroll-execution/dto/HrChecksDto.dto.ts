@@ -1,7 +1,19 @@
-import { IsIn, IsMongoId, IsOptional, IsISO8601, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsMongoId,
+  IsOptional,
+  IsISO8601,
+  IsString,
+} from 'class-validator';
 
-export const ALLOWED_HR_EVENTS = ['normal', 'new_hire', 'resignation', 'termination', 'probation_end'] as const;
-export type HREventType = typeof ALLOWED_HR_EVENTS[number];
+export const ALLOWED_HR_EVENTS = [
+  'normal',
+  'new_hire',
+  'resignation',
+  'termination',
+  'probation_end',
+] as const;
+export type HREventType = (typeof ALLOWED_HR_EVENTS)[number];
 
 export class HrChecksDto {
   @IsMongoId()

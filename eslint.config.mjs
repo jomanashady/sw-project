@@ -12,7 +12,7 @@ export default tseslint.config(
       'node_modules/**/*',
       'coverage/**/*',
       '**/*.js',
-      '**/*.d.ts'
+      '**/*.d.ts',
     ],
   },
   eslint.configs.recommended,
@@ -42,28 +42,34 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off', // ✅ ADD THIS
       '@typescript-eslint/no-unsafe-assignment': 'off', // ✅ ADD THIS
       '@typescript-eslint/no-unsafe-return': 'off', // ✅ ADD THIS
-      
+
       // ✅ NestJS specific adjustments
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      
+
       // ✅ Prettier settings
-      'prettier/prettier': ['error', { 
-        endOfLine: 'auto',
-        singleQuote: true,
-        trailingComma: 'es5',
-        printWidth: 100,
-        tabWidth: 2,
-        semi: true
-      }],
-      
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+          singleQuote: true,
+          trailingComma: 'es5',
+          printWidth: 100,
+          tabWidth: 2,
+          semi: true,
+        },
+      ],
+
       // ✅ Other useful rules
       'no-console': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { 
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_' 
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 );

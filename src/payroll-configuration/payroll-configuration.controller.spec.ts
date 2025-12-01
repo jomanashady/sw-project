@@ -91,7 +91,10 @@ describe('PayrollConfigurationController', () => {
       mockPayrollConfigurationService.createPayGrade.mockResolvedValue(result);
 
       expect(await controller.createPayGrade(createDto, user)).toBe(result);
-      expect(service.createPayGrade).toHaveBeenCalledWith(createDto, user.userId);
+      expect(service.createPayGrade).toHaveBeenCalledWith(
+        createDto,
+        user.userId,
+      );
     });
   });
 
@@ -146,8 +149,13 @@ describe('PayrollConfigurationController', () => {
       const result = { id: 'a2', ...createDto };
       mockPayrollConfigurationService.createAllowance.mockResolvedValue(result);
 
-      expect(await controller.createAllowance(createDto as any, user)).toBe(result);
-      expect(service.createAllowance).toHaveBeenCalledWith(createDto, user.userId);
+      expect(await controller.createAllowance(createDto as any, user)).toBe(
+        result,
+      );
+      expect(service.createAllowance).toHaveBeenCalledWith(
+        createDto,
+        user.userId,
+      );
     });
   });
 
@@ -165,10 +173,14 @@ describe('PayrollConfigurationController', () => {
         result,
       );
 
-      expect(await controller.approveAllowance(id, approvalDto as any, user)).toBe(
-        result,
+      expect(
+        await controller.approveAllowance(id, approvalDto as any, user),
+      ).toBe(result);
+      expect(service.approveAllowance).toHaveBeenCalledWith(
+        id,
+        approvalDto,
+        user.userId,
       );
-      expect(service.approveAllowance).toHaveBeenCalledWith(id, approvalDto, user.userId);
     });
   });
 });
