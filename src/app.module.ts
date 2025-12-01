@@ -1,6 +1,5 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // Add ConfigService
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -23,10 +22,15 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    MongooseModule.forRoot(
-      process.env.MONGODB_URI ||
-        'mongodb+srv://TeamUser:TeamUser@cluster0.mfclf62.mongodb.net/hr_system',
-    ),
+    // ✅ FIXED: Use forRootAsync to access ConfigService
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URI'),
+        dbName: configService.get<string>('DATABASE_NAME', 'hr_system'),
+      }),
+      inject: [ConfigService],
+    }),
     AuthModule,
     EmployeeProfileModule,
     OrganizationStructureModule,
