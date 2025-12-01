@@ -54,6 +54,9 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.FINANCE_STAFF,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_EMPLOYEE,
   )
   async clockInWithID(
     @Param('employeeId') employeeId: string,
@@ -74,6 +77,9 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.FINANCE_STAFF,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_EMPLOYEE,
   )
   async clockOutWithID(
     @Param('employeeId') employeeId: string,
@@ -226,7 +232,13 @@ export class TimeManagementController {
   }
 
   @Post('attendance/punch/device')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_EMPLOYEE,
+  )
   async recordPunchFromDevice(
     @Body() recordPunchWithMetadataDto: RecordPunchWithMetadataDto,
     @CurrentUser() user: any,

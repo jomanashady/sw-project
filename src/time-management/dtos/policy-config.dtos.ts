@@ -6,9 +6,31 @@ import {
   IsBoolean,
   IsNumber,
   IsEnum,
+  Min,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { HolidayType } from '../models/enums';  // Importing existing enums
+
+// Custom validator to ensure endDate >= startDate
+@ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
+export class IsEndDateAfterStartDateConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(endDate: any, args: ValidationArguments) {
+    const obj = args.object as any;
+    const startDate = obj.startDate;
+    if (!startDate || !endDate) return true; // Let @IsOptional handle missing dates
+    return new Date(endDate).getTime() >= new Date(startDate).getTime();
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'endDate must be greater than or equal to startDate';
+  }
+}
 
 // ===== OVERTIME RULE DTOs =====
 
@@ -64,10 +86,12 @@ export class CreateLatenessRuleDto {
 
   @IsNotEmpty()
   @IsNumber()
+  @Min(0)
   gracePeriodMinutes: number;  // Grace period in minutes (required)
 
   @IsNotEmpty()
   @IsNumber()
+  @Min(0)
   deductionForEachMinute: number;  // Deduction amount per minute late (required)
 
   @IsNotEmpty()
@@ -114,6 +138,7 @@ export class CreateHolidayDto {
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate: Date;  // End date of the holiday (required)
 
   @IsNotEmpty()
@@ -139,6 +164,7 @@ export class UpdateHolidayDto {
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate: Date;  // End date of the holiday (required)
 
   @IsNotEmpty()
@@ -160,6 +186,7 @@ export class GetHolidaysDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Filter: End date range
 
   @IsOptional()

@@ -1,6 +1,36 @@
-import { IsString, IsNotEmpty, IsArray, IsOptional, IsDate, IsBoolean, IsEnum, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  IsOptional,
+  IsDate,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CorrectionRequestStatus, TimeExceptionType, TimeExceptionStatus, PunchType } from '../models/enums';  // Importing enums from index.ts
+
+// Custom validator to ensure endDate >= startDate
+@ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
+export class IsEndDateAfterStartDateConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(endDate: any, args: ValidationArguments) {
+    const obj = args.object as any;
+    const startDate = obj.startDate;
+    if (!startDate || !endDate) return true; // Let @IsOptional handle missing dates
+    return new Date(endDate).getTime() >= new Date(startDate).getTime();
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'endDate must be greater than or equal to startDate';
+  }
+}
 
 // DTO for creating an attendance record - ALL FIELDS FROM SCHEMA
 export class CreateAttendanceRecordDto {
@@ -42,6 +72,7 @@ export class GetAttendanceRecordDto {
 
   @IsOptional()
   @IsDate()
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Optional: End date for the attendance period
 }
 
@@ -96,6 +127,7 @@ export class CalculateWorkMinutesDto {
 
   @IsOptional()
   @IsDate()
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Optional: End date for calculating work minutes
 }
 

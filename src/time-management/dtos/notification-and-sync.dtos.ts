@@ -1,5 +1,33 @@
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDate, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsDate,
+  IsBoolean,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
+
+// Custom validator to ensure endDate >= startDate
+@ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
+export class IsEndDateAfterStartDateConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(endDate: any, args: ValidationArguments) {
+    const obj = args.object as any;
+    const startDate = obj.startDate;
+    if (!startDate || !endDate) return true; // Let @IsOptional handle missing dates
+    return new Date(endDate).getTime() >= new Date(startDate).getTime();
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'endDate must be greater than or equal to startDate';
+  }
+}
 
 // DTO for sending a notification - ALL FIELDS FROM SCHEMA
 export class SendNotificationDto {
@@ -37,6 +65,7 @@ export class SyncAttendanceWithPayrollDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Optional: End date for filtering
 }
 
@@ -54,6 +83,7 @@ export class SyncLeaveWithPayrollDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Optional: End date for filtering
 }
 
@@ -71,6 +101,7 @@ export class SynchronizeAttendanceAndPayrollDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date;  // Optional: End date for filtering
 }
 
@@ -131,6 +162,7 @@ export class SyncWithLeaveDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
+  @Validate(IsEndDateAfterStartDateConstraint)
   windowEnd?: Date;
 }
 
