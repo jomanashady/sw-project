@@ -67,7 +67,7 @@ export class LeavesService {
     }
 
       // Calendar Management
-      async createCalendar(dto: CreateCalendarDto): Promise<CalendarDocument> {
+      async createCalendar(dto: CreateCalendarDto, currentUserId: string): Promise<CalendarDocument> {
         // Normalize holidays: accept either array of ObjectId strings or embedded holiday objects
         const holidayIds: Types.ObjectId[] = [];
         if (dto.holidays && Array.isArray(dto.holidays)) {
@@ -116,17 +116,19 @@ export class LeavesService {
             from: new Date(p.from),
             to: new Date(p.to),
             reason: p.reason || ''
-          })) || []
+          })) || [],
+          createdBy: currentUserId,
+          updatedBy: currentUserId,
         });
         return await doc.save();
       }
 
-      async getCalendarByYear(year: number): Promise<CalendarDocument | null> {
+      async getCalendarByYear(year: number, _currentUserId: string): Promise<CalendarDocument | null> {
         // Populate holidays so callers receive full holiday documents (dates/names)
         return await this.calendarModel.findOne({ year }).populate('holidays').exec();
       }
 
-      async updateCalendar(year: number, dto: CreateCalendarDto): Promise<CalendarDocument | null> {
+      async updateCalendar(year: number, dto: CreateCalendarDto, currentUserId: string): Promise<CalendarDocument | null> {
         const holidayIds: Types.ObjectId[] = [];
         if (dto.holidays && Array.isArray(dto.holidays)) {
           let HolidayModel: any = null;
@@ -170,7 +172,8 @@ export class LeavesService {
                 from: new Date(p.from),
                 to: new Date(p.to),
                 reason: p.reason || ''
-              })) || []
+              })) || [],
+              updatedBy: currentUserId,
             }
           },
           { upsert: true, new: true }
@@ -192,19 +195,23 @@ export class LeavesService {
   ) {}
 
                               // LeavePolicy
-async createLeavePolicy(createLeavePolicyDto: CreateLeavePolicyDto): Promise<LeavePolicyDocument> {
-  const newLeavePolicy = new this.leavePolicyModel(createLeavePolicyDto);
+async createLeavePolicy(createLeavePolicyDto: CreateLeavePolicyDto, currentUserId: string): Promise<LeavePolicyDocument> {
+  const newLeavePolicy = new this.leavePolicyModel({
+    ...createLeavePolicyDto,
+    createdBy: currentUserId,
+    updatedBy: currentUserId,
+  });
   return await newLeavePolicy.save(); 
 }
 
 
-async getLeavePolicies(): Promise<LeavePolicyDocument[]> {
+async getLeavePolicies(_currentUserId: string): Promise<LeavePolicyDocument[]> {
   return await this.leavePolicyModel.find().exec(); 
 }
 
 
 
-async getLeavePolicyById(id: string): Promise<LeavePolicyDocument> {
+async getLeavePolicyById(id: string, _currentUserId: string): Promise<LeavePolicyDocument> {
   const leavePolicy = await this.leavePolicyModel.findById(id).exec();
   if (!leavePolicy) {
     throw new Error(`LeavePolicy with ID ${id} not found`);  
@@ -216,10 +223,15 @@ async getLeavePolicyById(id: string): Promise<LeavePolicyDocument> {
 
 async updateLeavePolicy(
   id: string,
-  updateLeavePolicyDto: UpdateLeavePolicyDto
+  updateLeavePolicyDto: UpdateLeavePolicyDto,
+  currentUserId: string
 ): Promise<LeavePolicyDocument> {
   const updatedLeavePolicy = await this.leavePolicyModel
-    .findByIdAndUpdate(id, updateLeavePolicyDto, { new: true })
+    .findByIdAndUpdate(
+      id,
+      { ...updateLeavePolicyDto, updatedBy: currentUserId },
+      { new: true }
+    )
     .exec();
 
   if (!updatedLeavePolicy) {
@@ -247,7 +259,7 @@ async updateLeavePolicy(
   //return await this.leavePolicyModel.findByIdAndDelete(id).exec();
 //}
 
-async deleteLeavePolicy(id: string): Promise<LeavePolicyDocument> {
+async deleteLeavePolicy(id: string, _currentUserId: string): Promise<LeavePolicyDocument> {
 
   const leavePolicy = await this.leavePolicyModel.findById(id).exec();
 
@@ -262,8 +274,12 @@ async deleteLeavePolicy(id: string): Promise<LeavePolicyDocument> {
 }
 
 // Leave Category
-async createLeaveCategory(createLeaveCategoryDto: CreateLeaveCategoryDto): Promise<LeaveCategoryDocument> {
-  const newCategory = new this.leaveCategoryModel(createLeaveCategoryDto);
+async createLeaveCategory(createLeaveCategoryDto: CreateLeaveCategoryDto, currentUserId: string): Promise<LeaveCategoryDocument> {
+  const newCategory = new this.leaveCategoryModel({
+    ...createLeaveCategoryDto,
+    createdBy: currentUserId,
+    updatedBy: currentUserId,
+  });
   return await newCategory.save();
 }
                                   // LeaveRequest
@@ -292,7 +308,7 @@ async isBlockedDateRange(from: string, to: string): Promise<boolean> {
 }
 
     // Phase 2: REQ-015 - Create leave request with validation and routing
-    async createLeaveRequest(createLeaveRequestDto: CreateLeaveRequestDto): Promise<LeaveRequestDocument> {
+    async createLeaveRequest(createLeaveRequestDto: CreateLeaveRequestDto, currentUserId: string): Promise<LeaveRequestDocument> {
         const { dates, employeeId, leaveTypeId, justification, attachmentId, durationDays: providedDurationDays } = createLeaveRequestDto;
         const { from, to } = dates;
 
@@ -398,13 +414,18 @@ async isBlockedDateRange(from: string, to: string): Promise<boolean> {
             decidedBy: undefined,
             decidedAt: undefined,
           }],
+          createdBy: currentUserId,
+          updatedBy: currentUserId,
         });
 
         // Update pending balance atomically using ObjectIds
         const entitlement = await this.getLeaveEntitlement(employeeObjectId as any, leaveTypeObjectId as any);
         await this.leaveEntitlementModel.findByIdAndUpdate(
           entitlement._id,
-          { $inc: { pending: durationDays } },
+          {
+            $inc: { pending: durationDays },
+            $set: { updatedBy: currentUserId },
+          },
           { new: true }
         ).exec();
 
@@ -465,7 +486,7 @@ private async validateLeaveRequest(
 
 
 
-    async getLeaveRequestById(id: string): Promise<LeaveRequestDocument> {
+    async getLeaveRequestById(id: string, _currentUserId: string): Promise<LeaveRequestDocument> {
       const leaveRequest = await this.leaveRequestModel.findById(id).exec();
       if (!leaveRequest) {
         throw new Error(`LeaveRequest with ID ${id} not found`);
@@ -476,7 +497,7 @@ private async validateLeaveRequest(
 
     // Phase 2: REQ-017 - Modify an existing leave request (only for pending requests)
     
-    async updateLeaveRequest(id: string, updateLeaveRequestDto: UpdateLeaveRequestDto): Promise<LeaveRequestDocument> {
+    async updateLeaveRequest(id: string, updateLeaveRequestDto: UpdateLeaveRequestDto, currentUserId: string): Promise<LeaveRequestDocument> {
   const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
   if (!leaveRequest) {
@@ -520,7 +541,10 @@ private async validateLeaveRequest(
     await this.leaveEntitlementModel
       .findByIdAndUpdate(
         entitlement._id,
-        { $inc: { pending: delta } },
+        {
+          $inc: { pending: delta },
+          $set: { updatedBy: currentUserId },
+        },
         { new: true },
       )
       .exec();
@@ -528,7 +552,11 @@ private async validateLeaveRequest(
 
   // 🔹 Finally apply the update
   const updatedLeaveRequest = await this.leaveRequestModel
-    .findByIdAndUpdate(id, updateLeaveRequestDto, { new: true })
+    .findByIdAndUpdate(
+      id,
+      { ...updateLeaveRequestDto, updatedBy: currentUserId },
+      { new: true },
+    )
     .exec();
 
   if (!updatedLeaveRequest) {
@@ -542,9 +570,9 @@ private async validateLeaveRequest(
 }
 
 
-    // Phase 2: REQ-019 - Delete a leave request (only for pending requests)
+// Phase 2: REQ-019 - Delete a leave request (only for pending requests)
 
-async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
+async deleteLeaveRequest(id: string, _currentUserId: string): Promise<LeaveRequestDocument> {
   const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
   if (!leaveRequest) {
@@ -555,7 +583,7 @@ async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
 }
 
     // Phase 2: REQ-018 - Cancel a leave request before final approval
-    async cancelLeaveRequest(id: string): Promise<LeaveRequestDocument> {
+    async cancelLeaveRequest(id: string, currentUserId: string): Promise<LeaveRequestDocument> {
       const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
       if (!leaveRequest) {
@@ -573,15 +601,22 @@ async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
       );
       const updated = await this.leaveEntitlementModel.findByIdAndUpdate(
         entitlement._id,
-        { $inc: { pending: -leaveRequest.durationDays } },
+        {
+          $inc: { pending: -leaveRequest.durationDays },
+          $set: { updatedBy: currentUserId },
+        },
         { new: true }
       ).exec();
       if (updated && updated.pending < 0) {
-        await this.leaveEntitlementModel.findByIdAndUpdate(entitlement._id, { $set: { pending: 0 } }).exec();
+        await this.leaveEntitlementModel.findByIdAndUpdate(
+          entitlement._id,
+          { $set: { pending: 0, updatedBy: currentUserId } }
+        ).exec();
       }
 
       // Update status to canceled
       leaveRequest.status = LeaveStatus.CANCELLED;
+      (leaveRequest as any).updatedBy = currentUserId;
       const canceledLeaveRequest = await leaveRequest.save();
 
       // REQ-030: Notify employee and manager
@@ -591,7 +626,7 @@ async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
     }
 
     // Phase 2: REQ-021 - Manager approve leave request
-    async approveLeaveRequest(approveLeaveRequestDto: ApproveLeaveRequestDto, user: any): Promise<LeaveRequestDocument> {
+    async approveLeaveRequest(approveLeaveRequestDto: ApproveLeaveRequestDto, user: any, currentUserId: string): Promise<LeaveRequestDocument> {
         const { leaveRequestId, status } = approveLeaveRequestDto;
 
         const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
@@ -625,6 +660,7 @@ async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
             decidedAt: undefined,
         });
 
+        (leaveRequest as any).updatedBy = currentUserId;
         const savedRequest = await leaveRequest.save();
 
         // REQ-030: Notify stakeholders
@@ -634,7 +670,7 @@ async deleteLeaveRequest(id: string): Promise<LeaveRequestDocument> {
     }
 
 // Phase 2: REQ-022 - Manager reject leave request
-async rejectLeaveRequest(rejectLeaveRequestDto: RejectLeaveRequestDto, user: any): Promise<LeaveRequestDocument> {
+async rejectLeaveRequest(rejectLeaveRequestDto: RejectLeaveRequestDto, user: any, currentUserId: string): Promise<LeaveRequestDocument> {
   const { leaveRequestId, status } = rejectLeaveRequestDto;
 
   const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
@@ -668,8 +704,9 @@ async rejectLeaveRequest(rejectLeaveRequestDto: RejectLeaveRequestDto, user: any
   entitlement.pending = Math.max(0, entitlement.pending - leaveRequest.durationDays);
   await this.updateLeaveEntitlement(entitlement._id.toString(), {
     pending: entitlement.pending,
-  });
+  }, currentUserId);
 
+  (leaveRequest as any).updatedBy = currentUserId;
   const savedRequest = await leaveRequest.save();
 
   // REQ-030: Notify stakeholders
@@ -682,9 +719,13 @@ async rejectLeaveRequest(rejectLeaveRequestDto: RejectLeaveRequestDto, user: any
                           //LeaveAdjustment
 
 
-async createLeaveAdjustment(createLeaveAdjustmentDto: any): Promise<LeaveAdjustmentDocument> {
+async createLeaveAdjustment(createLeaveAdjustmentDto: any, currentUserId: string): Promise<LeaveAdjustmentDocument> {
   // Ensure employeeId (and any other id fields) are ObjectId before creation
-  const doc: any = { ...createLeaveAdjustmentDto };
+  const doc: any = {
+    ...createLeaveAdjustmentDto,
+    createdBy: currentUserId,
+    updatedBy: currentUserId,
+  };
   if (doc.employeeId) doc.employeeId = this.toObjectId(doc.employeeId);
   if (doc.leaveTypeId) doc.leaveTypeId = this.toObjectId(doc.leaveTypeId);
   const newLeaveAdjustment = new this.leaveAdjustmentModel(doc);
@@ -692,12 +733,12 @@ async createLeaveAdjustment(createLeaveAdjustmentDto: any): Promise<LeaveAdjustm
 }
 
 
-async getLeaveAdjustments(employeeId: string): Promise<LeaveAdjustmentDocument[]> {
+async getLeaveAdjustments(employeeId: string, _currentUserId: string): Promise<LeaveAdjustmentDocument[]> {
   return await this.leaveAdjustmentModel.find({ employeeId }).exec(); 
 }
 
 
-async deleteLeaveAdjustment(id: string): Promise<LeaveAdjustmentDocument> {
+async deleteLeaveAdjustment(id: string, _currentUserId: string): Promise<LeaveAdjustmentDocument> {
   const leaveAdjustment= await this.leaveAdjustmentModel.findByIdAndDelete(id).exec();
   if(!leaveAdjustment){
     throw new Error(`leaveAdjustment with ID ${id} not found`);
@@ -707,9 +748,13 @@ async deleteLeaveAdjustment(id: string): Promise<LeaveAdjustmentDocument> {
                      //LeaveEntitlement
 
 
-async createLeaveEntitlement(createLeaveEntitlementDto: CreateLeaveEntitlementDto): Promise<LeaveEntitlementDocument> {
+async createLeaveEntitlement(createLeaveEntitlementDto: CreateLeaveEntitlementDto, currentUserId: string): Promise<LeaveEntitlementDocument> {
   // Ensure ids are ObjectId when creating entitlement
-  const doc: any = { ...createLeaveEntitlementDto };
+  const doc: any = {
+    ...createLeaveEntitlementDto,
+    createdBy: currentUserId,
+    updatedBy: currentUserId,
+  };
   doc.employeeId = this.toObjectId(createLeaveEntitlementDto.employeeId) as Types.ObjectId;
   doc.leaveTypeId = this.toObjectId(createLeaveEntitlementDto.leaveTypeId) as Types.ObjectId;
   const newLeaveEntitlement = new this.leaveEntitlementModel(doc);
@@ -718,7 +763,7 @@ async createLeaveEntitlement(createLeaveEntitlementDto: CreateLeaveEntitlementDt
 
 
 
-async getLeaveEntitlement(employeeId: string, leaveTypeId: string): Promise<LeaveEntitlementDocument> {
+async getLeaveEntitlement(employeeId: string, leaveTypeId: string, _currentUserId?: string): Promise<LeaveEntitlementDocument> {
 
   const leaveEntitlement = await this.leaveEntitlementModel
     .findOne({ employeeId, leaveTypeId })
@@ -734,7 +779,8 @@ async getLeaveEntitlement(employeeId: string, leaveTypeId: string): Promise<Leav
 
 async updateLeaveEntitlement(
   id: string,
-  updateLeaveEntitlementDto: UpdateLeaveEntitlementDto
+  updateLeaveEntitlementDto: UpdateLeaveEntitlementDto,
+  currentUserId: string
 ): Promise<LeaveEntitlementDocument> {
   let leaveEntitlement = await this.leaveEntitlementModel.findById(id).exec();
 
@@ -744,12 +790,16 @@ async updateLeaveEntitlement(
 
   // Here, you can modify `leaveEntitlement` based on the business logic (e.g., accruals)
   // If needed, modify `leaveEntitlement` before saving the update
-  leaveEntitlement = await this.leaveEntitlementModel.findByIdAndUpdate(id.toString(), updateLeaveEntitlementDto, { new: true }).exec();
+  leaveEntitlement = await this.leaveEntitlementModel.findByIdAndUpdate(
+    id.toString(),
+    { ...updateLeaveEntitlementDto, updatedBy: currentUserId },
+    { new: true }
+  ).exec();
   return leaveEntitlement as LeaveEntitlementDocument;
 }
 
 
-async calculateAccrual(employeeId: string, leaveTypeId: string, accrualMethod: AccrualMethod): Promise<void> {
+async calculateAccrual(employeeId: string, leaveTypeId: string, accrualMethod: AccrualMethod, currentUserId: string): Promise<void> {
   const leaveEntitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
 
   if (!leaveEntitlement) {
@@ -805,7 +855,7 @@ async calculateAccrual(employeeId: string, leaveTypeId: string, accrualMethod: A
         accruedRounded: roundedIncrement,
         remaining: roundedIncrement 
       },
-      $set: { lastAccrualDate: new Date() },
+      $set: { lastAccrualDate: new Date(), updatedBy: currentUserId },
     },
     { new: true }
   ).exec();
@@ -892,11 +942,15 @@ async assignPersonalizedEntitlement(
           const nextReset = new Date(resetDate);
           nextReset.setFullYear(nextReset.getFullYear() + 1);
 
-          await this.updateLeaveEntitlement(entitlement._id.toString(), {
-            remaining: newRemaining,
-            lastAccrualDate: new Date(),
-            nextResetDate: nextReset
-          });
+          await this.updateLeaveEntitlement(
+            entitlement._id.toString(),
+            {
+              remaining: newRemaining,
+              lastAccrualDate: new Date(),
+              nextResetDate: nextReset
+            },
+            'system',
+          );
         }
       } catch (error) {
         console.error(`Error resetting balance for entitlement ${entitlement._id}:`, error);
@@ -913,22 +967,31 @@ async assignPersonalizedEntitlement(
 
                         //leave type 
 
-        async createLeaveType(createLeaveTypeDto: CreateLeaveTypeDto): Promise<LeaveTypeDocument> {
+        async createLeaveType(createLeaveTypeDto: CreateLeaveTypeDto, currentUserId: string): Promise<LeaveTypeDocument> {
   const { code, name } = createLeaveTypeDto;
   // Check if the leave type is a special leave type based on the `code` or `name`
   if (code === 'BEREAVEMENT_LEAVE' || code === 'JURY_DUTY') {
     // Add specific logic for special leave types hanshoof baa b3dein ayzeen n3mel eh
     console.log(`Creating special leave type: ${name}`);
   }
-  const newLeaveType = new this.leaveTypeModel(createLeaveTypeDto);
+  const newLeaveType = new this.leaveTypeModel({
+    ...createLeaveTypeDto,
+    createdBy: currentUserId,
+    updatedBy: currentUserId,
+  });
   return await newLeaveType.save();
 }
 
 async updateLeaveType(
   id: string,
-  updateLeaveTypeDto: UpdateLeaveTypeDto
+  updateLeaveTypeDto: UpdateLeaveTypeDto,
+  currentUserId: string
 ): Promise<LeaveTypeDocument> {
-  const updatedLeaveType = await this.leaveTypeModel.findByIdAndUpdate(id, updateLeaveTypeDto, { new: true }).exec();
+  const updatedLeaveType = await this.leaveTypeModel.findByIdAndUpdate(
+    id,
+    { ...updateLeaveTypeDto, updatedBy: currentUserId },
+    { new: true }
+  ).exec();
   if (!updatedLeaveType) {
     throw new Error(`LeaveType with ID ${id} not found`);
   }
@@ -1006,7 +1069,7 @@ async updateLeaveType(
     }
 
     // Phase 2: REQ-025, REQ-029 - HR Manager finalize approved leave request
-    async finalizeLeaveRequest(leaveRequestId: string, hrUserId: string): Promise<LeaveRequestDocument> {
+    async finalizeLeaveRequest(leaveRequestId: string, hrUserId: string, currentUserId: string): Promise<LeaveRequestDocument> {
       const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
       if (!leaveRequest) {
         throw new Error(`LeaveRequest with ID ${leaveRequestId} not found`);
@@ -1050,6 +1113,7 @@ async updateLeaveType(
       // REQ-042, BR 692: Sync with payroll system
     ///await this.syncWithPayroll(leaveRequest);
 
+      (leaveRequest as any).updatedBy = currentUserId;
       return await leaveRequest.save();
     }
 
@@ -1161,7 +1225,7 @@ async updateLeaveType(
 
     
     // Phase 2: REQ-026, BR 479 - HR Manager override manager decision
-    async hrOverrideDecision(leaveRequestId: string, hrUserId: string, overrideToApproved: boolean, overrideReason?: string): Promise<LeaveRequestDocument> {
+    async hrOverrideDecision(leaveRequestId: string, hrUserId: string, overrideToApproved: boolean, overrideReason: string | undefined, currentUserId: string): Promise<LeaveRequestDocument> {
       const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
       if (!leaveRequest) {
         throw new Error(`LeaveRequest with ID ${leaveRequestId} not found`);
@@ -1192,31 +1256,38 @@ async updateLeaveType(
         );
         const updated = await this.leaveEntitlementModel.findByIdAndUpdate(
           entitlement._id,
-          { $inc: { pending: -leaveRequest.durationDays } },
+          {
+            $inc: { pending: -leaveRequest.durationDays },
+            $set: { updatedBy: currentUserId },
+          },
           { new: true }
         ).exec();
         if (updated && updated.pending < 0) {
-          await this.leaveEntitlementModel.findByIdAndUpdate(entitlement._id, { $set: { pending: 0 } }).exec();
+          await this.leaveEntitlementModel.findByIdAndUpdate(
+            entitlement._id,
+            { $set: { pending: 0, updatedBy: currentUserId } }
+          ).exec();
         }
         await this.notifyStakeholders(leaveRequest, 'overridden_rejected');
       }
 
+      (leaveRequest as any).updatedBy = currentUserId;
       return await leaveRequest.save();
     }
     
 
     
     // Phase 2: REQ-027 - Process multiple leave requests at once
-    async processMultipleLeaveRequests(leaveRequestIds: string[], hrUserId: string, approved: boolean): Promise<LeaveRequestDocument[]> {
+    async processMultipleLeaveRequests(leaveRequestIds: string[], hrUserId: string, approved: boolean, currentUserId: string): Promise<LeaveRequestDocument[]> {
       const results: LeaveRequestDocument[] = [];
 
       for (const leaveRequestId of leaveRequestIds) {
         try {
           if (approved) {
-            const finalized = await this.finalizeLeaveRequest(leaveRequestId, hrUserId);
+            const finalized = await this.finalizeLeaveRequest(leaveRequestId, hrUserId, currentUserId);
             results.push(finalized);
           } else {
-            const rejected = await this.hrOverrideDecision(leaveRequestId, hrUserId, false, 'Bulk rejection');
+            const rejected = await this.hrOverrideDecision(leaveRequestId, hrUserId, false, 'Bulk rejection', currentUserId);
             results.push(rejected);
           }
         } catch (error) {
@@ -1233,7 +1304,7 @@ async updateLeaveType(
     // Consolidated: returns detailed entitlement info. If `leaveTypeId` is provided,
     // returns a single object; otherwise returns an array of entitlements.
     //REQ-031:view current leave balance
-    async getEmployeeLeaveBalance(employeeId: string, leaveTypeId?: string): Promise<any> {
+    async getEmployeeLeaveBalance(employeeId: string, leaveTypeId: string | undefined, _currentUserId: string): Promise<any> {
       try {
         const query: any = { employeeId: new Types.ObjectId(employeeId) };
         if (leaveTypeId) {
@@ -1265,7 +1336,7 @@ async updateLeaveType(
     }
 
     // REQ-032: Get past leave requests with filters
-    async getPastLeaveRequests(employeeId: string, filters?: any): Promise<any[]> {
+    async getPastLeaveRequests(employeeId: string, filters: any | undefined, _currentUserId: string): Promise<any[]> {
       try {
         const query: any = { employeeId: new Types.ObjectId(employeeId) };
         
@@ -1310,7 +1381,7 @@ async updateLeaveType(
     }
 
     // REQ-033: Filter and sort leave history
-    async filterLeaveHistory(employeeId: string, filters: any): Promise<any> {
+    async filterLeaveHistory(employeeId: string, filters: any, _currentUserId: string): Promise<any> {
       try {
         const query: any = { employeeId: new Types.ObjectId(employeeId) };
 
@@ -1368,7 +1439,7 @@ async updateLeaveType(
     }
 
     // REQ-034: Get team leave balances and upcoming leaves
-    async getTeamLeaveBalances(managerId: string, upcomingFromDate?: Date, upcomingToDate?: Date, departmentId?: string): Promise<any> {
+    async getTeamLeaveBalances(managerId: string, upcomingFromDate: Date | undefined, upcomingToDate: Date | undefined, departmentId: string | undefined, _currentUserId: string): Promise<any> {
       try {
         // Get team members under manager - placeholder implementation
         const teamMembers: any[] = [];
@@ -1425,7 +1496,7 @@ async updateLeaveType(
     }
 
     // REQ-035: Filter and sort team leave data
-    async filterTeamLeaveData(managerId: string, filters: any): Promise<any> {
+    async filterTeamLeaveData(managerId: string, filters: any, _currentUserId: string): Promise<any> {
       try {
         // Get team members - placeholder
         const teamMembers: any[] = [];
@@ -1494,7 +1565,7 @@ async updateLeaveType(
     }
 
     // REQ-039: Flag irregular leaving patterns
-    async flagIrregularPattern(leaveRequestId: string, managerId: string, flagReason: string, notes?: string): Promise<any> {
+    async flagIrregularPattern(leaveRequestId: string, managerId: string, flagReason: string, notes: string | undefined, currentUserId: string): Promise<any> {
       try {
         const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
         if (!leaveRequest) {
@@ -1502,6 +1573,7 @@ async updateLeaveType(
         }
 
         leaveRequest.irregularPatternFlag = true;
+        (leaveRequest as any).updatedBy = currentUserId;
         await leaveRequest.save();
 
         return {
@@ -1519,7 +1591,7 @@ async updateLeaveType(
     }
 
     // REQ-040: Auto accrue leave for single employee
-    async autoAccrueLeave(employeeId: string, leaveTypeId: string, accrualAmount: number, accrualType: string, policyId?: string, notes?: string): Promise<any> {
+    async autoAccrueLeave(employeeId: string, leaveTypeId: string, accrualAmount: number, accrualType: string, policyId: string | undefined, notes: string | undefined, currentUserId: string): Promise<any> {
       try {
           const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
           const previousBalance = entitlement.remaining;
@@ -1538,7 +1610,7 @@ async updateLeaveType(
                 accruedRounded: roundedAmount,
                 remaining: roundedAmount 
               }, 
-              $set: { lastAccrualDate: new Date() } 
+              $set: { lastAccrualDate: new Date(), updatedBy: currentUserId } 
             },
             { new: true }
           ).exec();
@@ -1565,7 +1637,8 @@ async autoAccrueAllEmployees(
   leaveTypeId: string,
   accrualAmount: number,
   accrualType: string,
-  departmentId?: string,
+  departmentId: string | undefined,
+  currentUserId: string,
 ): Promise<any> {
   try {
     const query: any = { leaveTypeId: new Types.ObjectId(leaveTypeId) };
@@ -1600,6 +1673,7 @@ async autoAccrueAllEmployees(
               },
               $set: {
                 lastAccrualDate: new Date(),
+                updatedBy: currentUserId,
               },
             },
             { new: true },
@@ -1640,9 +1714,10 @@ async autoAccrueAllEmployees(
     // REQ-041: Run carry-forward
 async runCarryForward(
   leaveTypeId: string,
-  employeeId?: string,
-  asOfDate?: Date,
-  departmentId?: string,
+  employeeId: string | undefined,
+  asOfDate: Date | undefined,
+  departmentId: string | undefined,
+  currentUserId: string,
 ): Promise<any> {
   try {
     const processDate = asOfDate || new Date();
@@ -1668,7 +1743,7 @@ async runCarryForward(
           .findByIdAndUpdate(
             entitlement._id,
             {
-              $set: { carryForward: carryForwardAmount },
+              $set: { carryForward: carryForwardAmount, updatedBy: currentUserId },
               $inc: { remaining: -carryForwardAmount },
             },
             { new: true },
@@ -1708,7 +1783,7 @@ async runCarryForward(
 
 
 // REQ-042: Adjust accruals during unpaid leave or long absence
-async adjustAccrual(employeeId: string,leaveTypeId: string,adjustmentType: string,adjustmentAmount: number,fromDate: Date,toDate?: Date,reason?: string,notes?: string,): Promise<any> {
+async adjustAccrual(employeeId: string,leaveTypeId: string,adjustmentType: string,adjustmentAmount: number,fromDate: Date,toDate: Date | undefined,reason: string | undefined,notes: string | undefined,currentUserId: string,): Promise<any> {
   try {
     const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
     const previousBalance = entitlement.remaining;
@@ -1742,10 +1817,14 @@ async adjustAccrual(employeeId: string,leaveTypeId: string,adjustmentType: strin
     entitlement.remaining = Math.max(0, entitlement.remaining);
 
     // Save and get the updated doc back
-    const updated = await this.updateLeaveEntitlement(entitlement._id.toString(), {
-      accruedActual: entitlement.accruedActual,
-      remaining: entitlement.remaining,
-    });
+    const updated = await this.updateLeaveEntitlement(
+      entitlement._id.toString(),
+      {
+        accruedActual: entitlement.accruedActual,
+        remaining: entitlement.remaining,
+      },
+      currentUserId,
+    );
 
     return {
       success: true,
@@ -1907,9 +1986,13 @@ async adjustAccrual(employeeId: string,leaveTypeId: string,adjustmentType: strin
         const resetDate = await this.calculateResetDate(employeeId, criterion, leaveTypeId);
         const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
         
-        await this.updateLeaveEntitlement(entitlement._id.toString(), {
+        await this.updateLeaveEntitlement(
+          entitlement._id.toString(),
+          {
             nextResetDate: resetDate,
-        });
+          },
+          'system',
+        );
     }
 
 }

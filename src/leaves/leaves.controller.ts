@@ -1,5 +1,5 @@
 import { CreateCalendarDto } from './dto/CreateCalendar.dto';
-import { Controller, Post, Get, Put, Delete, Body, Param, UseGuards, Query, Req } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { LeavesService } from './leaves.service';
 import { CreateLeavePolicyDto } from './dto/CreateLeavePolicy.dto';
 import { UpdateLeavePolicyDto } from './dto/UpdateLeavePolicy.dto';
@@ -27,67 +27,74 @@ import { RunCarryForwardDto } from './dto/CarryForward.dto';
 import { AccrualAdjustmentDto, AccrualSuspensionDto } from './dto/AccrualAdjustment.dto';
 //import { DelegateApprovalDto } from './dto/DelegateApproval.dto';
 
-import { Roles } from './decorators/roles.decorator';
-import { RolesGuard } from './guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { AccrualMethod } from './enums/accrual-method.enum';
 import { CalculateAccrualDto } from './dto/CalculateAccrual.Dto';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('leaves')
 export class LeaveController {
     // Calendar Endpoints
     @Post('calendar')
-    async createCalendar(@Body() dto: CreateCalendarDto) {
-      return await this.leavesService.createCalendar(dto);
+    async createCalendar(@Body() dto: CreateCalendarDto, @CurrentUser() user: any) {
+      return await this.leavesService.createCalendar(dto, user.userId);
     }
 
     @Get('calendar/:year')
-    async getCalendar(@Param('year') year: string) {
-      return await this.leavesService.getCalendarByYear(Number(year));
+    async getCalendar(@Param('year') year: string, @CurrentUser() user: any) {
+      return await this.leavesService.getCalendarByYear(Number(year), user.userId);
     }
 
     @Put('calendar/:year')
-    async updateCalendar(@Param('year') year: string, @Body() dto: CreateCalendarDto) {
-      return await this.leavesService.updateCalendar(Number(year), dto);
+    async updateCalendar(
+      @Param('year') year: string,
+      @Body() dto: CreateCalendarDto,
+      @CurrentUser() user: any,
+    ) {
+      return await this.leavesService.updateCalendar(Number(year), dto, user.userId);
     }
   constructor(private readonly leavesService: LeavesService) {}
                        //leave policy Endpoints
   @Post('policy')
   //@UseGuards(RolesGuard) 
   //@Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async createLeavePolicy(@Body() createLeavePolicyDto: CreateLeavePolicyDto) {
-    return await this.leavesService.createLeavePolicy(createLeavePolicyDto);
+  async createLeavePolicy(
+    @Body() createLeavePolicyDto: CreateLeavePolicyDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeavePolicy(createLeavePolicyDto, user.userId);
   }
 
   @Get('policies')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
-  async getLeavePolicies() {
-    return await this.leavesService.getLeavePolicies();
+  async getLeavePolicies(@CurrentUser() user: any) {
+    return await this.leavesService.getLeavePolicies(user.userId);
   }
 
   @Get('policy/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
-  async getLeavePolicyById(@Param('id') id: string) {
-    return await this.leavesService.getLeavePolicyById(id);
+  async getLeavePolicyById(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.getLeavePolicyById(id, user.userId);
   }
 
   @Put('policy/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
   async updateLeavePolicy(
     @Param('id') id: string,
-    @Body() updateLeavePolicyDto: UpdateLeavePolicyDto
+    @Body() updateLeavePolicyDto: UpdateLeavePolicyDto,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.updateLeavePolicy(id, updateLeavePolicyDto);
+    return await this.leavesService.updateLeavePolicy(id, updateLeavePolicyDto, user.userId);
   }
 
   @Delete('policy/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async deleteLeavePolicy(@Param('id') id: string) {
-    return await this.leavesService.deleteLeavePolicy(id);
+  async deleteLeavePolicy(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.deleteLeavePolicy(id, user.userId);
   }
 
                           // Leave Request Endpoints
@@ -95,130 +102,141 @@ export class LeaveController {
   @Post('request')
   //@UseGuards(RolesGuard)
   //@Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD)
-  async createLeaveRequest(@Body() createLeaveRequestDto: CreateLeaveRequestDto) {
-    return await this.leavesService.createLeaveRequest(createLeaveRequestDto);
+  async createLeaveRequest(
+    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeaveRequest(createLeaveRequestDto, user.userId);
   }
 
   @Get('request/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_ADMIN, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER)
-  async getLeaveRequestById(@Param('id') id: string) {
-    return await this.leavesService.getLeaveRequestById(id);
+  async getLeaveRequestById(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.getLeaveRequestById(id, user.userId);
   }
 
   @Put('request/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_ADMIN, SystemRole.DEPARTMENT_HEAD)
   async updateLeaveRequest(
     @Param('id') id: string,
-    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto
+    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.updateLeaveRequest(id, updateLeaveRequestDto);
+    return await this.leavesService.updateLeaveRequest(id, updateLeaveRequestDto, user.userId);
   }
 
   @Delete('request/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_ADMIN)
-  async deleteLeaveRequest(@Param('id') id: string) {
-    return await this.leavesService.deleteLeaveRequest(id);
+  async deleteLeaveRequest(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.deleteLeaveRequest(id, user.userId);
   }
 
   // Leave Entitlement Endpoints
   @Post('entitlement')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN)
-  async createLeaveEntitlement(@Body() createLeaveEntitlementDto: CreateLeaveEntitlementDto) {
-    return await this.leavesService.createLeaveEntitlement(createLeaveEntitlementDto);
+  async createLeaveEntitlement(
+    @Body() createLeaveEntitlementDto: CreateLeaveEntitlementDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeaveEntitlement(createLeaveEntitlementDto, user.userId);
   }
 
   @Get('entitlement/:employeeId/:leaveTypeId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.DEPARTMENT_HEAD)
   async getLeaveEntitlement(
     @Param('employeeId') employeeId: string,
-    @Param('leaveTypeId') leaveTypeId: string
+    @Param('leaveTypeId') leaveTypeId: string,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.getLeaveEntitlement(employeeId, leaveTypeId);
+    return await this.leavesService.getLeaveEntitlement(employeeId, leaveTypeId, user.userId);
   }
 
   @Put('entitlement/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
   async updateLeaveEntitlement(
     @Param('id') id: string,
-    @Body() updateLeaveEntitlementDto: UpdateLeaveEntitlementDto
+    @Body() updateLeaveEntitlementDto: UpdateLeaveEntitlementDto,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.updateLeaveEntitlement(id, updateLeaveEntitlementDto);
+    return await this.leavesService.updateLeaveEntitlement(id, updateLeaveEntitlementDto, user.userId);
   }
 
   // Leave Adjustment Endpoints
   @Post('adjustment')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
-  async createLeaveAdjustment(@Body() createLeaveAdjustmentDto: CreateLeaveAdjustmentDto) {
-    return await this.leavesService.createLeaveAdjustment(createLeaveAdjustmentDto);
+  async createLeaveAdjustment(
+    @Body() createLeaveAdjustmentDto: CreateLeaveAdjustmentDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeaveAdjustment(createLeaveAdjustmentDto, user.userId);
   }
 
   @Get('adjustment/:employeeId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.DEPARTMENT_HEAD)
-  async getLeaveAdjustments(@Param('employeeId') employeeId: string) {
-    return await this.leavesService.getLeaveAdjustments(employeeId);
+  async getLeaveAdjustments(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.getLeaveAdjustments(employeeId, user.userId);
   }
 
   @Delete('adjustment/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
-  async deleteLeaveAdjustment(@Param('id') id: string) {
-    return await this.leavesService.deleteLeaveAdjustment(id);
+  async deleteLeaveAdjustment(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.deleteLeaveAdjustment(id, user.userId);
   }
 
   // Leave Type Endpoints
   @Post('category')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async createLeaveCategory(@Body() createLeaveCategoryDto: CreateLeaveCategoryDto) {
-    return await this.leavesService.createLeaveCategory(createLeaveCategoryDto);
+  async createLeaveCategory(
+    @Body() createLeaveCategoryDto: CreateLeaveCategoryDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeaveCategory(createLeaveCategoryDto, user.userId);
   }
   @Post('type')
   //@UseGuards(RolesGuard)
   //@Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async createLeaveType(@Body() createLeaveTypeDto: CreateLeaveTypeDto) {
-    return await this.leavesService.createLeaveType(createLeaveTypeDto);
+  async createLeaveType(
+    @Body() createLeaveTypeDto: CreateLeaveTypeDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.createLeaveType(createLeaveTypeDto, user.userId);
   }
 
   @Put('type/:id')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
   async updateLeaveType(
     @Param('id') id: string,
-    @Body() updateLeaveTypeDto: UpdateLeaveTypeDto
+    @Body() updateLeaveTypeDto: UpdateLeaveTypeDto,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.updateLeaveType(id, updateLeaveTypeDto);
+    return await this.leavesService.updateLeaveType(id, updateLeaveTypeDto, user.userId);
   }
 
   // Phase 2: Leave Request Approval Endpoints
 
   @Post('request/:id/approve')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async approveLeaveRequest(
     @Param('id') id: string,
     @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
-    @Req() req: any
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.approveLeaveRequest(approveLeaveRequestDto, req.user);
+    return await this.leavesService.approveLeaveRequest(approveLeaveRequestDto, user, user.userId);
   }
 
   @Post('request/:id/reject')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async rejectLeaveRequest(
     @Param('id') id: string,
     @Body() rejectLeaveRequestDto: RejectLeaveRequestDto,
-    @Req() req: any
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.rejectLeaveRequest(rejectLeaveRequestDto, req.user);
+    return await this.leavesService.rejectLeaveRequest(rejectLeaveRequestDto, user, user.userId);
   }
 
   // @Get('pending/:managerId')
@@ -231,128 +249,147 @@ export class LeaveController {
   // Phase 2: HR Manager Endpoints
 
   @Post('request/finalize')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async finalizeLeaveRequest(@Body() finalizeDto: FinalizeLeaveRequestDto) {
-    return await this.leavesService.finalizeLeaveRequest(finalizeDto.leaveRequestId, finalizeDto.hrUserId);
+  async finalizeLeaveRequest(
+    @Body() finalizeDto: FinalizeLeaveRequestDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.finalizeLeaveRequest(
+      finalizeDto.leaveRequestId,
+      finalizeDto.hrUserId,
+      user.userId,
+    );
   }
 
   @Post('request/override')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async hrOverrideDecision(@Body() overrideDto: HrOverrideDecisionDto) {
+  async hrOverrideDecision(
+    @Body() overrideDto: HrOverrideDecisionDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.hrOverrideDecision(
       overrideDto.leaveRequestId,
       overrideDto.hrUserId,
       overrideDto.overrideToApproved,
-      overrideDto.overrideReason
+      overrideDto.overrideReason,
+      user.userId,
     );
   }
 
   @Post('request/process-multiple')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async processMultipleLeaveRequests(@Body() processDto: ProcessMultipleRequestsDto) {
+  async processMultipleLeaveRequests(
+    @Body() processDto: ProcessMultipleRequestsDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.processMultipleLeaveRequests(
       processDto.leaveRequestIds,
       processDto.hrUserId,
-      processDto.approved
+      processDto.approved,
+      user.userId,
     );
   }
 
   // Phase 2: Employee Endpoints
 
   @Get('balance/:employeeId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async getEmployeeLeaveBalance(
     @Param('employeeId') employeeId: string,
-    @Query('leaveTypeId') leaveTypeId?: string
+    @Query('leaveTypeId') leaveTypeId: string | undefined,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId);
+    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId, user.userId);
   }
 
   @Post('request/:id/cancel')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_ADMIN)
-  async cancelLeaveRequest(@Param('id') id: string) {
-    return await this.leavesService.cancelLeaveRequest(id);
+  async cancelLeaveRequest(@Param('id') id: string, @CurrentUser() user: any) {
+    return await this.leavesService.cancelLeaveRequest(id, user.userId);
   }
 
   // REQ-031: Get detailed leave balance
   @Get('balance-details/:employeeId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async getLeaveBalanceDetails(
     @Param('employeeId') employeeId: string,
-    @Query('leaveTypeId') leaveTypeId?: string
+    @Query('leaveTypeId') leaveTypeId: string | undefined,
+    @CurrentUser() user: any,
   ) {
-    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId);
+    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId, user.userId);
   }
 
   // REQ-032: Get past leave requests
   @Get('past-requests/:employeeId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async getPastLeaveRequests(
     @Param('employeeId') employeeId: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
     @Query('status') status?: string,
-    @Query('leaveTypeId') leaveTypeId?: string
+    @Query('leaveTypeId') leaveTypeId?: string,
+    @CurrentUser() user?: any,
   ) {
     return await this.leavesService.getPastLeaveRequests(employeeId, {
       fromDate: fromDate ? new Date(fromDate) : undefined,
       toDate: toDate ? new Date(toDate) : undefined,
       status,
       leaveTypeId,
-    });
+    }, user.userId);
   }
 
   // REQ-033: Filter leave history
   @Post('filter-history')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async filterLeaveHistory(@Body() filterDto: FilterLeaveHistoryDto) {
-    return await this.leavesService.filterLeaveHistory(filterDto.employeeId, filterDto);
+  async filterLeaveHistory(
+    @Body() filterDto: FilterLeaveHistoryDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.filterLeaveHistory(filterDto.employeeId, filterDto, user.userId);
   }
 
   // REQ-034: View team leave balances and upcoming leaves
   @Get('team-balances/:managerId')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async getTeamLeaveBalances(
     @Param('managerId') managerId: string,
     @Query('upcomingFromDate') upcomingFromDate?: string,
     @Query('upcomingToDate') upcomingToDate?: string,
-    @Query('departmentId') departmentId?: string
+    @Query('departmentId') departmentId?: string,
+    @CurrentUser() user?: any,
   ) {
     return await this.leavesService.getTeamLeaveBalances(
       managerId,
       upcomingFromDate ? new Date(upcomingFromDate) : undefined,
       upcomingToDate ? new Date(upcomingToDate) : undefined,
-      departmentId
+      departmentId,
+      user.userId,
     );
   }
 
   // REQ-035: Filter team leave data
   @Post('filter-team-data')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async filterTeamLeaveData(@Body() filterDto: FilterTeamLeaveDataDto) {
-    return await this.leavesService.filterTeamLeaveData(filterDto.managerId, filterDto);
+  async filterTeamLeaveData(
+    @Body() filterDto: FilterTeamLeaveDataDto,
+    @CurrentUser() user: any,
+  ) {
+    return await this.leavesService.filterTeamLeaveData(filterDto.managerId, filterDto, user.userId);
   }
 
   // REQ-039: Flag irregular pattern
   @Post('flag-irregular-pattern')
-  @UseGuards(RolesGuard)
   @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async flagIrregularPattern(@Body() flagDto: FlagIrregularPatternDto) {
+  async flagIrregularPattern(
+    @Body() flagDto: FlagIrregularPatternDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.flagIrregularPattern(
       flagDto.leaveRequestId,
       flagDto.managerId,
       flagDto.flagReason,
-      flagDto.notes
+      flagDto.notes,
+      user.userId,
     );
   }
 
@@ -360,14 +397,18 @@ export class LeaveController {
   @Post('auto-accrue')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.PAYROLL_SPECIALIST)
-  async autoAccrueLeave(@Body() accrueDto: AutoAccrueLeaveDto) {
+  async autoAccrueLeave(
+    @Body() accrueDto: AutoAccrueLeaveDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.autoAccrueLeave(
       accrueDto.employeeId,
       accrueDto.leaveTypeId,
       accrueDto.accrualAmount,
       accrueDto.accrualType,
       accrueDto.policyId,
-      accrueDto.notes
+      accrueDto.notes,
+      user.userId,
     );
   }
 
@@ -375,12 +416,16 @@ export class LeaveController {
   @Post('auto-accrue-all')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.PAYROLL_SPECIALIST)
-  async autoAccrueAllEmployees(@Body() accrueAllDto: AccrueAllEmployeesDto) {
+  async autoAccrueAllEmployees(
+    @Body() accrueAllDto: AccrueAllEmployeesDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.autoAccrueAllEmployees(
       accrueAllDto.leaveTypeId,
       accrueAllDto.accrualAmount,
       accrueAllDto.accrualType,
-      accrueAllDto.departmentId
+      accrueAllDto.departmentId,
+      user.userId,
     );
   }
 
@@ -388,12 +433,16 @@ export class LeaveController {
   @Post('carry-forward')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.PAYROLL_SPECIALIST)
-  async runCarryForward(@Body() carryForwardDto: RunCarryForwardDto) {
+  async runCarryForward(
+    @Body() carryForwardDto: RunCarryForwardDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.runCarryForward(
       carryForwardDto.leaveTypeId,
       carryForwardDto.employeeId,
       carryForwardDto.asOfDate,
-      carryForwardDto.departmentId
+      carryForwardDto.departmentId,
+      user.userId,
     );
   }
 
@@ -401,7 +450,10 @@ export class LeaveController {
   @Post('adjust-accrual')
   // @UseGuards(RolesGuard)
   // @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.PAYROLL_SPECIALIST)
-  async adjustAccrual(@Body() adjustmentDto: AccrualAdjustmentDto) {
+  async adjustAccrual(
+    @Body() adjustmentDto: AccrualAdjustmentDto,
+    @CurrentUser() user: any,
+  ) {
     return await this.leavesService.adjustAccrual(
       adjustmentDto.employeeId,
       adjustmentDto.leaveTypeId,
@@ -410,17 +462,19 @@ export class LeaveController {
       adjustmentDto.fromDate,
       adjustmentDto.toDate,
       adjustmentDto.reason,
-      adjustmentDto.notes
+      adjustmentDto.notes,
+      user.userId,
     );
   }
 
   @Post('calculate-accrual')
   async calculateAccrual(
-    @Body() calculateAccrualDto: CalculateAccrualDto
+    @Body() calculateAccrualDto: CalculateAccrualDto,
+    @CurrentUser() user: any,
   ): Promise<void> {
     const { employeeId, leaveTypeId, accrualMethod } = calculateAccrualDto;
     // No need for type casting; the DTO should already be typed correctly
-    await this.leavesService.calculateAccrual(employeeId, leaveTypeId, accrualMethod);
+    await this.leavesService.calculateAccrual(employeeId, leaveTypeId, accrualMethod, user.userId);
   }
 }
 
