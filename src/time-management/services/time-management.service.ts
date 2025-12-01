@@ -4221,4 +4221,651 @@ export class TimeManagementService {
       generatedAt: new Date(),
     };
   }
+
+  // ===== US19: OVERTIME & EXCEPTION REPORTS (BR-TM-21) =====
+
+  /**
+   * Get detailed lateness logs for HR/Line Managers
+   * BR-TM-21: HR and Line Managers must have access to lateness logs
+   */
+  async getLatenessLogs(
+    params: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      includeResolved?: boolean;
+      sortBy?: 'date' | 'employee' | 'duration';
+      sortOrder?: 'asc' | 'desc';
+    },
+    currentUserId: string,
+  ) {
+    const { 
+      startDate, 
+      endDate, 
+      employeeId, 
+      departmentId,
+      includeResolved = true,
+      sortBy = 'date',
+      sortOrder = 'desc',
+    } = params;
+
+    // Query lateness exceptions
+    const query: any = {
+      type: TimeExceptionType.LATE,
+      createdAt: { $gte: startDate, $lte: endDate },
+    };
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    if (!includeResolved) {
+      query.status = { $nin: [TimeExceptionStatus.RESOLVED, TimeExceptionStatus.REJECTED] };
+    }
+
+    const latenessRecords = await this.timeExceptionModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .populate('attendanceRecordId')
+      .populate('assignedTo', 'firstName lastName')
+      .exec();
+
+    // Filter by department if specified
+    const filteredRecords = departmentId
+      ? latenessRecords.filter((r: any) => 
+          r.employeeId?.departmentId?.toString() === departmentId)
+      : latenessRecords;
+
+    // Transform to detailed log entries
+    const logEntries = filteredRecords.map((record: any) => {
+      const attendance = record.attendanceRecordId as any;
+      return {
+        logId: record._id,
+        date: record.createdAt,
+        employee: record.employeeId ? {
+          id: record.employeeId._id,
+          name: `${record.employeeId.firstName} ${record.employeeId.lastName}`,
+          employeeNumber: record.employeeId.employeeNumber,
+          email: record.employeeId.email,
+        } : null,
+        lateness: {
+          scheduledStart: attendance?.scheduledStartTime || null,
+          actualStart: attendance?.clockIn || null,
+          lateMinutes: attendance?.lateMinutes || 0,
+          lateHours: Math.round((attendance?.lateMinutes || 0) / 60 * 100) / 100,
+        },
+        status: record.status,
+        reason: record.reason,
+        assignedTo: record.assignedTo ? {
+          id: record.assignedTo._id,
+          name: `${record.assignedTo.firstName} ${record.assignedTo.lastName}`,
+        } : null,
+        penalty: {
+          hasPenalty: attendance?.penaltyAmount > 0,
+          amount: attendance?.penaltyAmount || 0,
+          type: attendance?.penaltyType || null,
+        },
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+      };
+    });
+
+    // Sort based on parameters
+    logEntries.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'date') {
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else if (sortBy === 'employee') {
+        comparison = (a.employee?.name || '').localeCompare(b.employee?.name || '');
+      } else if (sortBy === 'duration') {
+        comparison = a.lateness.lateMinutes - b.lateness.lateMinutes;
+      }
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    // Calculate summary statistics
+    const totalLateMinutes = logEntries.reduce((sum, e) => sum + e.lateness.lateMinutes, 0);
+    const uniqueEmployees = [...new Set(logEntries.map(e => e.employee?.id?.toString()))].length;
+    const avgLateMinutes = logEntries.length > 0 
+      ? Math.round(totalLateMinutes / logEntries.length) 
+      : 0;
+
+    // Status breakdown
+    const statusBreakdown: Record<string, number> = {};
+    logEntries.forEach(e => {
+      statusBreakdown[e.status] = (statusBreakdown[e.status] || 0) + 1;
+    });
+
+    // Penalty breakdown
+    const withPenalty = logEntries.filter(e => e.penalty.hasPenalty);
+    const totalPenaltyAmount = withPenalty.reduce((sum, e) => sum + e.penalty.amount, 0);
+
+    await this.logTimeManagementChange(
+      'LATENESS_LOGS_ACCESSED',
+      {
+        startDate,
+        endDate,
+        employeeId,
+        departmentId,
+        totalRecords: logEntries.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      reportType: 'LATENESS_LOGS',
+      reportPeriod: { startDate, endDate },
+      filters: { employeeId, departmentId, includeResolved, sortBy, sortOrder },
+      summary: {
+        totalIncidents: logEntries.length,
+        uniqueEmployees,
+        totalLateMinutes,
+        totalLateHours: Math.round(totalLateMinutes / 60 * 100) / 100,
+        avgLateMinutes,
+        statusBreakdown: Object.entries(statusBreakdown).map(([status, count]) => ({ status, count })),
+        penaltyStats: {
+          incidentsWithPenalty: withPenalty.length,
+          totalPenaltyAmount: Math.round(totalPenaltyAmount * 100) / 100,
+        },
+      },
+      logs: logEntries,
+      generatedAt: new Date(),
+      accessedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Generate combined overtime and exception report for compliance
+   * BR-TM-21: HR must have access to overtime reports
+   * US19: View and export overtime and exception attendance reports for payroll and compliance checks
+   */
+  async generateOvertimeAndExceptionComplianceReport(
+    params: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      includeAllExceptionTypes?: boolean;
+    },
+    currentUserId: string,
+  ) {
+    const { 
+      startDate, 
+      endDate, 
+      employeeId, 
+      departmentId,
+      includeAllExceptionTypes = true,
+    } = params;
+
+    // Get overtime exceptions
+    const overtimeQuery: any = {
+      type: TimeExceptionType.OVERTIME_REQUEST,
+      createdAt: { $gte: startDate, $lte: endDate },
+    };
+
+    if (employeeId) {
+      overtimeQuery.employeeId = employeeId;
+    }
+
+    const overtimeRecords = await this.timeExceptionModel
+      .find(overtimeQuery)
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .populate('attendanceRecordId')
+      .exec();
+
+    // Get other exceptions if requested
+    let otherExceptions: any[] = [];
+    if (includeAllExceptionTypes) {
+      const exceptionQuery: any = {
+        type: { $ne: TimeExceptionType.OVERTIME_REQUEST },
+        createdAt: { $gte: startDate, $lte: endDate },
+      };
+
+      if (employeeId) {
+        exceptionQuery.employeeId = employeeId;
+      }
+
+      otherExceptions = await this.timeExceptionModel
+        .find(exceptionQuery)
+        .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+        .exec();
+    }
+
+    // Filter by department
+    const filteredOvertime = departmentId
+      ? overtimeRecords.filter((r: any) => 
+          r.employeeId?.departmentId?.toString() === departmentId)
+      : overtimeRecords;
+
+    const filteredExceptions = departmentId
+      ? otherExceptions.filter((r: any) => 
+          r.employeeId?.departmentId?.toString() === departmentId)
+      : otherExceptions;
+
+    // Process overtime data
+    const overtimeSummary = {
+      totalRequests: filteredOvertime.length,
+      approved: filteredOvertime.filter(r => r.status === TimeExceptionStatus.APPROVED).length,
+      pending: filteredOvertime.filter(r => 
+        r.status === TimeExceptionStatus.OPEN || r.status === TimeExceptionStatus.PENDING
+      ).length,
+      rejected: filteredOvertime.filter(r => r.status === TimeExceptionStatus.REJECTED).length,
+      totalOvertimeMinutes: 0,
+      approvedOvertimeMinutes: 0,
+    };
+
+    filteredOvertime.forEach((record: any) => {
+      const attendance = record.attendanceRecordId as any;
+      const overtimeMinutes = attendance?.totalWorkMinutes 
+        ? Math.max(0, attendance.totalWorkMinutes - 480)
+        : 0;
+      
+      overtimeSummary.totalOvertimeMinutes += overtimeMinutes;
+      if (record.status === TimeExceptionStatus.APPROVED) {
+        overtimeSummary.approvedOvertimeMinutes += overtimeMinutes;
+      }
+    });
+
+    // Process other exceptions by type
+    const exceptionsByType: Record<string, { count: number; approved: number; pending: number }> = {};
+    filteredExceptions.forEach((exc: any) => {
+      const type = exc.type;
+      if (!exceptionsByType[type]) {
+        exceptionsByType[type] = { count: 0, approved: 0, pending: 0 };
+      }
+      exceptionsByType[type].count += 1;
+      if (exc.status === TimeExceptionStatus.APPROVED) {
+        exceptionsByType[type].approved += 1;
+      }
+      if (exc.status === TimeExceptionStatus.OPEN || exc.status === TimeExceptionStatus.PENDING) {
+        exceptionsByType[type].pending += 1;
+      }
+    });
+
+    // Compliance indicators
+    const complianceIndicators = {
+      overtimeApprovalRate: overtimeSummary.totalRequests > 0
+        ? Math.round((overtimeSummary.approved / overtimeSummary.totalRequests) * 100)
+        : 0,
+      pendingRequiresAction: overtimeSummary.pending > 0 || 
+        Object.values(exceptionsByType).some(e => e.pending > 0),
+      avgOvertimeHoursPerRequest: overtimeSummary.totalRequests > 0
+        ? Math.round((overtimeSummary.totalOvertimeMinutes / overtimeSummary.totalRequests / 60) * 100) / 100
+        : 0,
+      complianceStatus: overtimeSummary.pending === 0 ? 'COMPLIANT' : 'PENDING_REVIEW',
+    };
+
+    // Top overtime employees
+    const employeeOvertimeMap: Record<string, { name: string; minutes: number }> = {};
+    filteredOvertime.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || 'unknown';
+      const empName = record.employeeId
+        ? `${record.employeeId.firstName} ${record.employeeId.lastName}`
+        : 'Unknown';
+      const attendance = record.attendanceRecordId as any;
+      const overtimeMinutes = attendance?.totalWorkMinutes
+        ? Math.max(0, attendance.totalWorkMinutes - 480)
+        : 0;
+
+      if (!employeeOvertimeMap[empId]) {
+        employeeOvertimeMap[empId] = { name: empName, minutes: 0 };
+      }
+      employeeOvertimeMap[empId].minutes += overtimeMinutes;
+    });
+
+    const topOvertimeEmployees = Object.entries(employeeOvertimeMap)
+      .map(([id, data]) => ({
+        employeeId: id,
+        name: data.name,
+        totalOvertimeHours: Math.round((data.minutes / 60) * 100) / 100,
+      }))
+      .sort((a, b) => b.totalOvertimeHours - a.totalOvertimeHours)
+      .slice(0, 10);
+
+    await this.logTimeManagementChange(
+      'OVERTIME_EXCEPTION_COMPLIANCE_REPORT_GENERATED',
+      {
+        startDate,
+        endDate,
+        employeeId,
+        departmentId,
+        overtimeCount: overtimeSummary.totalRequests,
+        exceptionCount: filteredExceptions.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      reportType: 'OVERTIME_AND_EXCEPTION_COMPLIANCE',
+      reportPeriod: { startDate, endDate },
+      filters: { employeeId, departmentId, includeAllExceptionTypes },
+      overtime: {
+        summary: {
+          ...overtimeSummary,
+          totalOvertimeHours: Math.round((overtimeSummary.totalOvertimeMinutes / 60) * 100) / 100,
+          approvedOvertimeHours: Math.round((overtimeSummary.approvedOvertimeMinutes / 60) * 100) / 100,
+        },
+        topEmployees: topOvertimeEmployees,
+      },
+      exceptions: {
+        totalCount: filteredExceptions.length,
+        byType: Object.entries(exceptionsByType).map(([type, data]) => ({
+          type,
+          ...data,
+        })),
+      },
+      compliance: complianceIndicators,
+      payrollReadiness: {
+        isReady: complianceIndicators.complianceStatus === 'COMPLIANT',
+        pendingItems: overtimeSummary.pending + 
+          Object.values(exceptionsByType).reduce((sum, e) => sum + e.pending, 0),
+        message: complianceIndicators.complianceStatus === 'COMPLIANT'
+          ? 'All overtime and exception requests have been processed. Ready for payroll.'
+          : 'Pending requests require review before payroll processing.',
+      },
+      generatedAt: new Date(),
+      generatedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get employee attendance history with overtime and exceptions
+   * BR-TM-21: Line Managers must have access to attendance summaries
+   */
+  async getEmployeeAttendanceHistory(
+    params: {
+      employeeId: string;
+      startDate: Date;
+      endDate: Date;
+      includeExceptions?: boolean;
+      includeOvertime?: boolean;
+    },
+    currentUserId: string,
+  ) {
+    const { 
+      employeeId, 
+      startDate, 
+      endDate,
+      includeExceptions = true,
+      includeOvertime = true,
+    } = params;
+
+    // Get attendance records with employee details populated
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        date: { $gte: startDate, $lte: endDate },
+      })
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .sort({ date: 1 })
+      .exec();
+
+    // Get exceptions if requested
+    let exceptions: any[] = [];
+    if (includeExceptions) {
+      exceptions = await this.timeExceptionModel
+        .find({
+          employeeId,
+          createdAt: { $gte: startDate, $lte: endDate },
+        })
+        .exec();
+    }
+
+    // Extract employee details from first attendance record (if available)
+    const firstRecord = attendanceRecords[0] as any;
+    const employeeData = firstRecord?.employeeId;
+
+    // Process daily records
+    const dailyRecords = attendanceRecords.map((record: any) => {
+      const dayExceptions = exceptions.filter((exc: any) => {
+        const excDate = new Date(exc.createdAt);
+        const recDate = new Date(record.date);
+        return excDate.toDateString() === recDate.toDateString();
+      });
+
+      const overtimeMinutes = record.totalWorkMinutes 
+        ? Math.max(0, record.totalWorkMinutes - 480)
+        : 0;
+
+      return {
+        date: record.date,
+        clockIn: record.clockIn,
+        clockOut: record.clockOut,
+        totalWorkMinutes: record.totalWorkMinutes || 0,
+        totalWorkHours: Math.round((record.totalWorkMinutes || 0) / 60 * 100) / 100,
+        regularHours: Math.min((record.totalWorkMinutes || 0), 480) / 60,
+        overtime: {
+          hasOvertime: overtimeMinutes > 0,
+          minutes: overtimeMinutes,
+          hours: Math.round((overtimeMinutes / 60) * 100) / 100,
+        },
+        status: {
+          isPresent: !!record.clockIn,
+          isLate: record.isLate || false,
+          lateMinutes: record.lateMinutes || 0,
+          earlyLeave: record.earlyLeave || false,
+        },
+        exceptions: dayExceptions.map((exc: any) => ({
+          id: exc._id,
+          type: exc.type,
+          status: exc.status,
+          reason: exc.reason,
+        })),
+        penalties: {
+          hasPenalty: (record.penaltyAmount || 0) > 0,
+          amount: record.penaltyAmount || 0,
+        },
+      };
+    });
+
+    // Calculate summary statistics
+    const summary = {
+      totalDays: dailyRecords.length,
+      presentDays: dailyRecords.filter(r => r.status.isPresent).length,
+      absentDays: dailyRecords.filter(r => !r.status.isPresent).length,
+      lateDays: dailyRecords.filter(r => r.status.isLate).length,
+      earlyLeaveDays: dailyRecords.filter(r => r.status.earlyLeave).length,
+      totalWorkHours: Math.round(dailyRecords.reduce((sum, r) => sum + r.totalWorkHours, 0) * 100) / 100,
+      totalOvertimeHours: Math.round(dailyRecords.reduce((sum, r) => sum + r.overtime.hours, 0) * 100) / 100,
+      totalLateMinutes: dailyRecords.reduce((sum, r) => sum + r.status.lateMinutes, 0),
+      totalExceptions: exceptions.length,
+      totalPenalties: Math.round(dailyRecords.reduce((sum, r) => sum + r.penalties.amount, 0) * 100) / 100,
+    };
+
+    // Attendance rate calculation
+    const attendanceRate = summary.totalDays > 0
+      ? Math.round((summary.presentDays / summary.totalDays) * 100)
+      : 0;
+    const punctualityRate = summary.presentDays > 0
+      ? Math.round(((summary.presentDays - summary.lateDays) / summary.presentDays) * 100)
+      : 0;
+
+    await this.logTimeManagementChange(
+      'EMPLOYEE_ATTENDANCE_HISTORY_ACCESSED',
+      {
+        employeeId,
+        startDate,
+        endDate,
+        totalRecords: dailyRecords.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      reportType: 'EMPLOYEE_ATTENDANCE_HISTORY',
+      reportPeriod: { startDate, endDate },
+      employee: employeeData ? {
+        id: employeeData._id || employeeId,
+        name: employeeData.firstName && employeeData.lastName 
+          ? `${employeeData.firstName} ${employeeData.lastName}` 
+          : 'Unknown',
+        employeeNumber: employeeData.employeeNumber || 'N/A',
+        email: employeeData.email || 'N/A',
+      } : {
+        id: employeeId,
+        name: 'Unknown',
+        employeeNumber: 'N/A',
+        email: 'N/A',
+      },
+      summary: {
+        ...summary,
+        attendanceRate: `${attendanceRate}%`,
+        punctualityRate: `${punctualityRate}%`,
+        avgWorkHoursPerDay: summary.presentDays > 0
+          ? Math.round((summary.totalWorkHours / summary.presentDays) * 100) / 100
+          : 0,
+      },
+      records: dailyRecords,
+      generatedAt: new Date(),
+      accessedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Export overtime and exception report for payroll
+   * BR-TM-21: Access to overtime reports
+   * BR-TM-23: Reports must be exportable in multiple formats
+   */
+  async exportOvertimeExceptionReport(
+    params: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      format: 'excel' | 'csv' | 'text';
+    },
+    currentUserId: string,
+  ) {
+    const { startDate, endDate, employeeId, departmentId, format } = params;
+
+    // Generate the compliance report first
+    const reportData = await this.generateOvertimeAndExceptionComplianceReport(
+      { startDate, endDate, employeeId, departmentId, includeAllExceptionTypes: true },
+      currentUserId,
+    );
+
+    // Format based on export type
+    let formattedData: string;
+    if (format === 'csv') {
+      formattedData = this.formatOvertimeExceptionAsCSV(reportData);
+    } else if (format === 'text') {
+      formattedData = this.formatOvertimeExceptionAsText(reportData);
+    } else {
+      // Excel format - return JSON structure
+      formattedData = JSON.stringify(reportData, null, 2);
+    }
+
+    await this.logTimeManagementChange(
+      'OVERTIME_EXCEPTION_REPORT_EXPORTED',
+      {
+        startDate,
+        endDate,
+        employeeId,
+        departmentId,
+        format,
+      },
+      currentUserId,
+    );
+
+    return {
+      exportType: 'OVERTIME_AND_EXCEPTION_REPORT',
+      format,
+      data: formattedData,
+      reportPeriod: { startDate, endDate },
+      generatedAt: new Date(),
+      exportedBy: currentUserId,
+    };
+  }
+
+  private formatOvertimeExceptionAsCSV(data: any): string {
+    const lines: string[] = [];
+    
+    lines.push('OVERTIME AND EXCEPTION COMPLIANCE REPORT');
+    lines.push(`Report Period,${data.reportPeriod.startDate},${data.reportPeriod.endDate}`);
+    lines.push('');
+    
+    lines.push('OVERTIME SUMMARY');
+    lines.push('Metric,Value');
+    lines.push(`Total Requests,${data.overtime.summary.totalRequests}`);
+    lines.push(`Approved,${data.overtime.summary.approved}`);
+    lines.push(`Pending,${data.overtime.summary.pending}`);
+    lines.push(`Rejected,${data.overtime.summary.rejected}`);
+    lines.push(`Total Overtime Hours,${data.overtime.summary.totalOvertimeHours}`);
+    lines.push(`Approved Overtime Hours,${data.overtime.summary.approvedOvertimeHours}`);
+    lines.push('');
+    
+    lines.push('TOP OVERTIME EMPLOYEES');
+    lines.push('Employee ID,Name,Overtime Hours');
+    data.overtime.topEmployees.forEach((emp: any) => {
+      lines.push(`${emp.employeeId},${emp.name},${emp.totalOvertimeHours}`);
+    });
+    lines.push('');
+    
+    lines.push('EXCEPTION SUMMARY BY TYPE');
+    lines.push('Type,Count,Approved,Pending');
+    data.exceptions.byType.forEach((exc: any) => {
+      lines.push(`${exc.type},${exc.count},${exc.approved},${exc.pending}`);
+    });
+    lines.push('');
+    
+    lines.push('COMPLIANCE STATUS');
+    lines.push(`Status,${data.compliance.complianceStatus}`);
+    lines.push(`Payroll Ready,${data.payrollReadiness.isReady ? 'YES' : 'NO'}`);
+    lines.push(`Pending Items,${data.payrollReadiness.pendingItems}`);
+    
+    return lines.join('\n');
+  }
+
+  private formatOvertimeExceptionAsText(data: any): string {
+    const lines: string[] = [];
+    
+    lines.push('='.repeat(60));
+    lines.push('OVERTIME AND EXCEPTION COMPLIANCE REPORT');
+    lines.push('='.repeat(60));
+    lines.push(`Report Period: ${data.reportPeriod.startDate} to ${data.reportPeriod.endDate}`);
+    lines.push(`Generated: ${data.generatedAt}`);
+    lines.push('');
+    
+    lines.push('-'.repeat(40));
+    lines.push('OVERTIME SUMMARY');
+    lines.push('-'.repeat(40));
+    lines.push(`  Total Requests: ${data.overtime.summary.totalRequests}`);
+    lines.push(`  Approved: ${data.overtime.summary.approved}`);
+    lines.push(`  Pending: ${data.overtime.summary.pending}`);
+    lines.push(`  Rejected: ${data.overtime.summary.rejected}`);
+    lines.push(`  Total Overtime Hours: ${data.overtime.summary.totalOvertimeHours}`);
+    lines.push(`  Approved Overtime Hours: ${data.overtime.summary.approvedOvertimeHours}`);
+    lines.push('');
+    
+    lines.push('-'.repeat(40));
+    lines.push('TOP OVERTIME EMPLOYEES');
+    lines.push('-'.repeat(40));
+    data.overtime.topEmployees.forEach((emp: any, idx: number) => {
+      lines.push(`  ${idx + 1}. ${emp.name}: ${emp.totalOvertimeHours} hours`);
+    });
+    lines.push('');
+    
+    lines.push('-'.repeat(40));
+    lines.push('EXCEPTION SUMMARY');
+    lines.push('-'.repeat(40));
+    lines.push(`  Total Exceptions: ${data.exceptions.totalCount}`);
+    data.exceptions.byType.forEach((exc: any) => {
+      lines.push(`  ${exc.type}: ${exc.count} (Approved: ${exc.approved}, Pending: ${exc.pending})`);
+    });
+    lines.push('');
+    
+    lines.push('-'.repeat(40));
+    lines.push('COMPLIANCE STATUS');
+    lines.push('-'.repeat(40));
+    lines.push(`  Status: ${data.compliance.complianceStatus}`);
+    lines.push(`  Overtime Approval Rate: ${data.compliance.overtimeApprovalRate}%`);
+    lines.push(`  Payroll Ready: ${data.payrollReadiness.isReady ? 'YES' : 'NO'}`);
+    lines.push(`  Pending Items: ${data.payrollReadiness.pendingItems}`);
+    lines.push(`  Message: ${data.payrollReadiness.message}`);
+    lines.push('');
+    lines.push('='.repeat(60));
+    
+    return lines.join('\n');
+  }
 }

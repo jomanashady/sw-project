@@ -1833,4 +1833,157 @@ export class TimeManagementController {
       user.userId,
     );
   }
+
+  // ===== US19: OVERTIME & EXCEPTION REPORTS (BR-TM-21) =====
+
+  /**
+   * US19: Get detailed lateness logs
+   * BR-TM-21: HR and Line Managers must have access to lateness logs
+   */
+  @Post('reports/lateness-logs')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getLatenessLogs(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      includeResolved?: boolean;
+      sortBy?: 'date' | 'employee' | 'duration';
+      sortOrder?: 'asc' | 'desc';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.getLatenessLogs(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeId: body.employeeId,
+        departmentId: body.departmentId,
+        includeResolved: body.includeResolved,
+        sortBy: body.sortBy,
+        sortOrder: body.sortOrder,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US19: Generate overtime and exception compliance report
+   * BR-TM-21: HR and Line Managers must have access to overtime reports
+   */
+  @Post('reports/overtime-exception-compliance')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async generateOvertimeAndExceptionComplianceReport(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      includeAllExceptionTypes?: boolean;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.generateOvertimeAndExceptionComplianceReport(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeId: body.employeeId,
+        departmentId: body.departmentId,
+        includeAllExceptionTypes: body.includeAllExceptionTypes,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US19: Get employee attendance history with overtime and exceptions
+   * BR-TM-21: Line Managers must have access to attendance summaries
+   */
+  @Post('reports/employee-attendance-history')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_EMPLOYEE,
+  )
+  async getEmployeeAttendanceHistory(
+    @Body() body: {
+      employeeId: string;
+      startDate: Date;
+      endDate: Date;
+      includeExceptions?: boolean;
+      includeOvertime?: boolean;
+    },
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check: employees can only view their own history
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      !user.roles.includes(SystemRole.DEPARTMENT_HEAD) &&
+      !user.roles.includes(SystemRole.HR_MANAGER) &&
+      !user.roles.includes(SystemRole.HR_ADMIN) &&
+      user.userId !== body.employeeId
+    ) {
+      throw new Error('Access denied: You can only view your own attendance history');
+    }
+
+    return this.timeManagementService.getEmployeeAttendanceHistory(
+      {
+        employeeId: body.employeeId,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        includeExceptions: body.includeExceptions,
+        includeOvertime: body.includeOvertime,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US19: Export overtime and exception report
+   * BR-TM-21: Access to overtime reports
+   * BR-TM-23: Reports must be exportable in multiple formats
+   */
+  @Post('reports/overtime-exception-export')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async exportOvertimeExceptionReport(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      format: 'excel' | 'csv' | 'text';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.exportOvertimeExceptionReport(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeId: body.employeeId,
+        departmentId: body.departmentId,
+        format: body.format,
+      },
+      user.userId,
+    );
+  }
 }

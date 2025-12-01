@@ -6,7 +6,7 @@ import { NotificationLog } from '../models/notification-log.schema';
 import { AttendanceRecord } from '../models/attendance-record.schema';
 import { TimeException } from '../models/time-exception.schema';
 // Import enums
-import { TimeExceptionType } from '../models/enums';
+import { TimeExceptionType, TimeExceptionStatus } from '../models/enums';
 // Import DTOs
 import {
   SendNotificationDto,
@@ -1558,6 +1558,1732 @@ export class NotificationService {
         999,
       ),
     );
+  }
+
+  // ===== US16: VACATION PACKAGE INTEGRATION (BR-TM-19) =====
+
+  /**
+   * Link employee vacation entitlements to attendance schedules
+   * BR-TM-19: Vacation packages must be linked to shift schedules
+   */
+  async linkVacationToAttendanceSchedule(
+    params: {
+      employeeId: string;
+      vacationPackageId: string;
+      startDate: Date;
+      endDate: Date;
+      vacationType: string;
+      autoReflect?: boolean;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, vacationPackageId, startDate, endDate, vacationType, autoReflect = true } = params;
+
+    // Log the vacation-attendance linkage
+    await this.logTimeManagementChange(
+      'VACATION_ATTENDANCE_LINKED',
+      {
+        employeeId,
+        vacationPackageId,
+        startDate,
+        endDate,
+        vacationType,
+        autoReflect,
+      },
+      currentUserId,
+    );
+
+    // Get attendance records for the vacation period
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        date: { $gte: startDate, $lte: endDate },
+      })
+      .exec();
+
+    // Calculate attendance impact
+    const affectedDays = attendanceRecords.length;
+    const workingDaysInRange = this.calculateWorkingDays(startDate, endDate);
+
+    return {
+      success: true,
+      linkage: {
+        employeeId,
+        vacationPackageId,
+        vacationType,
+        period: { startDate, endDate },
+        autoReflect,
+      },
+      attendanceImpact: {
+        affectedAttendanceRecords: affectedDays,
+        workingDaysInRange,
+        message: autoReflect 
+          ? 'Vacation will be automatically reflected in attendance records'
+          : 'Manual attendance adjustments required',
+      },
+      linkedAt: new Date(),
+      linkedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get employee vacation-attendance integration status
+   * BR-TM-19: Check how vacation packages affect attendance
+   */
+  async getEmployeeVacationAttendanceStatus(
+    params: {
+      employeeId: string;
+      startDate: Date;
+      endDate: Date;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, startDate, endDate } = params;
+
+    // Get attendance records for the period
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        date: { $gte: startDate, $lte: endDate },
+      })
+      .sort({ date: 1 })
+      .exec();
+
+    // Analyze attendance patterns
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const recordedDays = attendanceRecords.length;
+    const presentDays = attendanceRecords.filter((r: any) => r.clockIn).length;
+    const absentDays = recordedDays - presentDays;
+
+    // Identify potential vacation days (days without clock-in)
+    const potentialVacationDays = attendanceRecords.filter((r: any) => !r.clockIn);
+
+    return {
+      employeeId,
+      period: { startDate, endDate },
+      summary: {
+        totalDays,
+        recordedDays,
+        presentDays,
+        absentDays,
+        attendanceRate: recordedDays > 0 ? `${Math.round((presentDays / recordedDays) * 100)}%` : 'N/A',
+      },
+      potentialVacationDays: potentialVacationDays.map((r: any) => ({
+        date: r.date,
+        status: 'ABSENT',
+        note: 'May be covered by vacation package',
+      })),
+      recommendation: absentDays > 0
+        ? 'Review absent days against vacation entitlements'
+        : 'All days accounted for in attendance',
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Validate vacation dates against shift schedule
+   * BR-TM-19: Ensure vacation dates align with shift schedules
+   */
+  async validateVacationAgainstShiftSchedule(
+    params: {
+      employeeId: string;
+      vacationStartDate: Date;
+      vacationEndDate: Date;
+      shiftAssignmentId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, vacationStartDate, vacationEndDate } = params;
+
+    // Get attendance records for the requested vacation period
+    const existingRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        date: { $gte: vacationStartDate, $lte: vacationEndDate },
+        clockIn: { $ne: null }, // Records where employee clocked in
+      })
+      .exec();
+
+    // Check for conflicts
+    const hasConflicts = existingRecords.length > 0;
+    const conflictDates = existingRecords.map((r: any) => r.date);
+
+    // Calculate working days in vacation period
+    const workingDays = this.calculateWorkingDays(vacationStartDate, vacationEndDate);
+
+    return {
+      valid: !hasConflicts,
+      employeeId,
+      vacationPeriod: {
+        startDate: vacationStartDate,
+        endDate: vacationEndDate,
+        totalDays: Math.ceil((vacationEndDate.getTime() - vacationStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        workingDays,
+      },
+      conflicts: hasConflicts ? {
+        count: existingRecords.length,
+        dates: conflictDates,
+        message: 'Employee has attendance records (worked) during requested vacation period',
+      } : null,
+      recommendation: hasConflicts
+        ? 'Review attendance records before approving vacation'
+        : 'No conflicts found - vacation can be approved',
+      validatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Auto-calculate leave deductions based on attendance
+   * BR-TM-19: Link vacation packages to attendance for automatic deductions
+   */
+  async calculateLeaveDeductionsFromAttendance(
+    params: {
+      employeeId: string;
+      startDate: Date;
+      endDate: Date;
+      leaveType?: string;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, startDate, endDate, leaveType = 'ANNUAL' } = params;
+
+    // Get absence records (days without clock-in)
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        date: { $gte: startDate, $lte: endDate },
+      })
+      .exec();
+
+    // Calculate absences
+    const absentDays = attendanceRecords.filter((r: any) => !r.clockIn);
+    const workingDaysInPeriod = this.calculateWorkingDays(startDate, endDate);
+    
+    // Calculate deduction
+    const deductionDays = absentDays.length;
+    const halfDays = attendanceRecords.filter((r: any) => {
+      const workMinutes = r.totalWorkMinutes || 0;
+      return workMinutes > 0 && workMinutes < 240; // Less than 4 hours
+    }).length;
+
+    await this.logTimeManagementChange(
+      'LEAVE_DEDUCTION_CALCULATED',
+      {
+        employeeId,
+        startDate,
+        endDate,
+        deductionDays,
+        halfDays,
+        leaveType,
+      },
+      currentUserId,
+    );
+
+    return {
+      employeeId,
+      period: { startDate, endDate },
+      leaveType,
+      deduction: {
+        fullDays: deductionDays,
+        halfDays,
+        totalDeduction: deductionDays + (halfDays * 0.5),
+        unit: 'days',
+      },
+      breakdown: {
+        workingDaysInPeriod,
+        daysPresent: attendanceRecords.filter((r: any) => r.clockIn).length,
+        daysAbsent: deductionDays,
+        partialDays: halfDays,
+      },
+      syncStatus: {
+        readyForPayroll: true,
+        readyForLeaveModule: true,
+        note: 'Deduction calculated - sync with Leaves module for entitlement update',
+      },
+      calculatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Get vacation-attendance integration summary for department
+   * BR-TM-19: Department-level vacation tracking
+   */
+  async getDepartmentVacationAttendanceSummary(
+    params: {
+      departmentId?: string;
+      startDate: Date;
+      endDate: Date;
+    },
+    currentUserId: string,
+  ) {
+    const { startDate, endDate } = params;
+
+    // Get all attendance records for the period
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({
+        date: { $gte: startDate, $lte: endDate },
+      })
+      .populate('employeeId', 'firstName lastName employeeNumber departmentId')
+      .exec();
+
+    // Group by employee
+    const employeeStats: Record<string, {
+      employee: any;
+      presentDays: number;
+      absentDays: number;
+      totalWorkMinutes: number;
+    }> = {};
+
+    attendanceRecords.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || 'unknown';
+      
+      if (!employeeStats[empId]) {
+        employeeStats[empId] = {
+          employee: record.employeeId,
+          presentDays: 0,
+          absentDays: 0,
+          totalWorkMinutes: 0,
+        };
+      }
+
+      if (record.clockIn) {
+        employeeStats[empId].presentDays += 1;
+        employeeStats[empId].totalWorkMinutes += record.totalWorkMinutes || 0;
+      } else {
+        employeeStats[empId].absentDays += 1;
+      }
+    });
+
+    // Calculate summary
+    const employeeSummaries = Object.entries(employeeStats).map(([empId, stats]) => ({
+      employeeId: empId,
+      employeeName: stats.employee 
+        ? `${stats.employee.firstName} ${stats.employee.lastName}`
+        : 'Unknown',
+      employeeNumber: stats.employee?.employeeNumber || 'N/A',
+      presentDays: stats.presentDays,
+      absentDays: stats.absentDays,
+      potentialVacationDays: stats.absentDays,
+      totalWorkHours: Math.round((stats.totalWorkMinutes / 60) * 100) / 100,
+    }));
+
+    // Sort by absent days (potential vacation) descending
+    employeeSummaries.sort((a, b) => b.absentDays - a.absentDays);
+
+    return {
+      reportType: 'VACATION_ATTENDANCE_SUMMARY',
+      period: { startDate, endDate },
+      summary: {
+        totalEmployees: employeeSummaries.length,
+        totalPresentDays: employeeSummaries.reduce((sum, e) => sum + e.presentDays, 0),
+        totalAbsentDays: employeeSummaries.reduce((sum, e) => sum + e.absentDays, 0),
+        avgAbsentDaysPerEmployee: employeeSummaries.length > 0
+          ? Math.round((employeeSummaries.reduce((sum, e) => sum + e.absentDays, 0) / employeeSummaries.length) * 100) / 100
+          : 0,
+      },
+      employees: employeeSummaries,
+      note: 'Absent days may be covered by vacation packages - cross-reference with Leaves module',
+      generatedAt: new Date(),
+    };
+  }
+
+  // ===== US18: ESCALATION FOR PENDING REQUESTS BEFORE PAYROLL CUT-OFF (BR-TM-20) =====
+
+  /**
+   * Get payroll cutoff configuration
+   * BR-TM-20: Define escalation rules before payroll cutoff
+   */
+  async getPayrollCutoffConfig(currentUserId: string) {
+    // Return standard payroll cutoff configuration
+    // These could be made configurable via database in future
+    return {
+      cutoffSchedule: {
+        dayOfMonth: 25, // Payroll cutoff on 25th of each month
+        escalationDaysBefore: 3, // Auto-escalate 3 days before cutoff
+        warningDaysBefore: 5, // Show warnings 5 days before cutoff
+        reminderDaysBefore: 7, // Send reminders 7 days before cutoff
+      },
+      escalationRules: {
+        autoEscalateUnreviewedCorrections: true,
+        autoEscalateUnreviewedExceptions: true,
+        autoEscalateOvertimeRequests: true,
+        notifyHROnEscalation: true,
+        notifyManagerOnEscalation: true,
+        blockPayrollIfPending: false, // If true, payroll cannot proceed with pending items
+      },
+      notifications: {
+        sendReminderEmails: true,
+        sendEscalationAlerts: true,
+        dailyDigestEnabled: true,
+      },
+      currentMonth: {
+        cutoffDate: this.getNextPayrollCutoffDate(25),
+        daysUntilCutoff: this.getDaysUntilCutoff(25),
+        status: this.getDaysUntilCutoff(25) <= 3 ? 'CRITICAL' : this.getDaysUntilCutoff(25) <= 5 ? 'WARNING' : 'NORMAL',
+      },
+    };
+  }
+
+  /**
+   * Get pending requests that need review before payroll cutoff
+   * BR-TM-20: Identify all unreviewed requests before cutoff
+   */
+  async getPendingRequestsBeforePayrollCutoff(
+    params: {
+      payrollCutoffDate?: Date;
+      departmentId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
+    const now = new Date();
+    const daysUntilCutoff = Math.ceil((cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Get pending time exceptions
+    const pendingExceptions = await this.timeExceptionModel
+      .find({
+        status: { $in: ['OPEN', 'PENDING'] },
+      })
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .populate('assignedTo', 'firstName lastName email')
+      .exec();
+
+    // Categorize by urgency
+    const categorized = {
+      critical: [] as any[], // Need immediate action
+      high: [] as any[],     // Should be reviewed within 1-2 days
+      medium: [] as any[],   // Can wait but should be done before cutoff
+    };
+
+    pendingExceptions.forEach((exc: any) => {
+      const createdAt = new Date(exc.createdAt);
+      const ageInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const item = {
+        id: exc._id,
+        type: exc.type,
+        status: exc.status,
+        employee: exc.employeeId ? {
+          id: exc.employeeId._id,
+          name: `${exc.employeeId.firstName} ${exc.employeeId.lastName}`,
+          employeeNumber: exc.employeeId.employeeNumber,
+        } : null,
+        assignedTo: exc.assignedTo ? {
+          id: exc.assignedTo._id,
+          name: `${exc.assignedTo.firstName} ${exc.assignedTo.lastName}`,
+        } : null,
+        ageInDays,
+        createdAt: exc.createdAt,
+      };
+
+      if (daysUntilCutoff <= 2 || ageInDays >= 5) {
+        categorized.critical.push(item);
+      } else if (daysUntilCutoff <= 5 || ageInDays >= 3) {
+        categorized.high.push(item);
+      } else {
+        categorized.medium.push(item);
+      }
+    });
+
+    await this.logTimeManagementChange(
+      'PAYROLL_CUTOFF_PENDING_CHECK',
+      {
+        cutoffDate,
+        daysUntilCutoff,
+        totalPending: pendingExceptions.length,
+        critical: categorized.critical.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      payrollCutoff: {
+        date: cutoffDate,
+        daysRemaining: daysUntilCutoff,
+        status: daysUntilCutoff <= 2 ? 'CRITICAL' : daysUntilCutoff <= 5 ? 'WARNING' : 'NORMAL',
+      },
+      summary: {
+        totalPending: pendingExceptions.length,
+        critical: categorized.critical.length,
+        high: categorized.high.length,
+        medium: categorized.medium.length,
+      },
+      pendingByUrgency: categorized,
+      recommendation: categorized.critical.length > 0
+        ? 'IMMEDIATE ACTION REQUIRED: Critical items must be reviewed before payroll cutoff'
+        : categorized.high.length > 0
+          ? 'HIGH PRIORITY: Review high-priority items within 1-2 days'
+          : 'ON TRACK: All pending items can be processed before cutoff',
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Auto-escalate all pending requests before payroll cutoff
+   * BR-TM-20: Unreviewed requests must auto-escalate before payroll cutoff
+   */
+  async autoEscalateBeforePayrollCutoff(
+    params: {
+      payrollCutoffDate?: Date;
+      escalationDaysBefore?: number;
+      notifyManagers?: boolean;
+    },
+    currentUserId: string,
+  ) {
+    const { 
+      payrollCutoffDate = this.getNextPayrollCutoffDate(25),
+      escalationDaysBefore = 3,
+      notifyManagers = true,
+    } = params;
+
+    const now = new Date();
+    const daysUntilCutoff = Math.ceil((payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Only escalate if within the escalation window
+    if (daysUntilCutoff > escalationDaysBefore) {
+      return {
+        success: false,
+        message: `Not within escalation window. ${daysUntilCutoff} days until cutoff, escalation starts ${escalationDaysBefore} days before.`,
+        payrollCutoff: payrollCutoffDate,
+        daysUntilCutoff,
+        escalationDaysBefore,
+        escalated: [],
+      };
+    }
+
+    // Find all pending items
+    const pendingExceptions = await this.timeExceptionModel
+      .find({
+        status: { $in: ['OPEN', 'PENDING'] },
+      })
+      .exec();
+
+    const escalatedItems: any[] = [];
+    const failedItems: any[] = [];
+
+    // Escalate each pending item
+    for (const exception of pendingExceptions) {
+      try {
+        await this.timeExceptionModel.findByIdAndUpdate(
+          exception._id,
+          {
+            status: 'ESCALATED',
+            reason: `${exception.reason || ''}\n\n[AUTO-ESCALATED - PAYROLL CUTOFF]\nEscalated on: ${now.toISOString()}\nPayroll cutoff: ${payrollCutoffDate.toISOString()}\nDays until cutoff: ${daysUntilCutoff}`,
+            updatedBy: currentUserId,
+          },
+        );
+        escalatedItems.push({
+          id: exception._id,
+          type: exception.type,
+          previousStatus: exception.status,
+        });
+      } catch {
+        failedItems.push({ id: exception._id, error: 'Failed to escalate' });
+      }
+    }
+
+    // Create notification for HR
+    if (notifyManagers && escalatedItems.length > 0) {
+      await this.sendNotification(
+        {
+          to: 'HR_MANAGERS', // Would be resolved to actual HR manager IDs
+          type: 'PAYROLL_ESCALATION_ALERT',
+          message: `${escalatedItems.length} time management requests have been auto-escalated due to approaching payroll cutoff (${payrollCutoffDate.toDateString()}). Immediate review required.`,
+        },
+        currentUserId,
+      );
+    }
+
+    await this.logTimeManagementChange(
+      'PAYROLL_AUTO_ESCALATION',
+      {
+        payrollCutoffDate,
+        daysUntilCutoff,
+        escalatedCount: escalatedItems.length,
+        failedCount: failedItems.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      success: true,
+      payrollCutoff: {
+        date: payrollCutoffDate,
+        daysRemaining: daysUntilCutoff,
+      },
+      escalation: {
+        totalEscalated: escalatedItems.length,
+        totalFailed: failedItems.length,
+        items: escalatedItems,
+        failed: failedItems.length > 0 ? failedItems : undefined,
+      },
+      notificationSent: notifyManagers && escalatedItems.length > 0,
+      executedAt: new Date(),
+      executedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Check payroll readiness status
+   * BR-TM-20: Verify all requests are processed before payroll
+   */
+  async checkPayrollReadinessStatus(
+    params: {
+      payrollCutoffDate?: Date;
+      departmentId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
+    const now = new Date();
+    const daysUntilCutoff = Math.ceil((cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Count pending items by type
+    const pendingExceptionsCount = await this.timeExceptionModel.countDocuments({
+      status: { $in: ['OPEN', 'PENDING'] },
+    });
+
+    const escalatedCount = await this.timeExceptionModel.countDocuments({
+      status: 'ESCALATED',
+    });
+
+    const approvedCount = await this.timeExceptionModel.countDocuments({
+      status: 'APPROVED',
+    });
+
+    const resolvedCount = await this.timeExceptionModel.countDocuments({
+      status: 'RESOLVED',
+    });
+
+    // Determine readiness
+    const isReady = pendingExceptionsCount === 0 && escalatedCount === 0;
+    const hasBlockers = pendingExceptionsCount > 0;
+    const hasWarnings = escalatedCount > 0;
+
+    let readinessStatus: 'READY' | 'BLOCKED' | 'WARNING' | 'CRITICAL';
+    if (isReady) {
+      readinessStatus = 'READY';
+    } else if (daysUntilCutoff <= 1 && hasBlockers) {
+      readinessStatus = 'CRITICAL';
+    } else if (hasBlockers) {
+      readinessStatus = 'BLOCKED';
+    } else {
+      readinessStatus = 'WARNING';
+    }
+
+    return {
+      payrollCutoff: {
+        date: cutoffDate,
+        daysRemaining: daysUntilCutoff,
+      },
+      readiness: {
+        status: readinessStatus,
+        isReady,
+        hasBlockers,
+        hasWarnings,
+        message: isReady 
+          ? 'All time management requests have been processed. Payroll can proceed.'
+          : hasBlockers
+            ? `${pendingExceptionsCount} pending request(s) must be reviewed before payroll.`
+            : `${escalatedCount} escalated request(s) require attention but payroll can proceed with caution.`,
+      },
+      counts: {
+        pending: pendingExceptionsCount,
+        escalated: escalatedCount,
+        approved: approvedCount,
+        resolved: resolvedCount,
+      },
+      recommendations: this.getPayrollReadinessRecommendations(
+        pendingExceptionsCount,
+        escalatedCount,
+        daysUntilCutoff,
+      ),
+      checkedAt: new Date(),
+    };
+  }
+
+  /**
+   * Get escalation history/log for audit
+   * BR-TM-20: Track escalation actions
+   */
+  async getEscalationHistory(
+    params: {
+      startDate?: Date;
+      endDate?: Date;
+      type?: 'PAYROLL' | 'THRESHOLD' | 'MANUAL' | 'ALL';
+    },
+    currentUserId: string,
+  ) {
+    const { startDate, endDate, type = 'ALL' } = params;
+
+    // Get escalated items
+    const query: any = {
+      status: 'ESCALATED',
+    };
+
+    if (startDate && endDate) {
+      query.updatedAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const escalatedItems = await this.timeExceptionModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName employeeNumber')
+      .populate('assignedTo', 'firstName lastName')
+      .sort({ updatedAt: -1 })
+      .limit(100)
+      .exec();
+
+    // Parse escalation reasons to categorize
+    const categorized = {
+      payroll: [] as any[],
+      threshold: [] as any[],
+      manual: [] as any[],
+    };
+
+    escalatedItems.forEach((item: any) => {
+      const entry = {
+        id: item._id,
+        type: item.type,
+        employee: item.employeeId ? `${item.employeeId.firstName} ${item.employeeId.lastName}` : 'Unknown',
+        assignedTo: item.assignedTo ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}` : 'Unassigned',
+        escalatedAt: item.updatedAt,
+        reason: item.reason,
+      };
+
+      if (item.reason?.includes('PAYROLL CUTOFF')) {
+        categorized.payroll.push(entry);
+      } else if (item.reason?.includes('AUTO-ESCALATED') && item.reason?.includes('days')) {
+        categorized.threshold.push(entry);
+      } else {
+        categorized.manual.push(entry);
+      }
+    });
+
+    const filteredItems = type === 'ALL' 
+      ? escalatedItems 
+      : type === 'PAYROLL'
+        ? categorized.payroll
+        : type === 'THRESHOLD'
+          ? categorized.threshold
+          : categorized.manual;
+
+    return {
+      period: {
+        startDate: startDate || 'ALL',
+        endDate: endDate || 'NOW',
+      },
+      filter: type,
+      summary: {
+        total: escalatedItems.length,
+        byPayrollCutoff: categorized.payroll.length,
+        byThreshold: categorized.threshold.length,
+        manual: categorized.manual.length,
+      },
+      items: filteredItems.slice(0, 50), // Limit response size
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Send payroll cutoff reminder notifications
+   * BR-TM-20: Notify stakeholders before cutoff
+   */
+  async sendPayrollCutoffReminders(
+    params: {
+      payrollCutoffDate?: Date;
+      reminderDaysBefore?: number;
+    },
+    currentUserId: string,
+  ) {
+    const { 
+      payrollCutoffDate = this.getNextPayrollCutoffDate(25),
+      reminderDaysBefore = 5,
+    } = params;
+
+    const now = new Date();
+    const daysUntilCutoff = Math.ceil((payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilCutoff > reminderDaysBefore) {
+      return {
+        success: false,
+        message: `Not within reminder window. ${daysUntilCutoff} days until cutoff, reminders start ${reminderDaysBefore} days before.`,
+        remindersSent: 0,
+      };
+    }
+
+    // Get pending items grouped by assignee
+    const pendingExceptions = await this.timeExceptionModel
+      .find({
+        status: { $in: ['OPEN', 'PENDING'] },
+        assignedTo: { $exists: true },
+      })
+      .populate('assignedTo', 'firstName lastName email')
+      .exec();
+
+    // Group by assignee
+    const byAssignee: Record<string, { assignee: any; items: any[] }> = {};
+    pendingExceptions.forEach((exc: any) => {
+      const assigneeId = exc.assignedTo?._id?.toString() || 'unassigned';
+      if (!byAssignee[assigneeId]) {
+        byAssignee[assigneeId] = {
+          assignee: exc.assignedTo,
+          items: [],
+        };
+      }
+      byAssignee[assigneeId].items.push(exc);
+    });
+
+    // Send reminders
+    const remindersSent: any[] = [];
+    for (const [assigneeId, data] of Object.entries(byAssignee)) {
+      if (data.assignee && data.items.length > 0) {
+        const notification = await this.sendNotification(
+          {
+            to: assigneeId,
+            type: 'PAYROLL_CUTOFF_REMINDER',
+            message: `Reminder: You have ${data.items.length} pending time management request(s) that need review before payroll cutoff on ${payrollCutoffDate.toDateString()}. Only ${daysUntilCutoff} day(s) remaining.`,
+          },
+          currentUserId,
+        );
+        remindersSent.push({
+          assigneeId,
+          assigneeName: `${data.assignee.firstName} ${data.assignee.lastName}`,
+          pendingCount: data.items.length,
+          notificationId: (notification as any)._id,
+        });
+      }
+    }
+
+    await this.logTimeManagementChange(
+      'PAYROLL_CUTOFF_REMINDERS_SENT',
+      {
+        payrollCutoffDate,
+        daysUntilCutoff,
+        reminderCount: remindersSent.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      success: true,
+      payrollCutoff: {
+        date: payrollCutoffDate,
+        daysRemaining: daysUntilCutoff,
+      },
+      remindersSent: remindersSent.length,
+      reminders: remindersSent,
+      sentAt: new Date(),
+    };
+  }
+
+  // ===== HELPER METHODS =====
+
+  /**
+   * Helper: Calculate working days in a date range (excluding weekends)
+   */
+  private calculateWorkingDays(startDate: Date, endDate: Date): number {
+    let count = 0;
+    const current = new Date(startDate);
+    
+    while (current <= endDate) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
+        count++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return count;
+  }
+
+  /**
+   * Helper: Get next payroll cutoff date
+   */
+  private getNextPayrollCutoffDate(dayOfMonth: number): Date {
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+    
+    // If we've passed this month's cutoff, get next month's
+    if (now > cutoff) {
+      cutoff.setMonth(cutoff.getMonth() + 1);
+    }
+    
+    return cutoff;
+  }
+
+  /**
+   * Helper: Get days until payroll cutoff
+   */
+  private getDaysUntilCutoff(dayOfMonth: number): number {
+    const cutoff = this.getNextPayrollCutoffDate(dayOfMonth);
+    const now = new Date();
+    return Math.ceil((cutoff.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  /**
+   * Helper: Generate payroll readiness recommendations
+   */
+  private getPayrollReadinessRecommendations(
+    pendingCount: number,
+    escalatedCount: number,
+    daysUntilCutoff: number,
+  ): string[] {
+    const recommendations: string[] = [];
+
+    if (pendingCount === 0 && escalatedCount === 0) {
+      recommendations.push('All items processed - payroll can proceed');
+      return recommendations;
+    }
+
+    if (pendingCount > 0) {
+      if (daysUntilCutoff <= 1) {
+        recommendations.push(`URGENT: ${pendingCount} pending items require immediate review`);
+        recommendations.push('Consider auto-escalation to expedite processing');
+      } else if (daysUntilCutoff <= 3) {
+        recommendations.push(`Review ${pendingCount} pending items within the next ${daysUntilCutoff - 1} days`);
+        recommendations.push('Send reminders to assigned reviewers');
+      } else {
+        recommendations.push(`${pendingCount} pending items should be processed before cutoff`);
+      }
+    }
+
+    if (escalatedCount > 0) {
+      recommendations.push(`${escalatedCount} escalated items need HR/management attention`);
+      if (daysUntilCutoff <= 2) {
+        recommendations.push('Prioritize escalated items for resolution');
+      }
+    }
+
+    return recommendations;
+  }
+
+  // ===== US20: CROSS-MODULE DATA SYNCHRONIZATION (BR-TM-22) =====
+
+  /**
+   * Get cross-module sync status dashboard
+   * BR-TM-22: All time management data must sync daily with payroll, benefits, and leave modules
+   */
+  async getCrossModuleSyncStatus(
+    params: {
+      startDate?: Date;
+      endDate?: Date;
+    },
+    currentUserId: string,
+  ) {
+    const now = new Date();
+    const startDate = params.startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = params.endDate || now;
+
+    const startDateUTC = this.convertDateToUTCStart(startDate);
+    const endDateUTC = this.convertDateToUTCEnd(endDate);
+
+    // Get attendance records status
+    const allAttendance = await this.attendanceRecordModel
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .exec();
+
+    const finalizedCount = allAttendance.filter((r: any) => r.finalisedForPayroll).length;
+    const pendingCount = allAttendance.length - finalizedCount;
+
+    // Get exception status
+    const allExceptions = await this.timeExceptionModel
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .exec();
+
+    const approvedExceptions = allExceptions.filter(e => e.status === 'APPROVED').length;
+    const pendingExceptions = allExceptions.filter(e => 
+      e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING
+    ).length;
+
+    // Get sync history
+    const recentSyncs = this.auditLogs
+      .filter(log => 
+        log.entity.includes('SYNC') && 
+        log.timestamp >= startDateUTC && 
+        log.timestamp <= endDateUTC
+      )
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 10);
+
+    // Calculate sync health
+    const syncHealth = {
+      attendanceSyncRate: allAttendance.length > 0 
+        ? Math.round((finalizedCount / allAttendance.length) * 100) 
+        : 100,
+      exceptionProcessingRate: allExceptions.length > 0 
+        ? Math.round((approvedExceptions / allExceptions.length) * 100) 
+        : 100,
+      overallHealth: 'GOOD' as 'GOOD' | 'WARNING' | 'CRITICAL',
+    };
+
+    if (syncHealth.attendanceSyncRate < 50 || syncHealth.exceptionProcessingRate < 50) {
+      syncHealth.overallHealth = 'CRITICAL';
+    } else if (syncHealth.attendanceSyncRate < 80 || syncHealth.exceptionProcessingRate < 80) {
+      syncHealth.overallHealth = 'WARNING';
+    }
+
+    await this.logTimeManagementChange(
+      'CROSS_MODULE_SYNC_STATUS_CHECKED',
+      {
+        startDate,
+        endDate,
+        attendanceCount: allAttendance.length,
+        exceptionCount: allExceptions.length,
+        overallHealth: syncHealth.overallHealth,
+      },
+      currentUserId,
+    );
+
+    return {
+      period: { startDate, endDate },
+      modules: {
+        timeManagement: {
+          status: 'ACTIVE',
+          lastSync: recentSyncs[0]?.timestamp || null,
+        },
+        payroll: {
+          status: 'READY_TO_SYNC',
+          pendingRecords: pendingCount,
+          finalizedRecords: finalizedCount,
+        },
+        leaves: {
+          status: 'INTEGRATION_AVAILABLE',
+          note: 'Time Management provides attendance context for leave validation',
+        },
+        benefits: {
+          status: 'INTEGRATION_AVAILABLE',
+          note: 'Overtime and attendance data available for benefits calculations',
+        },
+      },
+      attendance: {
+        total: allAttendance.length,
+        finalized: finalizedCount,
+        pending: pendingCount,
+        syncRate: `${syncHealth.attendanceSyncRate}%`,
+      },
+      exceptions: {
+        total: allExceptions.length,
+        approved: approvedExceptions,
+        pending: pendingExceptions,
+        processingRate: `${syncHealth.exceptionProcessingRate}%`,
+      },
+      health: syncHealth,
+      recentSyncOperations: recentSyncs.map(s => ({
+        operation: s.entity,
+        timestamp: s.timestamp,
+        performedBy: s.actorId,
+      })),
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Sync time management data with leaves module
+   * BR-TM-22: Sync with leave modules
+   */
+  async syncWithLeavesModule(
+    params: {
+      employeeId?: string;
+      startDate: Date;
+      endDate: Date;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, startDate, endDate } = params;
+    const startDateUTC = this.convertDateToUTCStart(startDate);
+    const endDateUTC = this.convertDateToUTCEnd(endDate);
+
+    // Get attendance records for the period
+    const query: any = {
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    const attendanceRecords = await this.attendanceRecordModel
+      .find(query)
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .exec();
+
+    // Identify potential leave-related absences (days with no attendance)
+    const attendanceDates = new Set(
+      attendanceRecords.map((r: any) => 
+        new Date(r.createdAt || r.date).toISOString().split('T')[0]
+      )
+    );
+
+    // Get unique employees
+    const uniqueEmployees = [...new Set(
+      attendanceRecords.map((r: any) => r.employeeId?._id?.toString() || r.employeeId?.toString())
+    )];
+
+    // Build leave context data
+    const leaveContextData = {
+      attendanceByEmployee: {} as Record<string, any>,
+    };
+
+    attendanceRecords.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      if (!leaveContextData.attendanceByEmployee[empId]) {
+        leaveContextData.attendanceByEmployee[empId] = {
+          employeeId: empId,
+          employeeName: record.employeeId 
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim() 
+            : 'Unknown',
+          daysPresent: 0,
+          totalWorkHours: 0,
+          attendanceDates: [] as string[],
+        };
+      }
+      leaveContextData.attendanceByEmployee[empId].daysPresent++;
+      leaveContextData.attendanceByEmployee[empId].totalWorkHours += 
+        Math.round((record.totalWorkMinutes || 0) / 60 * 100) / 100;
+      leaveContextData.attendanceByEmployee[empId].attendanceDates.push(
+        new Date(record.createdAt || record.date).toISOString().split('T')[0]
+      );
+    });
+
+    await this.logTimeManagementChange(
+      'LEAVES_MODULE_SYNC',
+      {
+        employeeId,
+        startDate,
+        endDate,
+        recordCount: attendanceRecords.length,
+        employeeCount: uniqueEmployees.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      syncType: 'TIME_MANAGEMENT_TO_LEAVES',
+      period: { startDate, endDate },
+      summary: {
+        totalAttendanceRecords: attendanceRecords.length,
+        uniqueEmployees: uniqueEmployees.length,
+        attendanceDaysRecorded: attendanceDates.size,
+      },
+      leaveContext: {
+        description: 'Attendance data for leave validation and deduction calculations',
+        employeeData: Object.values(leaveContextData.attendanceByEmployee),
+      },
+      integrationNotes: [
+        'Use attendanceDates to validate against requested leave dates',
+        'Absent days (not in attendanceDates) may indicate leave or unauthorized absence',
+        'totalWorkHours can be used for partial day leave calculations',
+      ],
+      syncedAt: new Date(),
+      syncedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Sync time management data with benefits module
+   * BR-TM-22: Sync with benefits modules
+   */
+  async syncWithBenefitsModule(
+    params: {
+      employeeId?: string;
+      startDate: Date;
+      endDate: Date;
+    },
+    currentUserId: string,
+  ) {
+    const { employeeId, startDate, endDate } = params;
+    const startDateUTC = this.convertDateToUTCStart(startDate);
+    const endDateUTC = this.convertDateToUTCEnd(endDate);
+
+    // Get attendance records
+    const attendanceQuery: any = {
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+
+    if (employeeId) {
+      attendanceQuery.employeeId = employeeId;
+    }
+
+    const attendanceRecords = await this.attendanceRecordModel
+      .find(attendanceQuery)
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .exec();
+
+    // Get approved overtime
+    const overtimeQuery: any = {
+      type: TimeExceptionType.OVERTIME_REQUEST,
+      status: 'APPROVED',
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+
+    if (employeeId) {
+      overtimeQuery.employeeId = employeeId;
+    }
+
+    const overtimeRecords = await this.timeExceptionModel
+      .find(overtimeQuery)
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .populate('attendanceRecordId')
+      .exec();
+
+    // Build benefits-relevant data
+    const benefitsData: Record<string, any> = {};
+
+    attendanceRecords.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      if (!benefitsData[empId]) {
+        benefitsData[empId] = {
+          employeeId: empId,
+          employeeName: record.employeeId 
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim() 
+            : 'Unknown',
+          totalWorkMinutes: 0,
+          totalWorkHours: 0,
+          daysWorked: 0,
+          overtimeMinutes: 0,
+          overtimeHours: 0,
+        };
+      }
+      benefitsData[empId].totalWorkMinutes += record.totalWorkMinutes || 0;
+      benefitsData[empId].daysWorked++;
+    });
+
+    // Add overtime data
+    overtimeRecords.forEach((ot: any) => {
+      const empId = ot.employeeId?._id?.toString() || ot.employeeId?.toString();
+      if (empId && benefitsData[empId]) {
+        const attendance = ot.attendanceRecordId as any;
+        const overtimeMinutes = attendance?.totalWorkMinutes 
+          ? Math.max(0, attendance.totalWorkMinutes - 480) 
+          : 0;
+        benefitsData[empId].overtimeMinutes += overtimeMinutes;
+      }
+    });
+
+    // Convert to hours
+    Object.values(benefitsData).forEach((data: any) => {
+      data.totalWorkHours = Math.round((data.totalWorkMinutes / 60) * 100) / 100;
+      data.overtimeHours = Math.round((data.overtimeMinutes / 60) * 100) / 100;
+    });
+
+    await this.logTimeManagementChange(
+      'BENEFITS_MODULE_SYNC',
+      {
+        employeeId,
+        startDate,
+        endDate,
+        attendanceCount: attendanceRecords.length,
+        overtimeCount: overtimeRecords.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      syncType: 'TIME_MANAGEMENT_TO_BENEFITS',
+      period: { startDate, endDate },
+      summary: {
+        totalAttendanceRecords: attendanceRecords.length,
+        approvedOvertimeRecords: overtimeRecords.length,
+        uniqueEmployees: Object.keys(benefitsData).length,
+      },
+      benefitsData: {
+        description: 'Work hours and overtime data for benefits calculations',
+        employees: Object.values(benefitsData),
+      },
+      calculations: {
+        totalWorkHoursAllEmployees: Math.round(
+          Object.values(benefitsData).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60 * 100
+        ) / 100,
+        totalOvertimeHoursAllEmployees: Math.round(
+          Object.values(benefitsData).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60 * 100
+        ) / 100,
+      },
+      integrationNotes: [
+        'Use totalWorkHours for attendance-based benefits eligibility',
+        'Use overtimeHours for overtime compensation calculations',
+        'daysWorked can be used for per-diem benefit calculations',
+      ],
+      syncedAt: new Date(),
+      syncedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Run full cross-module synchronization
+   * BR-TM-22: All time management data must sync daily with payroll, benefits, and leave modules
+   */
+  async runFullCrossModuleSync(
+    params: {
+      syncDate: Date;
+      modules: ('payroll' | 'leaves' | 'benefits')[];
+    },
+    currentUserId: string,
+  ) {
+    const { syncDate, modules } = params;
+    const syncResults: Record<string, any> = {};
+    const startOfDay = this.convertDateToUTCStart(syncDate);
+    const endOfDay = this.convertDateToUTCEnd(syncDate);
+
+    // Sync with Payroll
+    if (modules.includes('payroll')) {
+      try {
+        const payrollSync = await this.runDailyPayrollSync(syncDate, currentUserId);
+        syncResults.payroll = {
+          status: 'SUCCESS',
+          data: payrollSync,
+        };
+      } catch (error: any) {
+        syncResults.payroll = {
+          status: 'FAILED',
+          error: error.message,
+        };
+      }
+    }
+
+    // Sync with Leaves
+    if (modules.includes('leaves')) {
+      try {
+        const leavesSync = await this.syncWithLeavesModule(
+          { startDate: startOfDay, endDate: endOfDay },
+          currentUserId,
+        );
+        syncResults.leaves = {
+          status: 'SUCCESS',
+          data: leavesSync,
+        };
+      } catch (error: any) {
+        syncResults.leaves = {
+          status: 'FAILED',
+          error: error.message,
+        };
+      }
+    }
+
+    // Sync with Benefits
+    if (modules.includes('benefits')) {
+      try {
+        const benefitsSync = await this.syncWithBenefitsModule(
+          { startDate: startOfDay, endDate: endOfDay },
+          currentUserId,
+        );
+        syncResults.benefits = {
+          status: 'SUCCESS',
+          data: benefitsSync,
+        };
+      } catch (error: any) {
+        syncResults.benefits = {
+          status: 'FAILED',
+          error: error.message,
+        };
+      }
+    }
+
+    // Determine overall status
+    const failedModules = Object.entries(syncResults)
+      .filter(([, result]) => result.status === 'FAILED')
+      .map(([module]) => module);
+
+    const overallStatus = failedModules.length === 0 
+      ? 'SUCCESS' 
+      : failedModules.length === modules.length 
+        ? 'FAILED' 
+        : 'PARTIAL';
+
+    await this.logTimeManagementChange(
+      'FULL_CROSS_MODULE_SYNC',
+      {
+        syncDate,
+        modules,
+        overallStatus,
+        failedModules,
+      },
+      currentUserId,
+    );
+
+    return {
+      syncDate,
+      modulesRequested: modules,
+      overallStatus,
+      results: syncResults,
+      failedModules: failedModules.length > 0 ? failedModules : undefined,
+      executedAt: new Date(),
+      executedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Check data consistency across modules
+   * BR-TM-22: Ensure data consistency
+   */
+  async checkCrossModuleDataConsistency(
+    params: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+    },
+    currentUserId: string,
+  ) {
+    const { startDate, endDate, employeeId } = params;
+    const startDateUTC = this.convertDateToUTCStart(startDate);
+    const endDateUTC = this.convertDateToUTCEnd(endDate);
+
+    const query: any = {
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+
+    if (employeeId) {
+      query.employeeId = employeeId;
+    }
+
+    // Get all relevant data
+    const attendanceRecords = await this.attendanceRecordModel.find(query).exec();
+    const timeExceptions = await this.timeExceptionModel.find(query).exec();
+
+    // Check for inconsistencies
+    const inconsistencies: any[] = [];
+
+    // Check 1: Attendance records with no clock-in but marked as present
+    const noClockInPresent = attendanceRecords.filter((r: any) => 
+      !r.clockIn && r.totalWorkMinutes > 0
+    );
+    if (noClockInPresent.length > 0) {
+      inconsistencies.push({
+        type: 'NO_CLOCKIN_BUT_HAS_WORK_MINUTES',
+        severity: 'WARNING',
+        count: noClockInPresent.length,
+        description: 'Records with work minutes but no clock-in time',
+        recordIds: noClockInPresent.map((r: any) => r._id),
+      });
+    }
+
+    // Check 2: Overtime exceptions without corresponding attendance
+    const overtimeExceptions = timeExceptions.filter(e => e.type === TimeExceptionType.OVERTIME_REQUEST);
+    const orphanOvertime = overtimeExceptions.filter((e: any) => !e.attendanceRecordId);
+    if (orphanOvertime.length > 0) {
+      inconsistencies.push({
+        type: 'ORPHAN_OVERTIME_EXCEPTIONS',
+        severity: 'ERROR',
+        count: orphanOvertime.length,
+        description: 'Overtime exceptions not linked to attendance records',
+        exceptionIds: orphanOvertime.map((e: any) => e._id),
+      });
+    }
+
+    // Check 3: Finalized records with pending exceptions
+    const finalizedRecordIds = attendanceRecords
+      .filter((r: any) => r.finalisedForPayroll)
+      .map((r: any) => r._id.toString());
+    
+    const exceptionsForFinalized = timeExceptions.filter((e: any) => 
+      finalizedRecordIds.includes(e.attendanceRecordId?.toString()) &&
+      (e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING)
+    );
+    if (exceptionsForFinalized.length > 0) {
+      inconsistencies.push({
+        type: 'FINALIZED_WITH_PENDING_EXCEPTIONS',
+        severity: 'ERROR',
+        count: exceptionsForFinalized.length,
+        description: 'Finalized attendance records have pending exceptions',
+        exceptionIds: exceptionsForFinalized.map((e: any) => e._id),
+      });
+    }
+
+    // Check 4: Duplicate attendance records for same employee/date
+    const employeeDateMap: Record<string, any[]> = {};
+    attendanceRecords.forEach((r: any) => {
+      const key = `${r.employeeId?.toString()}_${new Date(r.createdAt || r.date).toDateString()}`;
+      if (!employeeDateMap[key]) employeeDateMap[key] = [];
+      employeeDateMap[key].push(r);
+    });
+    
+    const duplicates = Object.entries(employeeDateMap)
+      .filter(([, records]) => records.length > 1);
+    if (duplicates.length > 0) {
+      inconsistencies.push({
+        type: 'DUPLICATE_ATTENDANCE_RECORDS',
+        severity: 'WARNING',
+        count: duplicates.length,
+        description: 'Multiple attendance records for same employee on same date',
+        details: duplicates.map(([key, records]) => ({
+          employeeDate: key,
+          recordCount: records.length,
+          recordIds: records.map((r: any) => r._id),
+        })),
+      });
+    }
+
+    const isConsistent = inconsistencies.filter(i => i.severity === 'ERROR').length === 0;
+
+    await this.logTimeManagementChange(
+      'CROSS_MODULE_CONSISTENCY_CHECK',
+      {
+        startDate,
+        endDate,
+        employeeId,
+        isConsistent,
+        inconsistencyCount: inconsistencies.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      period: { startDate, endDate },
+      employeeFilter: employeeId || 'ALL',
+      isConsistent,
+      summary: {
+        attendanceRecordsChecked: attendanceRecords.length,
+        exceptionsChecked: timeExceptions.length,
+        errorCount: inconsistencies.filter(i => i.severity === 'ERROR').length,
+        warningCount: inconsistencies.filter(i => i.severity === 'WARNING').length,
+      },
+      inconsistencies,
+      recommendations: isConsistent 
+        ? ['Data is consistent across modules'] 
+        : this.getConsistencyRecommendations(inconsistencies),
+      checkedAt: new Date(),
+      checkedBy: currentUserId,
+    };
+  }
+
+  /**
+   * Get data ready for all downstream modules
+   * BR-TM-22: Provide single source of truth for downstream systems
+   */
+  async getDataForDownstreamModules(
+    params: {
+      startDate: Date;
+      endDate: Date;
+      departmentId?: string;
+      modules: ('payroll' | 'leaves' | 'benefits')[];
+    },
+    currentUserId: string,
+  ) {
+    const { startDate, endDate, departmentId, modules } = params;
+    const startDateUTC = this.convertDateToUTCStart(startDate);
+    const endDateUTC = this.convertDateToUTCEnd(endDate);
+
+    // Get base attendance data
+    const attendanceQuery: any = {
+      createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+    };
+
+    const attendanceRecords = await this.attendanceRecordModel
+      .find(attendanceQuery)
+      .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
+      .exec();
+
+    // Filter by department
+    const filteredAttendance = departmentId
+      ? attendanceRecords.filter((r: any) => 
+          r.employeeId?.departmentId?.toString() === departmentId)
+      : attendanceRecords;
+
+    // Get exceptions
+    const exceptions = await this.timeExceptionModel
+      .find({
+        createdAt: { $gte: startDateUTC, $lte: endDateUTC },
+      })
+      .populate('employeeId', 'firstName lastName employeeNumber departmentId')
+      .exec();
+
+    const filteredExceptions = departmentId
+      ? exceptions.filter((e: any) => 
+          e.employeeId?.departmentId?.toString() === departmentId)
+      : exceptions;
+
+    // Build module-specific data packages
+    const dataPackages: Record<string, any> = {};
+
+    if (modules.includes('payroll')) {
+      dataPackages.payroll = this.buildPayrollDataPackage(filteredAttendance, filteredExceptions);
+    }
+
+    if (modules.includes('leaves')) {
+      dataPackages.leaves = this.buildLeavesDataPackage(filteredAttendance);
+    }
+
+    if (modules.includes('benefits')) {
+      dataPackages.benefits = this.buildBenefitsDataPackage(filteredAttendance, filteredExceptions);
+    }
+
+    await this.logTimeManagementChange(
+      'DOWNSTREAM_DATA_PACKAGE_GENERATED',
+      {
+        startDate,
+        endDate,
+        departmentId,
+        modules,
+        attendanceCount: filteredAttendance.length,
+        exceptionCount: filteredExceptions.length,
+      },
+      currentUserId,
+    );
+
+    return {
+      period: { startDate, endDate },
+      departmentFilter: departmentId || 'ALL',
+      modulesIncluded: modules,
+      baseDataSummary: {
+        attendanceRecords: filteredAttendance.length,
+        exceptions: filteredExceptions.length,
+        uniqueEmployees: [...new Set(
+          filteredAttendance.map((r: any) => r.employeeId?._id?.toString())
+        )].length,
+      },
+      dataPackages,
+      generatedAt: new Date(),
+      generatedBy: currentUserId,
+    };
+  }
+
+  // Helper methods for US20
+
+  private buildPayrollDataPackage(attendance: any[], exceptions: any[]): any {
+    const employeeData: Record<string, any> = {};
+
+    attendance.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || 'unknown';
+      if (!employeeData[empId]) {
+        employeeData[empId] = {
+          employeeId: empId,
+          employeeNumber: record.employeeId?.employeeNumber || 'N/A',
+          employeeName: record.employeeId 
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
+            : 'Unknown',
+          totalWorkMinutes: 0,
+          regularMinutes: 0,
+          overtimeMinutes: 0,
+          daysWorked: 0,
+          lateDays: 0,
+          missedPunches: 0,
+        };
+      }
+
+      const workMinutes = record.totalWorkMinutes || 0;
+      employeeData[empId].totalWorkMinutes += workMinutes;
+      employeeData[empId].regularMinutes += Math.min(workMinutes, 480);
+      employeeData[empId].overtimeMinutes += Math.max(0, workMinutes - 480);
+      employeeData[empId].daysWorked++;
+      if (record.isLate) employeeData[empId].lateDays++;
+      if (record.hasMissedPunch) employeeData[empId].missedPunches++;
+    });
+
+    // Convert to hours
+    Object.values(employeeData).forEach((data: any) => {
+      data.totalWorkHours = Math.round((data.totalWorkMinutes / 60) * 100) / 100;
+      data.regularHours = Math.round((data.regularMinutes / 60) * 100) / 100;
+      data.overtimeHours = Math.round((data.overtimeMinutes / 60) * 100) / 100;
+    });
+
+    return {
+      description: 'Payroll-ready attendance and overtime data',
+      employees: Object.values(employeeData),
+      totals: {
+        totalEmployees: Object.keys(employeeData).length,
+        totalWorkHours: Math.round(
+          Object.values(employeeData).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60 * 100
+        ) / 100,
+        totalOvertimeHours: Math.round(
+          Object.values(employeeData).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60 * 100
+        ) / 100,
+      },
+    };
+  }
+
+  private buildLeavesDataPackage(attendance: any[]): any {
+    const employeeData: Record<string, any> = {};
+
+    attendance.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || 'unknown';
+      if (!employeeData[empId]) {
+        employeeData[empId] = {
+          employeeId: empId,
+          employeeName: record.employeeId 
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
+            : 'Unknown',
+          presentDates: [] as string[],
+          daysPresent: 0,
+        };
+      }
+
+      const dateStr = new Date(record.createdAt || record.date).toISOString().split('T')[0];
+      if (!employeeData[empId].presentDates.includes(dateStr)) {
+        employeeData[empId].presentDates.push(dateStr);
+        employeeData[empId].daysPresent++;
+      }
+    });
+
+    return {
+      description: 'Attendance data for leave validation',
+      employees: Object.values(employeeData),
+      usage: 'Cross-reference presentDates against leave requests to validate absences',
+    };
+  }
+
+  private buildBenefitsDataPackage(attendance: any[], exceptions: any[]): any {
+    const employeeData: Record<string, any> = {};
+
+    attendance.forEach((record: any) => {
+      const empId = record.employeeId?._id?.toString() || 'unknown';
+      if (!employeeData[empId]) {
+        employeeData[empId] = {
+          employeeId: empId,
+          employeeName: record.employeeId 
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
+            : 'Unknown',
+          totalWorkHours: 0,
+          overtimeHours: 0,
+          daysWorked: 0,
+          perfectAttendanceDays: 0,
+        };
+      }
+
+      const workMinutes = record.totalWorkMinutes || 0;
+      employeeData[empId].totalWorkHours += Math.round((workMinutes / 60) * 100) / 100;
+      employeeData[empId].overtimeHours += Math.round((Math.max(0, workMinutes - 480) / 60) * 100) / 100;
+      employeeData[empId].daysWorked++;
+      if (!record.isLate && !record.earlyLeave && !record.hasMissedPunch) {
+        employeeData[empId].perfectAttendanceDays++;
+      }
+    });
+
+    return {
+      description: 'Attendance and overtime data for benefits calculations',
+      employees: Object.values(employeeData),
+      eligibilityCriteria: {
+        overtimeBonusEligible: Object.values(employeeData).filter((e: any) => e.overtimeHours > 0),
+        perfectAttendanceBonus: Object.values(employeeData).filter((e: any) => 
+          e.daysWorked > 0 && e.perfectAttendanceDays === e.daysWorked
+        ),
+      },
+    };
+  }
+
+  private getConsistencyRecommendations(inconsistencies: any[]): string[] {
+    const recommendations: string[] = [];
+
+    inconsistencies.forEach(inc => {
+      switch (inc.type) {
+        case 'NO_CLOCKIN_BUT_HAS_WORK_MINUTES':
+          recommendations.push('Review attendance records with work minutes but no clock-in time');
+          break;
+        case 'ORPHAN_OVERTIME_EXCEPTIONS':
+          recommendations.push('Link overtime exceptions to corresponding attendance records');
+          break;
+        case 'FINALIZED_WITH_PENDING_EXCEPTIONS':
+          recommendations.push('Resolve pending exceptions before keeping records finalized, or un-finalize records');
+          break;
+        case 'DUPLICATE_ATTENDANCE_RECORDS':
+          recommendations.push('Merge or remove duplicate attendance records for same employee/date');
+          break;
+      }
+    });
+
+    return recommendations;
   }
 
   private async logTimeManagementChange(

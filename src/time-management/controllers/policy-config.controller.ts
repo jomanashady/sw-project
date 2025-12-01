@@ -588,6 +588,204 @@ export class PolicyConfigController {
     return this.policyConfigService.deleteHoliday(id, user.userId);
   }
 
+  // ===== US17: HOLIDAY & REST DAY CONFIGURATION (BR-TM-19) =====
+
+  /**
+   * US17: Configure weekly rest days
+   * BR-TM-19: Weekly rest days must be linked to shift schedules
+   */
+  @Post('rest-days/configure')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async configureWeeklyRestDays(
+    @Body() body: {
+      restDays: number[];
+      effectiveFrom?: Date;
+      effectiveTo?: Date;
+      departmentId?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.configureWeeklyRestDays(
+      {
+        restDays: body.restDays,
+        effectiveFrom: body.effectiveFrom ? new Date(body.effectiveFrom) : undefined,
+        effectiveTo: body.effectiveTo ? new Date(body.effectiveTo) : undefined,
+        departmentId: body.departmentId,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US17: Check if a date is a rest day
+   * BR-TM-19: Rest day checking for penalty suppression
+   */
+  @Post('rest-days/check')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async checkRestDay(
+    @Body() body: {
+      date: Date;
+      restDays?: number[];
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.checkRestDay(
+      {
+        date: new Date(body.date),
+        restDays: body.restDays,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US17: Bulk create holidays
+   * BR-TM-19: Annual holiday calendar setup
+   */
+  @Post('holiday/bulk')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async bulkCreateHolidays(
+    @Body() body: {
+      holidays: Array<{
+        name: string;
+        type: string;
+        startDate: Date;
+        endDate?: Date;
+      }>;
+      year?: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.bulkCreateHolidays(
+      {
+        holidays: body.holidays.map(h => ({
+          ...h,
+          startDate: new Date(h.startDate),
+          endDate: h.endDate ? new Date(h.endDate) : undefined,
+        })),
+        year: body.year,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US17: Get holiday calendar
+   * BR-TM-19: View all holidays and rest days for planning
+   */
+  @Get('holiday/calendar')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async getHolidayCalendar(
+    @Query('year') year?: number,
+    @Query('month') month?: number,
+    @Query('includeRestDays') includeRestDays?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.policyConfigService.getHolidayCalendar(
+      {
+        year: year ? Number(year) : undefined,
+        month: month ? Number(month) : undefined,
+        includeRestDays: includeRestDays !== 'false',
+      },
+      user?.userId,
+    );
+  }
+
+  /**
+   * US17: Check penalty suppression for a date
+   * BR-TM-19: Comprehensive holiday/rest day check
+   */
+  @Post('penalty-suppression/check')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async checkPenaltySuppression(
+    @Body() body: {
+      employeeId: string;
+      date: Date;
+      restDays?: number[];
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.checkPenaltySuppression(
+      {
+        employeeId: body.employeeId,
+        date: new Date(body.date),
+        restDays: body.restDays,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US17: Link holidays to shift
+   * BR-TM-19: Holidays must be linked to shift schedules
+   */
+  @Post('holiday/link-to-shift')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async linkHolidaysToShift(
+    @Body() body: {
+      shiftId: string;
+      holidayIds: string[];
+      action: 'NO_WORK' | 'OPTIONAL' | 'OVERTIME_ELIGIBLE';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.linkHolidaysToShift(
+      {
+        shiftId: body.shiftId,
+        holidayIds: body.holidayIds,
+        action: body.action,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US17: Get employee holiday schedule
+   * BR-TM-19: Employee-specific holiday view
+   */
+  @Get('holiday/employee-schedule/:employeeId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getEmployeeHolidaySchedule(
+    @Param('employeeId') employeeId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.policyConfigService.getEmployeeHolidaySchedule(
+      {
+        employeeId,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      },
+      user.userId,
+    );
+  }
+
   // ===== HOLIDAY VALIDATION =====
   @Post('holiday/check')
   @Roles(
