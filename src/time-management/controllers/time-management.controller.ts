@@ -5,6 +5,7 @@ import {
   Put,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TimeManagementService } from '../services/time-management.service';
@@ -258,55 +259,6 @@ export class TimeManagementController {
     );
   }
 
-  @Get('attendance/corrections')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
-  async getAllCorrectionRequests(
-    @Body() getAllCorrectionsDto: GetAllCorrectionsDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.getAllCorrectionRequests(
-      getAllCorrectionsDto,
-      user.userId,
-    );
-  }
-
-  @Post('attendance/corrections/approve')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
-  async approveCorrectionRequest(
-    @Body() approveCorrectionRequestDto: ApproveCorrectionRequestDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.approveCorrectionRequest(
-      approveCorrectionRequestDto,
-      user.userId,
-    );
-  }
-
-  @Post('attendance/corrections/reject')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
-  async rejectCorrectionRequest(
-    @Body() rejectCorrectionRequestDto: RejectCorrectionRequestDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.rejectCorrectionRequest(
-      rejectCorrectionRequestDto,
-      user.userId,
-    );
-  }
-
   // ===== Attendance Punch Enhancements =====
   @Post('attendance/punch/metadata')
   @Roles(
@@ -390,6 +342,292 @@ export class TimeManagementController {
   ) {
     return this.timeManagementService.enforceShiftPunchPolicy(
       enforceShiftPunchPolicyDto,
+      user.userId,
+    );
+  }
+
+  // ===== US13: ATTENDANCE CORRECTION REQUESTS (BR-TM-15) =====
+
+  /**
+   * US13: Submit correction request for missing/incorrect punch
+   * BR-TM-15: Employees submit correction requests via ESS
+   */
+  @Post('correction-request')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+  )
+  async submitCorrectionRequest(
+    @Body()
+    body: {
+      employeeId: string;
+      attendanceRecord: string;
+      reason: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.submitAttendanceCorrectionRequest(
+      {
+        employeeId: body.employeeId,
+        attendanceRecord: body.attendanceRecord,
+        reason: body.reason,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Get correction requests by employee
+   * BR-TM-15: Track approval status of own requests
+   */
+  @Get('correction-request/employee/:employeeId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getCorrectionRequestsByEmployee(
+    @Param('employeeId') employeeId: string,
+    @Query('status') status?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getCorrectionRequestsByEmployee(
+      {
+        employeeId,
+        status,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Get correction request by ID
+   * BR-TM-15: View detailed request information
+   */
+  @Get('correction-request/:requestId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getCorrectionRequestById(
+    @Param('requestId') requestId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.getCorrectionRequestById(
+      requestId,
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Get all correction requests (for managers/admins)
+   * BR-TM-15: Managers review pending requests
+   */
+  @Get('correction-request')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getAllCorrectionRequests(
+    @Query('status') status?: string,
+    @Query('employeeId') employeeId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getAllCorrectionRequests(
+      { status, employeeId },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Get pending requests for manager approval
+   * BR-TM-15: Routed to Line Manager for approval
+   */
+  @Get('correction-request/pending/manager')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getPendingCorrectionRequestsForManager(
+    @Query('managerId') managerId?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getPendingCorrectionRequestsForManager(
+      {
+        managerId,
+        departmentId,
+        limit: limit ? Number(limit) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Mark correction request as in-review
+   * BR-TM-15: Workflow status transition
+   */
+  @Post('correction-request/:requestId/in-review')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async markCorrectionRequestInReview(
+    @Param('requestId') requestId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.markCorrectionRequestInReview(
+      requestId,
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Approve correction request
+   * BR-TM-15: Line Manager approves the request
+   */
+  @Post('correction-request/:requestId/approve')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async approveCorrectionRequest(
+    @Param('requestId') requestId: string,
+    @Body() body: { reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.approveCorrectionRequest(
+      {
+        correctionRequestId: requestId,
+        reason: body.reason,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Reject correction request
+   * BR-TM-15: Line Manager rejects with reason
+   */
+  @Post('correction-request/:requestId/reject')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async rejectCorrectionRequest(
+    @Param('requestId') requestId: string,
+    @Body() body: { reason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.rejectCorrectionRequest(
+      {
+        correctionRequestId: requestId,
+        reason: body.reason,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Escalate correction request
+   * BR-TM-15: Route to HR for approval
+   */
+  @Post('correction-request/:requestId/escalate')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async escalateCorrectionRequest(
+    @Param('requestId') requestId: string,
+    @Body()
+    body: {
+      escalateTo: 'LINE_MANAGER' | 'HR_ADMIN' | 'HR_MANAGER';
+      reason?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.escalateCorrectionRequest(
+      {
+        requestId,
+        escalateTo: body.escalateTo,
+        reason: body.reason,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Cancel/withdraw correction request
+   * BR-TM-15: Employee can withdraw pending request
+   */
+  @Post('correction-request/:requestId/cancel')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+  )
+  async cancelCorrectionRequest(
+    @Param('requestId') requestId: string,
+    @Body() body: { reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.cancelCorrectionRequest(
+      {
+        requestId,
+        reason: body.reason,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US13: Get correction request statistics
+   * BR-TM-15: Summary for HR/payroll reporting
+   */
+  @Get('correction-request/statistics')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async getCorrectionRequestStatistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('departmentId') departmentId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getCorrectionRequestStatistics(
+      {
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        departmentId,
+      },
       user.userId,
     );
   }
@@ -508,6 +746,367 @@ export class TimeManagementController {
     );
   }
 
+  // ===== US6 ENHANCEMENTS: Time Exception Management =====
+  // BR-TM-08: Exception types (MISSED_PUNCH, LATE, EARLY_LEAVE, SHORT_TIME, OVERTIME_REQUEST, MANUAL_ADJUSTMENT)
+  // BR-TM-09: Exception approval workflows (Open → Pending → Approved/Rejected/Escalated → Resolved)
+
+  // Get all time exceptions with filters
+  @Get('time-exceptions')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getAllTimeExceptions(
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('employeeId') employeeId?: string,
+    @Query('assignedTo') assignedTo?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getAllTimeExceptions(
+      {
+        status,
+        type,
+        employeeId,
+        assignedTo,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  // Get time exception by ID
+  @Get('time-exception/:id')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getTimeExceptionById(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.getTimeExceptionById(id, user.userId);
+  }
+
+  // Resolve time exception (mark as resolved after approval action is completed)
+  // BR-TM-09: Final status transition
+  @Post('time-exception/resolve')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async resolveTimeException(
+    @Body() body: { timeExceptionId: string; resolutionNotes?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.resolveTimeException(body, user.userId);
+  }
+
+  // Reassign time exception to a different handler
+  // BR-TM-09: Workflow reassignment
+  @Post('time-exception/reassign')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async reassignTimeException(
+    @Body() body: { timeExceptionId: string; newAssigneeId: string; reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.reassignTimeException(body, user.userId);
+  }
+
+  // Get exception statistics/summary
+  // BR-TM-08: Track all exception types
+  @Get('time-exceptions/statistics')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getTimeExceptionStatistics(
+    @Query('employeeId') employeeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getTimeExceptionStatistics(
+      {
+        employeeId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  // Bulk approve time exceptions
+  // BR-TM-09: Bulk operations for efficiency
+  @Post('time-exceptions/bulk-approve')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async bulkApproveTimeExceptions(
+    @Body() body: { exceptionIds: string[] },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.bulkApproveTimeExceptions(
+      body.exceptionIds,
+      user.userId,
+    );
+  }
+
+  // Bulk reject time exceptions
+  @Post('time-exceptions/bulk-reject')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async bulkRejectTimeExceptions(
+    @Body() body: { exceptionIds: string[]; reason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.bulkRejectTimeExceptions(body, user.userId);
+  }
+
+  // Get pending exceptions for a handler
+  // BR-TM-09: Workflow - handlers see their assigned exceptions
+  @Get('time-exceptions/my-pending')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getPendingExceptionsForHandler(@CurrentUser() user: any) {
+    return this.timeManagementService.getPendingExceptionsForHandler(
+      user.userId,
+      user.userId,
+    );
+  }
+
+  // Get escalated exceptions
+  // BR-TM-09 & BR-TM-15: View escalated exceptions requiring immediate attention
+  @Get('time-exceptions/escalated')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getEscalatedExceptions(@CurrentUser() user: any) {
+    return this.timeManagementService.getEscalatedExceptions(user.userId);
+  }
+
+  // ===== US14: TIME EXCEPTION APPROVAL WORKFLOW (BR-TM-01, BR-TM-19, BR-TM-20) =====
+
+  /**
+   * US14: Auto-escalate overdue exceptions
+   * BR-TM-20: Unreviewed employee requests must auto-escalate after a defined time
+   */
+  @Post('time-exceptions/auto-escalate-overdue')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async autoEscalateOverdueExceptions(
+    @Body() body: {
+      thresholdDays: number;
+      excludeTypes?: string[];
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.autoEscalateOverdueExceptions(
+      {
+        thresholdDays: body.thresholdDays,
+        excludeTypes: body.excludeTypes,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US14: Get overdue exceptions
+   * BR-TM-20: Identify requests needing escalation
+   */
+  @Get('time-exceptions/overdue')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getOverdueExceptions(
+    @Query('thresholdDays') thresholdDays: number,
+    @Query('status') status?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getOverdueExceptions(
+      {
+        thresholdDays: Number(thresholdDays),
+        status: status ? status.split(',') : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US14: Get approval workflow configuration
+   * BR-TM-01 & BR-TM-20: Escalation rules and thresholds
+   */
+  @Get('time-exceptions/workflow-config')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getApprovalWorkflowConfig(@CurrentUser() user: any) {
+    return this.timeManagementService.getApprovalWorkflowConfig(user.userId);
+  }
+
+  /**
+   * US14: Get approval workflow dashboard
+   * BR-TM-01: Line Managers and HR approve or reject time management permissions
+   */
+  @Get('time-exceptions/workflow-dashboard')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getApprovalWorkflowDashboard(
+    @Query('managerId') managerId?: string,
+    @Query('departmentId') departmentId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getApprovalWorkflowDashboard(
+      {
+        managerId,
+        departmentId,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US14: Set exception deadline
+   * BR-TM-20: Support deadline-based escalation
+   */
+  @Post('time-exception/set-deadline')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async setExceptionDeadline(
+    @Body() body: {
+      exceptionId: string;
+      deadlineDate: Date;
+      notifyBeforeDays?: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.setExceptionDeadline(
+      {
+        exceptionId: body.exceptionId,
+        deadlineDate: new Date(body.deadlineDate),
+        notifyBeforeDays: body.notifyBeforeDays,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US14: Get requests approaching deadline
+   * BR-TM-20: Identify requests needing action before deadline
+   */
+  @Get('time-exceptions/approaching-deadline')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async getRequestsApproachingDeadline(
+    @Query('withinDays') withinDays: number,
+    @Query('payrollCutoffDate') payrollCutoffDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getRequestsApproachingDeadline(
+      {
+        withinDays: Number(withinDays),
+        payrollCutoffDate: payrollCutoffDate ? new Date(payrollCutoffDate) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  // Auto-create lateness exception
+  // BR-TM-08 & BR-TM-17: Auto-detect lateness
+  @Post('time-exception/auto-lateness')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async autoCreateLatenessException(
+    @Body() body: {
+      employeeId: string;
+      attendanceRecordId: string;
+      assignedTo: string;
+      lateMinutes: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.autoCreateLatenessException(
+      body.employeeId,
+      body.attendanceRecordId,
+      body.assignedTo,
+      body.lateMinutes,
+      user.userId,
+    );
+  }
+
+  // Auto-create early leave exception
+  // BR-TM-08: Support EARLY_LEAVE exception type
+  @Post('time-exception/auto-early-leave')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async autoCreateEarlyLeaveException(
+    @Body() body: {
+      employeeId: string;
+      attendanceRecordId: string;
+      assignedTo: string;
+      earlyMinutes: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.autoCreateEarlyLeaveException(
+      body.employeeId,
+      body.attendanceRecordId,
+      body.assignedTo,
+      body.earlyMinutes,
+      user.userId,
+    );
+  }
+
   // ===== US4: Shift Expiry Notifications - Automatic Detection Methods =====
   // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
   
@@ -580,10 +1179,421 @@ export class TimeManagementController {
     );
   }
 
+  // ===== US12: REPEATED LATENESS HANDLING (BR-TM-09, BR-TM-16) =====
+
+  /**
+   * US12: Get detailed employee lateness history
+   * BR-TM-09: Track lateness for disciplinary purposes
+   */
+  @Get('lateness/history/:employeeId')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async getEmployeeLatenessHistory(
+    @Param('employeeId') employeeId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getEmployeeLatenessHistory(
+      {
+        employeeId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Flag employee for repeated lateness
+   * BR-TM-09: Create disciplinary flag for tracking
+   */
+  @Post('lateness/flag')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async flagEmployeeForRepeatedLateness(
+    @Body()
+    body: {
+      employeeId: string;
+      occurrenceCount: number;
+      periodDays: number;
+      severity: 'WARNING' | 'WRITTEN_WARNING' | 'FINAL_WARNING' | 'SUSPENSION';
+      notes?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.flagEmployeeForRepeatedLateness(
+      {
+        employeeId: body.employeeId,
+        occurrenceCount: body.occurrenceCount,
+        periodDays: body.periodDays,
+        severity: body.severity,
+        notes: body.notes,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Get all lateness disciplinary flags
+   * BR-TM-09: Retrieve flagged employees for HR review
+   */
+  @Get('lateness/flags')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getLatenesDisciplinaryFlags(
+    @Query('status') status?: 'PENDING' | 'RESOLVED' | 'ESCALATED',
+    @Query('severity') severity?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getLatenesDisciplinaryFlags(
+      {
+        status,
+        severity,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Analyze lateness patterns for an employee
+   * BR-TM-09: Pattern analysis for identifying systemic issues
+   */
+  @Get('lateness/patterns/:employeeId')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async analyzeLatenessPatterns(
+    @Param('employeeId') employeeId: string,
+    @Query('periodDays') periodDays?: number,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.analyzeLatenessPatterns(
+      {
+        employeeId,
+        periodDays: periodDays ? Number(periodDays) : undefined,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Get lateness trend report for department/organization
+   * BR-TM-09: Organizational-level lateness tracking
+   */
+  @Post('lateness/trend-report')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getLatenessTrendReport(
+    @Body()
+    body: {
+      departmentId?: string;
+      startDate: string;
+      endDate: string;
+      groupBy?: 'day' | 'week' | 'month';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.getLatenessTrendReport(
+      {
+        departmentId: body.departmentId,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        groupBy: body.groupBy,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Resolve/clear a disciplinary flag
+   * BR-TM-09: Mark flags as resolved after corrective action
+   */
+  @Post('lateness/flag/resolve')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async resolveDisciplinaryFlag(
+    @Body()
+    body: {
+      flagId: string;
+      resolution: 'RESOLVED' | 'ESCALATED' | 'DISMISSED';
+      resolutionNotes: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.resolveDisciplinaryFlag(
+      {
+        flagId: body.flagId,
+        resolution: body.resolution,
+        resolutionNotes: body.resolutionNotes,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US12: Get employees with repeated lateness exceeding thresholds
+   * BR-TM-09: Identify repeat offenders for HR review
+   */
+  @Get('lateness/offenders')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getRepeatedLatenessOffenders(
+    @Query('threshold') threshold: number,
+    @Query('periodDays') periodDays: number,
+    @Query('includeResolved') includeResolved?: boolean,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getRepeatedLatenessOffenders(
+      {
+        threshold: Number(threshold),
+        periodDays: Number(periodDays),
+        includeResolved: includeResolved === true,
+      },
+      user.userId,
+    );
+  }
+
   @Post('automation/schedule-backup')
   @Roles(SystemRole.SYSTEM_ADMIN)
   async scheduleTimeDataBackup(@CurrentUser() user: any) {
     return this.timeManagementService.scheduleTimeDataBackup(user.userId);
+  }
+
+  // ===== US7: OVERTIME MANAGEMENT =====
+  // BR-TM-13: Overtime calculation based on work hours exceeding standard hours
+  // BR-TM-14: Overtime approval workflow (request → approve/reject)
+  // BR-TM-18: Overtime rates and multipliers based on rules
+  // BR-TM-19: Overtime reporting and tracking
+
+  // Request overtime approval
+  @Post('overtime/request')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async requestOvertimeApproval(
+    @Body() body: {
+      employeeId: string;
+      attendanceRecordId: string;
+      requestedMinutes: number;
+      reason: string;
+      assignedTo: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check for employees
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      user.userId !== body.employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.timeManagementService.requestOvertimeApproval(body, user.userId);
+  }
+
+  // Calculate overtime from attendance record
+  @Post('overtime/calculate/:attendanceRecordId')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async calculateOvertimeFromAttendance(
+    @Param('attendanceRecordId') attendanceRecordId: string,
+    @Body() body: { standardWorkMinutes?: number },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.calculateOvertimeFromAttendance(
+      attendanceRecordId,
+      body.standardWorkMinutes || 480,
+      user.userId,
+    );
+  }
+
+  // Get employee overtime summary
+  @Get('overtime/summary/:employeeId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getEmployeeOvertimeSummary(
+    @Param('employeeId') employeeId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check for employees
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      !user.roles.includes(SystemRole.DEPARTMENT_HEAD) &&
+      user.userId !== employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.timeManagementService.getEmployeeOvertimeSummary(
+      employeeId,
+      new Date(startDate),
+      new Date(endDate),
+      user.userId,
+    );
+  }
+
+  // Get pending overtime requests
+  @Get('overtime/pending')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getPendingOvertimeRequests(
+    @Query('departmentId') departmentId?: string,
+    @Query('assignedTo') assignedTo?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getPendingOvertimeRequests(
+      { departmentId, assignedTo },
+      user.userId,
+    );
+  }
+
+  // Approve overtime request
+  @Post('overtime/approve/:id')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async approveOvertimeRequest(
+    @Param('id') id: string,
+    @Body() body: { approvalNotes?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.approveOvertimeRequest(
+      id,
+      body.approvalNotes,
+      user.userId,
+    );
+  }
+
+  // Reject overtime request
+  @Post('overtime/reject/:id')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async rejectOvertimeRequest(
+    @Param('id') id: string,
+    @Body() body: { rejectionReason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.rejectOvertimeRequest(
+      id,
+      body.rejectionReason,
+      user.userId,
+    );
+  }
+
+  // Auto-detect and create overtime exception
+  @Post('overtime/auto-detect/:attendanceRecordId')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async autoDetectAndCreateOvertimeException(
+    @Param('attendanceRecordId') attendanceRecordId: string,
+    @Body() body: { standardWorkMinutes?: number; assignedTo: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.autoDetectAndCreateOvertimeException(
+      attendanceRecordId,
+      body.standardWorkMinutes || 480,
+      body.assignedTo,
+      user.userId,
+    );
+  }
+
+  // Get overtime statistics
+  @Get('overtime/statistics')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getOvertimeStatistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('departmentId') departmentId?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.timeManagementService.getOvertimeStatistics(
+      {
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        departmentId,
+      },
+      user.userId,
+    );
+  }
+
+  // Bulk process overtime requests
+  @Post('overtime/bulk-process')
+  @Roles(
+    SystemRole.HR_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async bulkProcessOvertimeRequests(
+    @Body() body: { action: 'approve' | 'reject'; requestIds: string[]; notes: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.bulkProcessOvertimeRequests(
+      body.action,
+      body.requestIds,
+      body.notes,
+      user.userId,
+    );
   }
 
   // ===== REPORTING =====
@@ -651,6 +1661,174 @@ export class TimeManagementController {
   ) {
     return this.timeManagementService.exportReport(
       exportReportDto,
+      user.userId,
+    );
+  }
+
+  // ===== US15: TIME MANAGEMENT REPORTING & ANALYTICS (BR-TM-19, BR-TM-13, BR-TM-22) =====
+
+  /**
+   * US15: Generate comprehensive attendance summary report
+   * BR-TM-19: Time management reporting and tracking
+   */
+  @Post('reports/attendance-summary')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async generateAttendanceSummaryReport(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      groupBy?: 'day' | 'week' | 'month';
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.generateAttendanceSummaryReport(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeId: body.employeeId,
+        departmentId: body.departmentId,
+        groupBy: body.groupBy,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US15: Generate overtime cost analysis report
+   * BR-TM-13: Overtime calculation based on work hours
+   * BR-TM-19: Overtime reporting and tracking
+   */
+  @Post('reports/overtime-cost-analysis')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async generateOvertimeCostAnalysis(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeId?: string;
+      departmentId?: string;
+      hourlyRate?: number;
+      overtimeMultiplier?: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.generateOvertimeCostAnalysis(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeId: body.employeeId,
+        departmentId: body.departmentId,
+        hourlyRate: body.hourlyRate,
+        overtimeMultiplier: body.overtimeMultiplier,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US15: Generate payroll-ready attendance data
+   * BR-TM-22: All time management data must sync with payroll
+   */
+  @Post('reports/payroll-ready')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async generatePayrollReadyReport(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      employeeIds?: string[];
+      departmentId?: string;
+      includeExceptions?: boolean;
+      includePenalties?: boolean;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.generatePayrollReadyReport(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        employeeIds: body.employeeIds,
+        departmentId: body.departmentId,
+        includeExceptions: body.includeExceptions,
+        includePenalties: body.includePenalties,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US15: Generate disciplinary summary report
+   * BR-TM-16: Repeated offenses trigger auto-escalation
+   * BR-TM-09: Track for disciplinary purposes
+   */
+  @Post('reports/disciplinary-summary')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async generateDisciplinarySummaryReport(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      departmentId?: string;
+      severityFilter?: string[];
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.generateDisciplinarySummaryReport(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        departmentId: body.departmentId,
+        severityFilter: body.severityFilter,
+      },
+      user.userId,
+    );
+  }
+
+  /**
+   * US15: Get time management analytics dashboard
+   * BR-TM-19: Time management reporting and tracking
+   */
+  @Post('reports/analytics-dashboard')
+  @Roles(
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.PAYROLL_SPECIALIST,
+  )
+  async getTimeManagementAnalyticsDashboard(
+    @Body() body: {
+      startDate: Date;
+      endDate: Date;
+      departmentId?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.getTimeManagementAnalyticsDashboard(
+      {
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        departmentId: body.departmentId,
+      },
       user.userId,
     );
   }
