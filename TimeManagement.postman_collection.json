@@ -7,7 +7,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:6000"
+			"value": "http://localhost:6000/api/v1"
 		},
 		{
 			"key": "accessToken",
@@ -15,7 +15,7 @@
 		},
 		{
 			"key": "employeeId",
-			"value": "employee-id-here"
+			"value": "000000000000000000000001"
 		},
 		{
 			"key": "attendanceId",
@@ -28,6 +28,34 @@
 		{
 			"key": "shiftTypeId",
 			"value": "shift-type-id-here"
+		},
+		{
+			"key": "shiftAssignmentId",
+			"value": "shift-assignment-id-here"
+		},
+		{
+			"key": "pendingAssignmentId",
+			"value": "pending-assignment-id-here"
+		},
+		{
+			"key": "ongoingAssignmentId",
+			"value": "ongoing-assignment-id-here"
+		},
+		{
+			"key": "deptAssignmentId",
+			"value": "dept-assignment-id-here"
+		},
+		{
+			"key": "posAssignmentId",
+			"value": "pos-assignment-id-here"
+		},
+		{
+			"key": "departmentId",
+			"value": "000000000000000000000002"
+		},
+		{
+			"key": "positionId",
+			"value": "000000000000000000000003"
 		},
 		{
 			"key": "overtimeRuleId",
@@ -699,6 +727,928 @@
 			]
 		},
 		{
+			"name": "US1 - Shift Assignment Management (Full Test Suite)",
+			"description": "Complete test cases for Requirement 1: Shift Assignment Management. Run these in order for automatic ID population.",
+			"item": [
+				{
+					"name": "Setup",
+					"item": [
+						{
+							"name": "1.1 Create Shift Type (Morning)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Response has _id', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id).to.be.a('string');",
+											"    pm.collectionVariables.set('shiftTypeId', jsonData._id);",
+											"    console.log('Saved shiftTypeId:', jsonData._id);",
+											"});",
+											"",
+											"pm.test('Shift type name is correct', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.name).to.eql('Morning Shift');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Morning Shift\",\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/type",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "type"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "1.2 Create Shift (Day Shift 9-5)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Response has _id', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id).to.be.a('string');",
+											"    pm.collectionVariables.set('shiftId', jsonData._id);",
+											"    console.log('Saved shiftId:', jsonData._id);",
+											"});",
+											"",
+											"pm.test('Shift has correct start/end times', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.startTime).to.eql('09:00');",
+											"    pm.expect(jsonData.endTime).to.eql('17:00');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Day Shift 9-5\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"17:00\",\n  \"punchPolicy\": \"FIRST_LAST\",\n  \"graceInMinutes\": 15,\n  \"graceOutMinutes\": 10,\n  \"requiresApprovalForOvertime\": true,\n  \"active\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "BR-TM-01: Assign Shifts to Employee/Department/Position",
+					"item": [
+						{
+							"name": "2.1 Assign Shift to Employee - APPROVED",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Response has _id', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id).to.be.a('string');",
+											"    pm.collectionVariables.set('shiftAssignmentId', jsonData._id);",
+											"    console.log('Saved shiftAssignmentId:', jsonData._id);",
+											"});",
+											"",
+											"pm.test('Assignment status is APPROVED', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.eql('APPROVED');",
+											"});",
+											"",
+											"pm.test('Assignment has start and end dates', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.startDate).to.be.a('string');",
+											"    pm.expect(jsonData.endDate).to.be.a('string');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "2.2 Assign Shift to Employee - PENDING",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Assignment status is PENDING', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.eql('PENDING');",
+											"});",
+											"",
+											"// Save for later tests",
+											"pm.collectionVariables.set('pendingAssignmentId', pm.response.json()._id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2026-01-01T00:00:00.000Z\",\n  \"endDate\": \"2026-01-31T23:59:59.000Z\",\n  \"status\": \"PENDING\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "2.3 Assign Shift to Department",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Assignment has departmentId', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.departmentId).to.be.a('string');",
+											"});",
+											"",
+											"pm.collectionVariables.set('deptAssignmentId', pm.response.json()._id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign/department",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign", "department"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "2.4 Assign Shift to Position",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Assignment has positionId', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.positionId).to.be.a('string');",
+											"});",
+											"",
+											"pm.collectionVariables.set('posAssignmentId', pm.response.json()._id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"positionId\": \"{{positionId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign/position",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign", "position"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "BR-TM-02: Start/End Dates (null = ongoing)",
+					"item": [
+						{
+							"name": "3.1 Assign Shift with NO End Date (Ongoing)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('EndDate is null (ongoing assignment)', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.endDate).to.be.oneOf([null, undefined]);",
+											"});",
+											"",
+											"pm.collectionVariables.set('ongoingAssignmentId', pm.response.json()._id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"status\": \"APPROVED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "3.2 Verify Assignment Has StartDate",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Assignment has valid startDate', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.startDate).to.be.a('string');",
+											"    pm.expect(new Date(jsonData.startDate)).to.be.a('date');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Query Assignments",
+					"item": [
+						{
+							"name": "4.1 Get All Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response is an array', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.2 Filter by Status APPROVED",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('All assignments have APPROVED status', function () {",
+											"    var jsonData = pm.response.json();",
+											"    jsonData.forEach(function(assignment) {",
+											"        pm.expect(assignment.status).to.eql('APPROVED');",
+											"    });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=APPROVED",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [{"key": "status", "value": "APPROVED"}]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.3 Filter by Status PENDING",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('All assignments have PENDING status', function () {",
+											"    var jsonData = pm.response.json();",
+											"    jsonData.forEach(function(assignment) {",
+											"        pm.expect(assignment.status).to.eql('PENDING');",
+											"    });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=PENDING",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [{"key": "status", "value": "PENDING"}]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.4 Get Employee Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response is an array', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments/employee/{{employeeId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments", "employee", "{{employeeId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.5 Get Department Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response is an array', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments/department/{{departmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments", "department", "{{departmentId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.6 Get Position Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response is an array', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments/position/{{positionId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments", "position", "{{positionId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.7 Get Assignment by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response has assignment details', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData._id).to.be.a('string');",
+											"    pm.expect(jsonData.shiftId).to.exist;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4.8 Get Assignment Status",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response has status info', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.be.oneOf(['PENDING', 'APPROVED', 'CANCELLED', 'EXPIRED']);",
+											"    pm.expect(jsonData.assignmentId).to.be.a('string');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}/status",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}", "status"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Modify Assignments",
+					"item": [
+						{
+							"name": "5.1 Update Assignment (Extend End Date)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('End date is updated', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.endDate).to.include('2026-01-31');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"APPROVED\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2026-01-31T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "5.2 Renew Assignment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200 or 201', function () {",
+											"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+											"});",
+											"",
+											"pm.test('New end date is set', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.endDate).to.include('2026-03-31');",
+											"});",
+											"",
+											"pm.test('Status is APPROVED after renewal', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.eql('APPROVED');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"newEndDate\": \"2026-03-31T23:59:59.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/renew",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "renew"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "5.3 Postpone Assignment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200 or 201', function () {",
+											"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+											"});",
+											"",
+											"pm.test('Start date is postponed', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.startDate).to.include('2026-02-01');",
+											"});",
+											"",
+											"pm.test('Status is PENDING after postpone', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.eql('PENDING');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{pendingAssignmentId}}\",\n  \"postponeUntil\": \"2026-02-01T00:00:00.000Z\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/postpone",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "postpone"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "5.4 Cancel Assignment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200 or 201', function () {",
+											"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+											"});",
+											"",
+											"pm.test('Status is CANCELLED', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.status).to.eql('CANCELLED');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"{{pendingAssignmentId}}\",\n  \"reason\": \"Employee transferred\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/cancel",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "cancel"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "BR-TM-07: Expired Assignments",
+					"item": [
+						{
+							"name": "6.1 Check & Mark Expired Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200 or 201', function () {",
+											"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+											"});",
+											"",
+											"pm.test('Response has modifiedCount', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.modifiedCount).to.be.a('number');",
+											"});",
+											"",
+											"pm.test('Response has success message', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.message).to.include('Expired');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments/check-expired",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments", "check-expired"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "6.2 Filter Expired Assignments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('All returned have EXPIRED status', function () {",
+											"    var jsonData = pm.response.json();",
+											"    jsonData.forEach(function(assignment) {",
+											"        pm.expect(assignment.status).to.eql('EXPIRED');",
+											"    });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=EXPIRED",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignments"],
+									"query": [{"key": "status", "value": "EXPIRED"}]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Error Cases",
+					"item": [
+						{
+							"name": "7.1 Assign with Invalid ShiftId - 404",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 404', function () {",
+											"    pm.response.to.have.status(404);",
+											"});",
+											"",
+											"pm.test('Error message mentions shift not found', function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.message.toLowerCase()).to.include('not found');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"shiftId\": \"000000000000000000000000\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"APPROVED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assign",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assign"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "7.2 Get Non-existent Assignment - 404",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 404', function () {",
+											"    pm.response.to.have.status(404);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/000000000000000000000000",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "000000000000000000000000"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "7.3 Cancel Non-existent Assignment - 404",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 404', function () {",
+											"    pm.response.to.have.status(404);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Content-Type", "value": "application/json"}],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"assignmentId\": \"000000000000000000000000\",\n  \"reason\": \"Test\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/shift-schedule/shift/assignment/cancel",
+									"host": ["{{baseUrl}}"],
+									"path": ["shift-schedule", "shift", "assignment", "cancel"]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "Shift Schedule",
 			"item": [
 				{
@@ -719,6 +1669,70 @@
 							"raw": "{{baseUrl}}/shift-schedule/shift/type",
 							"host": ["{{baseUrl}}"],
 							"path": ["shift-schedule", "shift", "type"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Shift Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/types?active=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "types"],
+							"query": [
+								{"key": "active", "value": "true"}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shift Type by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/type/{{shiftTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "type", "{{shiftTypeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift Type",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Morning Shift\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/type/{{shiftTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "type", "{{shiftTypeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Shift Type",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/type/{{shiftTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "type", "{{shiftTypeId}}"]
 						}
 					},
 					"response": []
@@ -746,6 +1760,48 @@
 					"response": []
 				},
 				{
+					"name": "Get All Shifts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shifts?active=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shifts"],
+							"query": [
+								{"key": "active", "value": "true"}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shift by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "{{shiftId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shifts by Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shifts/type/{{shiftTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shifts", "type", "{{shiftTypeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Update Shift",
 					"request": {
 						"method": "PUT",
@@ -759,6 +1815,19 @@
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"Updated Day Shift\",\n  \"shiftType\": \"{{shiftTypeId}}\",\n  \"startTime\": \"08:30\",\n  \"endTime\": \"17:30\",\n  \"punchPolicy\": \"MULTIPLE\",\n  \"graceInMinutes\": 10,\n  \"graceOutMinutes\": 15,\n  \"requiresApprovalForOvertime\": false,\n  \"active\": true\n}"
 						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "{{shiftId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Shift",
+					"request": {
+						"method": "DELETE",
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/shift-schedule/shift/{{shiftId}}",
 							"host": ["{{baseUrl}}"],
@@ -829,6 +1898,232 @@
 							"raw": "{{baseUrl}}/shift-schedule/schedule/flexible",
 							"host": ["{{baseUrl}}"],
 							"path": ["shift-schedule", "schedule", "flexible"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Shift to Department",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assign/department",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assign", "department"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Shift to Position",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"positionId\": \"{{positionId}}\",\n  \"shiftId\": \"{{shiftId}}\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assign/position",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assign", "position"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Shift Assignments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignments?status=APPROVED",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignments"],
+							"query": [
+								{"key": "status", "value": "APPROVED"}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shift Assignment by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Employee Shift Assignments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignments/employee/{{employeeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignments", "employee", "{{employeeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Department Shift Assignments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignments/department/{{departmentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignments", "department", "{{departmentId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Position Shift Assignments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignments/position/{{positionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignments", "position", "{{positionId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shift Assignment Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shift Assignment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\",\n  \"startDate\": \"2025-12-01T00:00:00.000Z\",\n  \"endDate\": \"2026-01-31T23:59:59.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/{{shiftAssignmentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "{{shiftAssignmentId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Renew Shift Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"newEndDate\": \"2026-03-31T23:59:59.000Z\",\n  \"note\": \"Extended due to contract renewal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/renew",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "renew"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Shift Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"reason\": \"Employee transferred to different department\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/cancel",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "cancel"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Postpone Shift Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"assignmentId\": \"{{shiftAssignmentId}}\",\n  \"postponeUntil\": \"2026-01-15T00:00:00.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignment/postpone",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignment", "postpone"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Expired Assignments",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/shift-schedule/shift/assignments/check-expired",
+							"host": ["{{baseUrl}}"],
+							"path": ["shift-schedule", "shift", "assignments", "check-expired"]
 						}
 					},
 					"response": []

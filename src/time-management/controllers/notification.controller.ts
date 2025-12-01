@@ -162,4 +162,115 @@ export class NotificationAndSyncController {
       user.userId,
     );
   }
+
+  // ===== US4: SHIFT EXPIRY NOTIFICATIONS =====
+  // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
+
+  @Post('shift-expiry/notify')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async sendShiftExpiryNotification(
+    @Body() body: {
+      recipientId: string;
+      shiftAssignmentId: string;
+      employeeId: string;
+      endDate: Date;
+      daysRemaining: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendShiftExpiryNotification(
+      body.recipientId,
+      body.shiftAssignmentId,
+      body.employeeId,
+      new Date(body.endDate),
+      body.daysRemaining,
+      user.userId,
+    );
+  }
+
+  @Post('shift-expiry/notify-bulk')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async sendBulkShiftExpiryNotifications(
+    @Body() body: {
+      hrAdminIds: string[];
+      expiringAssignments: Array<{
+        assignmentId: string;
+        employeeId: string;
+        employeeName?: string;
+        shiftName?: string;
+        endDate: Date;
+        daysRemaining: number;
+      }>;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendBulkShiftExpiryNotifications(
+      body.hrAdminIds,
+      body.expiringAssignments.map(a => ({
+        ...a,
+        endDate: new Date(a.endDate),
+      })),
+      user.userId,
+    );
+  }
+
+  @Get('shift-expiry/:hrAdminId')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+  async getShiftExpiryNotifications(
+    @Param('hrAdminId') hrAdminId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.getShiftExpiryNotifications(
+      hrAdminId,
+      user.userId,
+    );
+  }
+
+  @Post('shift-renewal/confirm')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+  async sendShiftRenewalConfirmation(
+    @Body() body: {
+      recipientId: string;
+      shiftAssignmentId: string;
+      newEndDate: Date;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendShiftRenewalConfirmation(
+      body.recipientId,
+      body.shiftAssignmentId,
+      new Date(body.newEndDate),
+      user.userId,
+    );
+  }
+
+  @Post('shift-archive/notify')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async sendShiftArchiveNotification(
+    @Body() body: {
+      recipientId: string;
+      shiftAssignmentId: string;
+      employeeId: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.sendShiftArchiveNotification(
+      body.recipientId,
+      body.shiftAssignmentId,
+      body.employeeId,
+      user.userId,
+    );
+  }
+
+  @Get('shift-notifications/:hrAdminId')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
+  async getAllShiftNotifications(
+    @Param('hrAdminId') hrAdminId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.notificationService.getAllShiftNotifications(
+      hrAdminId,
+      user.userId,
+    );
+  }
 }

@@ -48,9 +48,17 @@ export class TimeManagementService {
     private shiftAssignmentModel: Model<ShiftAssignment>,
   ) {}
 
-  // ===== ATTENDANCE SERVICE METHODS =====
+  // ===== US5: CLOCK-IN/OUT ATTENDANCE SERVICE METHODS =====
+  // BR-TM-06: Time-in/out captured via Biometric, Web Login, Mobile App, or Manual Input (with audit trail)
+  // BR-TM-07: Attendance data must follow HR rounding rules
+  // BR-TM-11: Allow multiple punches per day, or first in/last out
+  // BR-TM-12: Clock-ins must be tagged with location, terminal ID, or device
 
-  // 1. Clock in with employee ID
+  /**
+   * Clock in with employee ID
+   * BR-TM-06: Creates audit trail for clock-in
+   * BR-TM-12: Tags with source type (defaults to manual)
+   */
   async clockInWithID(employeeId: string, currentUserId: string) {
     const now = new Date();
 
@@ -70,10 +78,28 @@ export class TimeManagementService {
       updatedBy: currentUserId,
     });
 
-    return attendanceRecord.save();
+    const saved = await attendanceRecord.save();
+    
+    // BR-TM-06: Log audit trail
+    await this.logAttendanceChange(
+      employeeId,
+      'CLOCK_IN',
+      {
+        attendanceRecordId: saved._id,
+        source: 'ID_CARD',
+        timestamp: now.toISOString(),
+      },
+      currentUserId,
+    );
+
+    return saved;
   }
 
-  // 1b. Clock out with employee ID
+  /**
+   * Clock out with employee ID
+   * BR-TM-06: Creates audit trail for clock-out
+   * BR-TM-07: Calculates total work minutes
+   */
   async clockOutWithID(employeeId: string, currentUserId: string) {
     const now = new Date();
 
@@ -112,6 +138,152 @@ export class TimeManagementService {
       time: now,
     });
 
+    // BR-TM-07: Calculate total work minutes
+    let totalMinutes = 0;
+    for (let i = 0; i < attendanceRecord.punches.length; i += 2) {
+      if (i + 1 < attendanceRecord.punches.length) {
+        const inTime = attendanceRecord.punches[i].time.getTime();
+        const outTime = attendanceRecord.punches[i + 1].time.getTime();
+        totalMinutes += (outTime - inTime) / 60000;
+      }
+    }
+    attendanceRecord.totalWorkMinutes = totalMinutes;
+    attendanceRecord.updatedBy = currentUserId;
+
+    const saved = await attendanceRecord.save();
+
+    // BR-TM-06: Log audit trail
+    await this.logAttendanceChange(
+      employeeId,
+      'CLOCK_OUT',
+      {
+        attendanceRecordId: saved._id,
+        source: 'ID_CARD',
+        totalWorkMinutes: totalMinutes,
+        timestamp: now.toISOString(),
+      },
+      currentUserId,
+    );
+
+    return saved;
+  }
+
+  /**
+   * Enhanced clock-in with full metadata
+   * BR-TM-06: Captures source type (BIOMETRIC, WEB, MOBILE, MANUAL)
+   * BR-TM-12: Tags with location, terminal ID, device
+   */
+  async clockInWithMetadata(
+    employeeId: string,
+    metadata: {
+      source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
+      deviceId?: string;
+      terminalId?: string;
+      location?: string;
+      gpsCoordinates?: { lat: number; lng: number };
+      ipAddress?: string;
+    },
+    currentUserId: string,
+  ) {
+    const now = new Date();
+
+    // Create attendance record with metadata
+    const attendanceRecord = new this.attendanceRecordModel({
+      employeeId,
+      punches: [
+        {
+          type: PunchType.IN,
+          time: now,
+        },
+      ],
+      totalWorkMinutes: 0,
+      hasMissedPunch: false,
+      finalisedForPayroll: false,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+
+    const saved = await attendanceRecord.save();
+
+    // BR-TM-06 & BR-TM-12: Log comprehensive audit trail
+    await this.logAttendanceChange(
+      employeeId,
+      'CLOCK_IN_WITH_METADATA',
+      {
+        attendanceRecordId: saved._id,
+        source: metadata.source,
+        deviceId: metadata.deviceId,
+        terminalId: metadata.terminalId,
+        location: metadata.location,
+        gpsCoordinates: metadata.gpsCoordinates,
+        ipAddress: metadata.ipAddress,
+        timestamp: now.toISOString(),
+      },
+      currentUserId,
+    );
+
+    return {
+      attendanceRecord: saved,
+      metadata: {
+        source: metadata.source,
+        deviceId: metadata.deviceId,
+        terminalId: metadata.terminalId,
+        location: metadata.location,
+        capturedAt: now,
+      },
+    };
+  }
+
+  /**
+   * Enhanced clock-out with full metadata
+   * BR-TM-06: Captures source type with audit trail
+   * BR-TM-12: Tags with location, terminal ID, device
+   */
+  async clockOutWithMetadata(
+    employeeId: string,
+    metadata: {
+      source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
+      deviceId?: string;
+      terminalId?: string;
+      location?: string;
+      gpsCoordinates?: { lat: number; lng: number };
+      ipAddress?: string;
+    },
+    currentUserId: string,
+  ) {
+    const now = new Date();
+
+    // Find active clock-in
+    const attendanceRecords = await this.attendanceRecordModel
+      .find({ employeeId })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      throw new Error('No attendance record found. Please clock in first.');
+    }
+
+    let attendanceRecord: any = null;
+    for (const record of attendanceRecords) {
+      if (record.punches && record.punches.length > 0) {
+        const lastPunch = record.punches[record.punches.length - 1];
+        if (lastPunch.type === PunchType.IN) {
+          attendanceRecord = record;
+          break;
+        }
+      }
+    }
+
+    if (!attendanceRecord) {
+      throw new Error('No active clock-in found. Please clock in first.');
+    }
+
+    // Add clock-out punch
+    attendanceRecord.punches.push({
+      type: PunchType.OUT,
+      time: now,
+    });
+
     // Calculate total work minutes
     let totalMinutes = 0;
     for (let i = 0; i < attendanceRecord.punches.length; i += 2) {
@@ -124,7 +296,176 @@ export class TimeManagementService {
     attendanceRecord.totalWorkMinutes = totalMinutes;
     attendanceRecord.updatedBy = currentUserId;
 
-    return attendanceRecord.save();
+    const saved = await attendanceRecord.save();
+
+    // BR-TM-06 & BR-TM-12: Log comprehensive audit trail
+    await this.logAttendanceChange(
+      employeeId,
+      'CLOCK_OUT_WITH_METADATA',
+      {
+        attendanceRecordId: saved._id,
+        source: metadata.source,
+        deviceId: metadata.deviceId,
+        terminalId: metadata.terminalId,
+        location: metadata.location,
+        gpsCoordinates: metadata.gpsCoordinates,
+        ipAddress: metadata.ipAddress,
+        totalWorkMinutes: totalMinutes,
+        timestamp: now.toISOString(),
+      },
+      currentUserId,
+    );
+
+    return {
+      attendanceRecord: saved,
+      metadata: {
+        source: metadata.source,
+        deviceId: metadata.deviceId,
+        terminalId: metadata.terminalId,
+        location: metadata.location,
+        capturedAt: now,
+      },
+      totalWorkMinutes: totalMinutes,
+      totalWorkHours: Math.round((totalMinutes / 60) * 100) / 100,
+    };
+  }
+
+  /**
+   * Validate clock-in against assigned shift and rest days
+   * US5 Flow: Clocks in/out using ID validating against assigned shifts and rest days
+   */
+  async validateClockInAgainstShift(
+    employeeId: string,
+    currentUserId: string,
+  ) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Find active shift assignments for this employee
+    const shiftAssignments = await this.shiftAssignmentModel
+      .find({
+        employeeId,
+        status: 'APPROVED',
+        startDate: { $lte: today },
+        $or: [
+          { endDate: { $gte: today } },
+          { endDate: null }, // Ongoing assignments
+        ],
+      })
+      .populate('shiftId')
+      .exec();
+
+    if (shiftAssignments.length === 0) {
+      return {
+        isValid: false,
+        message: 'No active shift assignment found for today',
+        allowClockIn: true, // Still allow, but flag it
+        warning: 'Employee has no assigned shift for today',
+      };
+    }
+
+    const assignment = shiftAssignments[0] as any;
+    const shift = assignment.shiftId;
+
+    if (!shift) {
+      return {
+        isValid: false,
+        message: 'Shift details not found',
+        allowClockIn: true,
+        warning: 'Shift information is missing',
+      };
+    }
+
+    // Parse shift times
+    const shiftStartMinutes = this.timeStringToMinutes(shift.startTime);
+    const shiftEndMinutes = this.timeStringToMinutes(shift.endTime);
+    const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+
+    // Check if within grace period (allow early/late based on shift config)
+    const graceIn = shift.graceInMinutes || 0;
+    const graceOut = shift.graceOutMinutes || 0;
+
+    const isWithinStartWindow = 
+      currentMinutes >= (shiftStartMinutes - 30) && // 30 min early allowed
+      currentMinutes <= (shiftStartMinutes + graceIn);
+
+    const isLate = currentMinutes > (shiftStartMinutes + graceIn);
+
+    return {
+      isValid: true,
+      shiftName: shift.name,
+      shiftStart: shift.startTime,
+      shiftEnd: shift.endTime,
+      currentTime: `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`,
+      isWithinStartWindow,
+      isLate,
+      lateByMinutes: isLate ? currentMinutes - shiftStartMinutes - graceIn : 0,
+      graceInMinutes: graceIn,
+      graceOutMinutes: graceOut,
+      allowClockIn: true,
+      message: isLate 
+        ? `Late clock-in. You are ${currentMinutes - shiftStartMinutes - graceIn} minutes late.`
+        : 'Clock-in validated successfully',
+    };
+  }
+
+  /**
+   * Get employee's attendance status for today
+   * Returns current clock-in/out status and work summary
+   */
+  async getEmployeeAttendanceStatus(employeeId: string, currentUserId: string) {
+    const now = new Date();
+    const todayStart = this.convertDateToUTCStart(now);
+    const todayEnd = this.convertDateToUTCEnd(now);
+
+    // Find today's attendance records
+    const todayRecords = await this.attendanceRecordModel
+      .find({
+        employeeId,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (todayRecords.length === 0) {
+      return {
+        status: 'NOT_CLOCKED_IN',
+        message: 'No attendance record for today',
+        records: [],
+      };
+    }
+
+    const latestRecord = todayRecords[0];
+    const lastPunch = latestRecord.punches[latestRecord.punches.length - 1];
+    const isClockedIn = lastPunch?.type === PunchType.IN;
+
+    // Calculate total work time today
+    let totalMinutesToday = 0;
+    for (const record of todayRecords) {
+      totalMinutesToday += record.totalWorkMinutes || 0;
+    }
+
+    // If currently clocked in, add time since last punch
+    if (isClockedIn && lastPunch) {
+      const minutesSinceLastPunch = (now.getTime() - lastPunch.time.getTime()) / 60000;
+      totalMinutesToday += minutesSinceLastPunch;
+    }
+
+    return {
+      status: isClockedIn ? 'CLOCKED_IN' : 'CLOCKED_OUT',
+      lastPunchTime: lastPunch?.time,
+      lastPunchType: lastPunch?.type,
+      totalMinutesToday: Math.round(totalMinutesToday),
+      totalHoursToday: Math.round((totalMinutesToday / 60) * 100) / 100,
+      recordCount: todayRecords.length,
+      punchCount: todayRecords.reduce((sum, r) => sum + r.punches.length, 0),
+      records: todayRecords.map(r => ({
+        id: r._id,
+        punches: r.punches,
+        totalWorkMinutes: r.totalWorkMinutes,
+        hasMissedPunch: r.hasMissedPunch,
+      })),
+    };
   }
 
   // 2. Create a new attendance record
@@ -561,9 +902,13 @@ export class TimeManagementService {
     return { message: 'Time management backup scheduled.' };
   }
 
-  // ===== AUTOMATIC DETECTION METHODS =====
+  // ===== US4: AUTOMATIC DETECTION METHODS FOR SHIFT EXPIRY =====
+  // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
 
-  // Check for expiring shift assignments and send notifications
+  /**
+   * Check for expiring shift assignments and return detailed info for notifications
+   * This method is used by HR Admins to identify shifts needing renewal or reassignment
+   */
   async checkExpiringShiftAssignments(
     daysBeforeExpiry: number = 7,
     currentUserId: string,
@@ -580,22 +925,114 @@ export class TimeManagementService {
         endDate: { $lte: expiryDateUTC, $gte: nowUTC },
         status: 'APPROVED',
       })
-      .populate('employeeId')
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .populate('shiftId', 'name startTime endTime')
+      .populate('departmentId', 'name')
+      .populate('positionId', 'name')
       .exec();
 
-    const expiring = expiringAssignments.map((assignment) => ({
-      employeeId: assignment.employeeId?._id?.toString() || '',
-      shiftId: assignment._id,
-      endDate: assignment.endDate,
-    }));
+    // Calculate days remaining for each assignment
+    const expiring = expiringAssignments.map((assignment: any) => {
+      const endDate = assignment.endDate ? new Date(assignment.endDate) : null;
+      const daysRemaining = endDate 
+        ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      
+      return {
+        assignmentId: assignment._id?.toString() || '',
+        employeeId: assignment.employeeId?._id?.toString() || '',
+        employeeName: assignment.employeeId 
+          ? `${assignment.employeeId.firstName || ''} ${assignment.employeeId.lastName || ''}`.trim()
+          : 'Unknown',
+        employeeEmail: assignment.employeeId?.email || '',
+        employeeNumber: assignment.employeeId?.employeeNumber || '',
+        shiftId: assignment.shiftId?._id?.toString() || '',
+        shiftName: assignment.shiftId?.name || 'Unknown Shift',
+        shiftTimes: assignment.shiftId 
+          ? `${assignment.shiftId.startTime} - ${assignment.shiftId.endTime}`
+          : '',
+        departmentId: assignment.departmentId?._id?.toString() || '',
+        departmentName: assignment.departmentId?.name || '',
+        positionId: assignment.positionId?._id?.toString() || '',
+        positionName: assignment.positionId?.name || '',
+        startDate: assignment.startDate,
+        endDate: assignment.endDate,
+        daysRemaining,
+        status: assignment.status,
+        urgency: daysRemaining <= 3 ? 'HIGH' : daysRemaining <= 5 ? 'MEDIUM' : 'LOW',
+      };
+    });
+
+    // Sort by days remaining (most urgent first)
+    expiring.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
     await this.logTimeManagementChange(
       'SHIFT_EXPIRY_SCAN',
-      { count: expiring.length },
+      { 
+        count: expiring.length,
+        daysBeforeExpiry,
+        urgentCount: expiring.filter(e => e.urgency === 'HIGH').length,
+      },
       currentUserId,
     );
 
-    return { count: expiring.length, assignments: expiring };
+    return { 
+      count: expiring.length, 
+      daysBeforeExpiry,
+      summary: {
+        highUrgency: expiring.filter(e => e.urgency === 'HIGH').length,
+        mediumUrgency: expiring.filter(e => e.urgency === 'MEDIUM').length,
+        lowUrgency: expiring.filter(e => e.urgency === 'LOW').length,
+      },
+      assignments: expiring,
+    };
+  }
+
+  /**
+   * Get assignments that have already expired but not yet archived
+   * BR-TM-05: Helps HR identify assignments that need immediate attention
+   */
+  async getExpiredUnprocessedAssignments(currentUserId: string) {
+    const now = new Date();
+    const nowUTC = this.convertDateToUTCStart(now);
+
+    const expiredAssignments = await this.shiftAssignmentModel
+      .find({
+        endDate: { $lt: nowUTC },
+        status: 'APPROVED', // Still approved but past end date
+      })
+      .populate('employeeId', 'firstName lastName email employeeNumber')
+      .populate('shiftId', 'name')
+      .exec();
+
+    const expired = expiredAssignments.map((assignment: any) => {
+      const endDate = assignment.endDate ? new Date(assignment.endDate) : null;
+      const daysOverdue = endDate 
+        ? Math.ceil((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      
+      return {
+        assignmentId: assignment._id?.toString() || '',
+        employeeId: assignment.employeeId?._id?.toString() || '',
+        employeeName: assignment.employeeId 
+          ? `${assignment.employeeId.firstName || ''} ${assignment.employeeId.lastName || ''}`.trim()
+          : 'Unknown',
+        shiftName: assignment.shiftId?.name || 'Unknown Shift',
+        endDate: assignment.endDate,
+        daysOverdue,
+      };
+    });
+
+    await this.logTimeManagementChange(
+      'EXPIRED_UNPROCESSED_SCAN',
+      { count: expired.length },
+      currentUserId,
+    );
+
+    return {
+      count: expired.length,
+      assignments: expired,
+    };
   }
 
   // Detect missed punches and send alerts
