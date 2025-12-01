@@ -2,10 +2,10 @@ import { IsString,IsNumber, IsArray, IsOptional, IsDate, IsObject } from 'class-
 
 export class CreateLeaveRequestDto {
   @IsString()
-  employeeId: string;
+  employeeId: string;  
 
   @IsString()
-  leaveTypeId: string;
+  leaveTypeId!: string;  
 
   @IsObject()
   dates: { from: Date; to: Date };
