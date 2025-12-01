@@ -1,4 +1,10 @@
-import { IsIn, IsMongoId, IsOptional, IsISO8601, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsMongoId,
+  IsOptional,
+  IsISO8601,
+  IsString,
+} from 'class-validator';
 
 export class ManagerDecisionDto {
   @IsMongoId()

@@ -1,5 +1,16 @@
-import { IsArray, IsEnum, IsISO8601, IsMongoId, IsNumber, IsOptional, IsString } from 'class-validator';
-import { PayRollPaymentStatus, PayRollStatus } from '../enums/payroll-execution-enum';
+import {
+  IsArray,
+  IsEnum,
+  IsISO8601,
+  IsMongoId,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import {
+  PayRollPaymentStatus,
+  PayRollStatus,
+} from '../enums/payroll-execution-enum';
 
 export class CreatePayrollRunDto {
   @IsString()

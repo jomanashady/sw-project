@@ -12,7 +12,10 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EmployeeProfileService } from './employee-profile.service';
 import {
   CreateEmployeeDto,
@@ -29,7 +32,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SystemRole } from './enums/employee-profile.enums';
+import { SystemRole, CandidateStatus } from './enums/employee-profile.enums';
 
 @Controller('employee-profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -70,7 +73,7 @@ export class EmployeeProfileController {
     };
   }
 
-  @Get('me')
+  @Get('me/profile')
   async getMyProfile(@CurrentUser() user: any) {
     if (!user || !user.userId) {
       throw new UnauthorizedException('User information not found in token');
@@ -94,6 +97,79 @@ export class EmployeeProfileController {
     return {
       message: 'Profile updated successfully',
       data: employee,
+    };
+  }
+
+  @Patch('me/contact')
+  async updateMyContact(
+    @CurrentUser() user: any,
+    @Body()
+    contactData: {
+      personalEmail?: string;
+      mobilePhone?: string;
+      homePhone?: string;
+      address?: {
+        city?: string;
+        streetAddress?: string;
+        country?: string;
+      };
+    },
+  ) {
+    const employee = await this.employeeProfileService.updateSelfService(
+      user.userId,
+      contactData,
+    );
+    return {
+      message: 'Contact information updated successfully',
+      data: employee,
+    };
+  }
+
+  @Patch('me/banking')
+  async updateMyBanking(
+    @CurrentUser() user: any,
+    @Body()
+    bankingData: {
+      bankName?: string;
+      bankAccountNumber?: string;
+    },
+  ) {
+    const employee = await this.employeeProfileService.updateBankingInfo(
+      user.userId,
+      bankingData,
+    );
+    return {
+      message: 'Banking information updated successfully',
+      data: employee,
+    };
+  }
+
+  @Patch('me/biography')
+  async updateMyBiography(
+    @CurrentUser() user: any,
+    @Body() biographyData: { biography?: string },
+  ) {
+    const employee = await this.employeeProfileService.updateBiography(
+      user.userId,
+      biographyData.biography,
+    );
+    return {
+      message: 'Biography updated successfully',
+      data: employee,
+    };
+  }
+
+  @Post('me/photo')
+  @UseInterceptors(FileInterceptor('photo'))
+  async uploadProfilePhoto(
+    @CurrentUser() user: any,
+    @UploadedFile() photo: Express.Multer.File,
+  ) {
+    const profilePictureUrl =
+      await this.employeeProfileService.uploadProfilePhoto(user.userId, photo);
+    return {
+      message: 'Profile photo uploaded successfully',
+      data: { profilePictureUrl },
     };
   }
 
@@ -157,6 +233,31 @@ export class EmployeeProfileController {
     };
   }
 
+  @Get(':id/pdf')
+  @Roles(
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async exportToPdf(@Param('id') id: string) {
+    const pdfBuffer = await this.employeeProfileService.exportToPdf(id);
+    return {
+      message: 'PDF export completed successfully',
+      data: pdfBuffer.toString('base64'),
+    };
+  }
+
+  @Get('export/excel')
+  @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
+  async exportToExcel(@Query() query: QueryEmployeeDto) {
+    const excelBuffer = await this.employeeProfileService.exportToExcel(query);
+    return {
+      message: 'Excel export completed successfully',
+      data: excelBuffer.toString('base64'),
+    };
+  }
+
   // ==================== SYSTEM ROLE ROUTES ====================
 
   @Post('assign-roles')
@@ -174,13 +275,60 @@ export class EmployeeProfileController {
     };
   }
 
-  @Get(':id/roles')
+  @Post(':employeeId/roles')
+  @Roles(SystemRole.SYSTEM_ADMIN)
+  async assignRolesToEmployee(
+    @Param('employeeId') employeeId: string,
+    @Body() assignRoleDto: Omit<AssignSystemRoleDto, 'employeeProfileId'>,
+  ) {
+    const systemRole = await this.employeeProfileService.assignSystemRoles(
+      employeeId,
+      assignRoleDto.roles,
+      assignRoleDto.permissions,
+    );
+    return {
+      message: 'Roles assigned successfully',
+      data: systemRole,
+    };
+  }
+
+  @Get(':employeeId/roles')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
-  async getEmployeeRoles(@Param('id') id: string) {
-    const roles = await this.employeeProfileService.getSystemRoles(id);
+  async getEmployeeRoles(@Param('employeeId') employeeId: string) {
+    const roles = await this.employeeProfileService.getSystemRoles(employeeId);
     return {
       message: 'Employee roles retrieved successfully',
       data: roles,
+    };
+  }
+
+  @Patch(':employeeId/roles')
+  @Roles(SystemRole.SYSTEM_ADMIN)
+  async updateEmployeeRoles(
+    @Param('employeeId') employeeId: string,
+    @Body()
+    updateRoleDto: {
+      roles?: SystemRole[];
+      permissions?: string[];
+    },
+  ) {
+    const systemRole = await this.employeeProfileService.updateSystemRoles(
+      employeeId,
+      updateRoleDto.roles,
+      updateRoleDto.permissions,
+    );
+    return {
+      message: 'Roles updated successfully',
+      data: systemRole,
+    };
+  }
+
+  @Patch(':employeeId/roles/deactivate')
+  @Roles(SystemRole.SYSTEM_ADMIN)
+  async deactivateEmployeeRoles(@Param('employeeId') employeeId: string) {
+    await this.employeeProfileService.deactivateSystemRoles(employeeId);
+    return {
+      message: 'Employee roles deactivated successfully',
     };
   }
 
@@ -210,8 +358,9 @@ export class EmployeeProfileController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.RECRUITER,
   )
-  async findAllCandidates() {
-    const candidates = await this.employeeProfileService.findAllCandidates();
+  async findAllCandidates(@Query() query: any) {
+    const candidates =
+      await this.employeeProfileService.findAllCandidatesWithFilters(query);
     return {
       message: 'Candidates retrieved successfully',
       data: candidates,
@@ -291,6 +440,27 @@ export class EmployeeProfileController {
     };
   }
 
+  @Patch('candidate/:id/status')
+  @Roles(
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.RECRUITER,
+  )
+  async updateCandidateStatus(
+    @Param('id') id: string,
+    @Body() statusData: { status: CandidateStatus },
+  ) {
+    const candidate = await this.employeeProfileService.updateCandidateStatus(
+      id,
+      statusData.status,
+    );
+    return {
+      message: 'Candidate status updated successfully',
+      data: candidate,
+    };
+  }
+
   @Get('candidate/status/:status')
   @Roles(
     SystemRole.SYSTEM_ADMIN,
@@ -342,9 +512,11 @@ export class EmployeeProfileController {
 
   @Get('change-request')
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
-  async getAllChangeRequests(@Query('status') status?: string) {
+  async getAllChangeRequests(@Query() query: any) {
     const requests =
-      await this.employeeProfileService.getAllProfileChangeRequests(status);
+      await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
+        query,
+      );
     return {
       message: 'Change requests retrieved successfully',
       data: requests,
@@ -379,6 +551,54 @@ export class EmployeeProfileController {
     };
   }
 
+  @Patch('change-request/:id/approve')
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  async approveChangeRequest(
+    @Param('id') id: string,
+    @Body() approveDto: { reason?: string },
+  ) {
+    const updatedRequest =
+      await this.employeeProfileService.processProfileChangeRequest(id, {
+        status: 'APPROVED',
+        reason: approveDto.reason,
+      });
+    return {
+      message: 'Change request approved successfully',
+      data: updatedRequest,
+    };
+  }
+
+  @Patch('change-request/:id/reject')
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  async rejectChangeRequest(
+    @Param('id') id: string,
+    @Body() rejectDto: { reason?: string },
+  ) {
+    const updatedRequest =
+      await this.employeeProfileService.processProfileChangeRequest(id, {
+        status: 'REJECTED',
+        reason: rejectDto.reason,
+      });
+    return {
+      message: 'Change request rejected successfully',
+      data: updatedRequest,
+    };
+  }
+
+  @Patch('change-request/:id/cancel')
+  @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
+  async cancelChangeRequest(@Param('id') id: string, @CurrentUser() user: any) {
+    const updatedRequest =
+      await this.employeeProfileService.cancelProfileChangeRequest(
+        id,
+        user.userId,
+      );
+    return {
+      message: 'Change request cancelled successfully',
+      data: updatedRequest,
+    };
+  }
+
   // ==================== QUALIFICATION ROUTES ====================
 
   @Post('qualification')
@@ -401,6 +621,26 @@ export class EmployeeProfileController {
     };
   }
 
+  @Post(':employeeId/qualifications')
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  async addQualificationForEmployee(
+    @Param('employeeId') employeeId: string,
+    @Body()
+    qualificationData: {
+      establishmentName: string;
+      graduationType: string;
+    },
+  ) {
+    const qualification = await this.employeeProfileService.addQualification(
+      employeeId,
+      qualificationData,
+    );
+    return {
+      message: 'Qualification added successfully',
+      data: qualification,
+    };
+  }
+
   @Get('qualification/my-qualifications')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
   async getMyQualifications(@CurrentUser() user: any) {
@@ -414,7 +654,7 @@ export class EmployeeProfileController {
     };
   }
 
-  @Get('employee/:employeeId/qualifications')
+  @Get(':employeeId/qualifications')
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
   async getEmployeeQualifications(@Param('employeeId') employeeId: string) {
     const qualifications =
@@ -425,11 +665,33 @@ export class EmployeeProfileController {
     };
   }
 
-  @Delete('qualification/:id')
+  @Patch('qualifications/:qualId')
+  @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
+  async updateQualification(
+    @Param('qualId') qualificationId: string,
+    @CurrentUser() user: any,
+    @Body()
+    qualificationData: {
+      establishmentName?: string;
+      graduationType?: string;
+    },
+  ) {
+    const qualification = await this.employeeProfileService.updateQualification(
+      qualificationId,
+      user.userId,
+      qualificationData,
+    );
+    return {
+      message: 'Qualification updated successfully',
+      data: qualification,
+    };
+  }
+
+  @Delete('qualifications/:qualId')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeQualification(
-    @Param('id') qualificationId: string,
+    @Param('qualId') qualificationId: string,
     @CurrentUser() user: any,
   ) {
     await this.employeeProfileService.removeQualification(
@@ -442,6 +704,22 @@ export class EmployeeProfileController {
   }
 
   // ==================== SEARCH ROUTES ====================
+
+  @Post('search')
+  @Roles(
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async advancedSearch(@Body() searchCriteria: any) {
+    const results =
+      await this.employeeProfileService.advancedSearch(searchCriteria);
+    return {
+      message: 'Search completed successfully',
+      data: results,
+    };
+  }
 
   @Get('search/by-number/:employeeNumber')
   @Roles(
@@ -467,6 +745,40 @@ export class EmployeeProfileController {
     return {
       message: 'Employee retrieved successfully',
       data: employee,
+    };
+  }
+
+  // ==================== TEAM MANAGEMENT ROUTES ====================
+
+  @Get('team/members')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getTeamMembers(@CurrentUser() user: any) {
+    const members = await this.employeeProfileService.getTeamMembers(
+      user.userId,
+    );
+    return {
+      message: 'Team members retrieved successfully',
+      data: members,
+    };
+  }
+
+  @Get('team/statistics')
+  @Roles(
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+  )
+  async getTeamStatistics(@CurrentUser() user: any) {
+    const stats = await this.employeeProfileService.getTeamStatistics(
+      user.userId,
+    );
+    return {
+      message: 'Team statistics retrieved successfully',
+      data: stats,
     };
   }
 }
