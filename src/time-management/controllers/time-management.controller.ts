@@ -48,7 +48,12 @@ import {
 export class TimeManagementController {
   constructor(private readonly timeManagementService: TimeManagementService) {}
 
-  // ===== Clocking and Attendance Records =====
+  // ===== US5: Clock-In/Out and Attendance Records =====
+  // BR-TM-06: Time-in/out captured via Biometric, Web Login, Mobile App, or Manual Input (with audit trail)
+  // BR-TM-07: Attendance data must follow HR rounding rules
+  // BR-TM-11: Allow multiple punches per day, or first in/last out
+  // BR-TM-12: Clock-ins must be tagged with location, terminal ID, or device
+
   @Post('clock-in/:employeeId')
   @Roles(
     SystemRole.DEPARTMENT_EMPLOYEE,
@@ -87,6 +92,103 @@ export class TimeManagementController {
       throw new Error('Access denied');
     }
     return this.timeManagementService.clockOutWithID(employeeId, user.userId);
+  }
+
+  // BR-TM-06 & BR-TM-12: Enhanced clock-in with metadata
+  @Post('clock-in/:employeeId/metadata')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_ADMIN,
+  )
+  async clockInWithMetadata(
+    @Param('employeeId') employeeId: string,
+    @Body() body: {
+      source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
+      deviceId?: string;
+      terminalId?: string;
+      location?: string;
+      gpsCoordinates?: { lat: number; lng: number };
+      ipAddress?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      user.userId !== employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.timeManagementService.clockInWithMetadata(employeeId, body, user.userId);
+  }
+
+  // BR-TM-06 & BR-TM-12: Enhanced clock-out with metadata
+  @Post('clock-out/:employeeId/metadata')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_ADMIN,
+  )
+  async clockOutWithMetadata(
+    @Param('employeeId') employeeId: string,
+    @Body() body: {
+      source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
+      deviceId?: string;
+      terminalId?: string;
+      location?: string;
+      gpsCoordinates?: { lat: number; lng: number };
+      ipAddress?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      user.userId !== employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.timeManagementService.clockOutWithMetadata(employeeId, body, user.userId);
+  }
+
+  // US5 Flow: Validate clock-in against assigned shifts and rest days
+  @Post('clock-in/:employeeId/validate')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+  )
+  async validateClockInAgainstShift(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.timeManagementService.validateClockInAgainstShift(employeeId, user.userId);
+  }
+
+  // Get employee's attendance status for today
+  @Get('attendance/status/:employeeId')
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.HR_ADMIN,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_MANAGER,
+  )
+  async getEmployeeAttendanceStatus(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Self-access check for employees
+    if (
+      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
+      !user.roles.includes(SystemRole.DEPARTMENT_HEAD) &&
+      user.userId !== employeeId
+    ) {
+      throw new Error('Access denied');
+    }
+    return this.timeManagementService.getEmployeeAttendanceStatus(employeeId, user.userId);
   }
 
   @Post('attendance')
@@ -394,7 +496,9 @@ export class TimeManagementController {
     );
   }
 
-  // ===== Automatic Detection Methods =====
+  // ===== US4: Shift Expiry Notifications - Automatic Detection Methods =====
+  // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
+  
   @Post('automation/check-expiring-shifts')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async checkExpiringShiftAssignments(
@@ -405,6 +509,12 @@ export class TimeManagementController {
       body.daysBeforeExpiry || 7,
       user.userId,
     );
+  }
+
+  @Get('automation/expired-unprocessed')
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
+  async getExpiredUnprocessedAssignments(@CurrentUser() user: any) {
+    return this.timeManagementService.getExpiredUnprocessedAssignments(user.userId);
   }
 
   @Post('automation/detect-missed-punches')

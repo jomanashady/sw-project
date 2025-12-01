@@ -352,6 +352,229 @@ export class NotificationService {
     };
   }
 
+  // ===== US4: SHIFT EXPIRY NOTIFICATIONS =====
+  // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
+  // This section handles notifications when shift assignments are nearing expiry
+
+  /**
+   * Send shift expiry notification to HR Admin
+   * Triggered when a shift assignment is nearing its end date
+   */
+  async sendShiftExpiryNotification(
+    recipientId: string,
+    shiftAssignmentId: string,
+    employeeId: string,
+    endDate: Date,
+    daysRemaining: number,
+    currentUserId: string,
+  ) {
+    const message = `Shift assignment ${shiftAssignmentId} for employee ${employeeId} is expiring in ${daysRemaining} days (${endDate.toISOString().split('T')[0]}). Please renew or reassign.`;
+    
+    const notification = new this.notificationLogModel({
+      to: recipientId,
+      type: 'SHIFT_EXPIRY_ALERT',
+      message,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await notification.save();
+    
+    await this.logTimeManagementChange(
+      'SHIFT_EXPIRY_NOTIFICATION_SENT',
+      {
+        recipientId,
+        shiftAssignmentId,
+        employeeId,
+        endDate,
+        daysRemaining,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send bulk shift expiry notifications to HR Admins
+   * Used when running batch expiry checks
+   */
+  async sendBulkShiftExpiryNotifications(
+    hrAdminIds: string[],
+    expiringAssignments: Array<{
+      assignmentId: string;
+      employeeId: string;
+      employeeName?: string;
+      shiftName?: string;
+      endDate: Date;
+      daysRemaining: number;
+    }>,
+    currentUserId: string,
+  ) {
+    const notifications: any[] = [];
+    
+    for (const hrAdminId of hrAdminIds) {
+      // Create summary message for HR Admin
+      const message = `${expiringAssignments.length} shift assignment(s) expiring soon:\n` +
+        expiringAssignments
+          .map(a => `- ${a.employeeName || a.employeeId}: ${a.shiftName || 'Shift'} expires in ${a.daysRemaining} days`)
+          .join('\n');
+      
+      const notification = new this.notificationLogModel({
+        to: hrAdminId,
+        type: 'SHIFT_EXPIRY_BULK_ALERT',
+        message,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
+      });
+      
+      await notification.save();
+      notifications.push(notification);
+    }
+    
+    await this.logTimeManagementChange(
+      'SHIFT_EXPIRY_BULK_NOTIFICATIONS_SENT',
+      {
+        hrAdminCount: hrAdminIds.length,
+        expiringCount: expiringAssignments.length,
+        assignmentIds: expiringAssignments.map(a => a.assignmentId),
+      },
+      currentUserId,
+    );
+    
+    return {
+      notificationsSent: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
+   * Get shift expiry notifications for an HR Admin
+   */
+  async getShiftExpiryNotifications(hrAdminId: string, currentUserId: string) {
+    const notifications = await this.notificationLogModel
+      .find({
+        to: hrAdminId,
+        type: { $in: ['SHIFT_EXPIRY_ALERT', 'SHIFT_EXPIRY_BULK_ALERT'] },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    return {
+      count: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
+   * Send renewal confirmation notification
+   * Sent when a shift assignment is successfully renewed
+   */
+  async sendShiftRenewalConfirmation(
+    recipientId: string,
+    shiftAssignmentId: string,
+    newEndDate: Date,
+    currentUserId: string,
+  ) {
+    const message = `Shift assignment ${shiftAssignmentId} has been renewed. New end date: ${newEndDate.toISOString().split('T')[0]}.`;
+    
+    const notification = new this.notificationLogModel({
+      to: recipientId,
+      type: 'SHIFT_RENEWAL_CONFIRMATION',
+      message,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await notification.save();
+    
+    await this.logTimeManagementChange(
+      'SHIFT_RENEWAL_NOTIFICATION_SENT',
+      {
+        recipientId,
+        shiftAssignmentId,
+        newEndDate,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send archive notification
+   * Sent when a shift assignment is archived/expired
+   */
+  async sendShiftArchiveNotification(
+    recipientId: string,
+    shiftAssignmentId: string,
+    employeeId: string,
+    currentUserId: string,
+  ) {
+    const message = `Shift assignment ${shiftAssignmentId} for employee ${employeeId} has been archived/expired. Consider creating a new assignment if needed.`;
+    
+    const notification = new this.notificationLogModel({
+      to: recipientId,
+      type: 'SHIFT_ARCHIVE_NOTIFICATION',
+      message,
+      createdBy: currentUserId,
+      updatedBy: currentUserId,
+    });
+    
+    await notification.save();
+    
+    await this.logTimeManagementChange(
+      'SHIFT_ARCHIVE_NOTIFICATION_SENT',
+      {
+        recipientId,
+        shiftAssignmentId,
+        employeeId,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Get all shift-related notifications (expiry, renewal, archive)
+   */
+  async getAllShiftNotifications(hrAdminId: string, currentUserId: string) {
+    const notifications = await this.notificationLogModel
+      .find({
+        to: hrAdminId,
+        type: {
+          $in: [
+            'SHIFT_EXPIRY_ALERT',
+            'SHIFT_EXPIRY_BULK_ALERT',
+            'SHIFT_RENEWAL_CONFIRMATION',
+            'SHIFT_ARCHIVE_NOTIFICATION',
+          ],
+        },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+    
+    // Group by type for better organization
+    const grouped = {
+      expiryAlerts: notifications.filter(n => 
+        n.type === 'SHIFT_EXPIRY_ALERT' || n.type === 'SHIFT_EXPIRY_BULK_ALERT'
+      ),
+      renewalConfirmations: notifications.filter(n => 
+        n.type === 'SHIFT_RENEWAL_CONFIRMATION'
+      ),
+      archiveNotifications: notifications.filter(n => 
+        n.type === 'SHIFT_ARCHIVE_NOTIFICATION'
+      ),
+    };
+    
+    return {
+      totalCount: notifications.length,
+      grouped,
+      all: notifications,
+    };
+  }
+
   // ===== PRIVATE HELPER METHODS =====
 
   /**
