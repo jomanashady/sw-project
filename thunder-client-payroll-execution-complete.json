@@ -1,0 +1,723 @@
+{
+  "clientName": "Payroll Execution - Complete API Collection",
+  "collectionName": "Payroll Execution APIs",
+  "collectionId": "payroll-execution-complete",
+  "folders": [
+    {
+      "name": "Phase 0 - Pre-Run Reviews",
+      "id": "phase-0"
+    },
+    {
+      "name": "Phase 1 - Payroll Initiation",
+      "id": "phase-1"
+    },
+    {
+      "name": "Phase 1.1 - Draft Generation",
+      "id": "phase-1-1"
+    },
+    {
+      "name": "Phase 2 - Draft Review",
+      "id": "phase-2"
+    },
+    {
+      "name": "Phase 3 - Review & Approval",
+      "id": "phase-3"
+    },
+    {
+      "name": "Phase 5 - Execution",
+      "id": "phase-5"
+    },
+    {
+      "name": "Calculations & Utilities",
+      "id": "calculations"
+    }
+  ],
+  "requests": [
+    {
+      "name": "Get Pre-Initiation Validation Status✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/pre-initiation-validation",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Process Signing Bonuses✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-signing-bonuses",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Create Employee Signing Bonus✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/create-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeId": "507f1f77bcf86cd799439011",
+        "signingBonusId": "507f1f77bcf86cd799439012",
+        "givenAmount": 5000,
+        "status": "PENDING",
+        "paymentDate": "2025-02-01T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Review Signing Bonus✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeSigningBonusId": "507f1f77bcf86cd799439013",
+        "status": "APPROVED",
+        "paymentDate": "2025-02-01T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Edit Signing Bonus✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeSigningBonusId": "507f1f77bcf86cd799439013",
+        "givenAmount": 6000,
+        "status": "APPROVED"
+      },
+      "params": []
+    },
+    {
+      "name": "Process Termination Benefits✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-termination-benefits",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Create Employee Termination Benefit✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/create-termination-benefit",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeId": "507f1f77bcf86cd799439011",
+        "benefitId": "507f1f77bcf86cd799439014",
+        "terminationId": "507f1f77bcf86cd799439015",
+        "givenAmount": 10000,
+        "status": "PENDING"
+      },
+      "params": []
+    },
+    {
+      "name": "Review Termination Benefit✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-termination-benefit",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeTerminationResignationId": "507f1f77bcf86cd799439016",
+        "status": "APPROVED"
+      },
+      "params": []
+    },
+    {
+      "name": "Edit Termination Benefit✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-termination-benefit",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-0",
+      "body": {
+        "employeeTerminationResignationId": "507f1f77bcf86cd799439016",
+        "givenAmount": 12000
+      },
+      "params": []
+    },
+    {
+      "name": "Process Payroll Initiation✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-initiation",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1",
+      "body": {
+        "payrollPeriod": "2025-02-28T00:00:00.000Z",
+        "entity": "Company Name|USD",
+        "payrollSpecialistId": "507f1f77bcf86cd799439017",
+        "currency": "USD",
+        "payrollManagerId": "507f1f77bcf86cd799439018"
+      },
+      "params": []
+    },
+    {
+      "name": "Review Payroll Initiation✅🚩",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-initiation/PR-2025-0001",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1",
+      "body": {
+        "approved": true,
+        "reviewerId": "507f1f77bcf86cd799439017",
+        "rejectionReason": null
+      },
+      "params": []
+    },
+    {
+      "name": "Edit Payroll Initiation✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-initiation/PR-2025-0001",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1",
+      "body": {
+        "payrollPeriod": "2025-02-28T00:00:00.000Z",
+        "entity": "Company Name|USD",
+        "employees": 50,
+        "totalnetpay": 500000
+      },
+      "params": []
+    },
+    {
+      "name": "Review Payroll Period✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-payroll-period",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "status": "UNDER_REVIEW",
+        "rejectionReason": null
+      },
+      "params": []
+    },
+    {
+      "name": "Edit Payroll Period✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-payroll-period",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "payrollPeriod": "2025-02-28T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Generate Draft Payroll Run✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/generate-draft",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-1-1",
+      "body": {
+        "payrollPeriod": "2025-02-28T00:00:00.000Z",
+        "entity": "Company Name|USD",
+        "payrollSpecialistId": "507f1f77bcf86cd799439017",
+        "currency": "USD",
+        "payrollManagerId": "507f1f77bcf86cd799439018"
+      },
+      "params": []
+    },
+    {
+      "name": "Calculate Payroll✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-payroll",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "calculations",
+      "body": {
+        "employeeId": "507f1f77bcf86cd799439011",
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "baseSalary": 10000
+      },
+      "params": []
+    },
+    {
+      "name": "Calculate Prorated Salary✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-prorated-salary",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "calculations",
+      "body": {
+        "employeeId": "507f1f77bcf86cd799439011",
+        "baseSalary": 10000,
+        "startDate": "2025-02-15T00:00:00.000Z",
+        "endDate": "2025-02-28T00:00:00.000Z",
+        "payrollPeriodEnd": "2025-02-28T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Apply Statutory Rules✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/apply-statutory-rules",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "calculations",
+      "body": {
+        "baseSalary": 10000,
+        "employeeId": "507f1f77bcf86cd799439011"
+      },
+      "params": []
+    },
+    {
+      "name": "Get Payroll Preview✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/preview/507f1f77bcf86cd799439019",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-2",
+      "body": {},
+      "params": [
+        {
+          "name": "currency",
+          "value": "USD"
+        }
+      ]
+    },
+    {
+      "name": "Detect Irregularities✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/detect-irregularities/507f1f77bcf86cd799439019",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-2",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Flag Payroll Exception✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/flag-exception",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-2",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "employeeId": "507f1f77bcf86cd799439011",
+        "code": "MISSING_BANK_ACCOUNT",
+        "message": "Employee has missing bank account details"
+      },
+      "params": []
+    },
+    {
+      "name": "Get Employee Exceptions✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/employee-exceptions/507f1f77bcf86cd799439011/507f1f77bcf86cd799439019",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-2",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Get All Payroll Exceptions✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/payroll-exceptions/507f1f77bcf86cd799439019",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-2",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Send for Approval✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/send-for-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "managerId": "507f1f77bcf86cd799439018",
+        "financeStaffId": "507f1f77bcf86cd799439020"
+      },
+      "params": []
+    },
+    {
+      "name": "Manager Approval✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/manager-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "status": "PENDING_FINANCE_APPROVAL",
+        "managerComments": "Approved by manager",
+        "managerDecision": "PENDING_FINANCE_APPROVAL",
+        "payrollManagerId": "507f1f77bcf86cd799439018",
+        "managerApprovalDate": "2025-02-15T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Resolve Irregularity✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/resolve-irregularity",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "employeeId": "507f1f77bcf86cd799439011",
+        "exceptionCode": "MISSING_BANK_ACCOUNT",
+        "resolution": "Bank account details updated",
+        "managerId": "507f1f77bcf86cd799439018"
+      },
+      "params": []
+    },
+    {
+      "name": "Finance Approval✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/finance-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "decision": "approve",
+        "reason": null,
+        "financeStaffId": "507f1f77bcf86cd799439020",
+        "decisionDate": "2025-02-15T00:00:00.000Z"
+      },
+      "params": []
+    },
+    {
+      "name": "Lock Payroll✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/507f1f77bcf86cd799439019/lock",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Unlock Payroll✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/507f1f77bcf86cd799439019/unlock",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "unlockReason": "Correction needed for employee salary"
+      },
+      "params": []
+    },
+    {
+      "name": "Freeze Payroll✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/507f1f77bcf86cd799439019/freeze",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {},
+      "params": []
+    },
+    {
+      "name": "Unfreeze Payroll✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/507f1f77bcf86cd799439019/unfreeze",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-3",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "unlockReason": "Correction needed for employee salary"
+      },
+      "params": []
+    },
+    {
+      "name": "Generate and Distribute Payslips",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "folder": "phase-5",
+      "body": {
+        "payrollRunId": "507f1f77bcf86cd799439019",
+        "distributionMethod": "PORTAL"
+      },
+      "params": []
+    }
+  ]
+}
+

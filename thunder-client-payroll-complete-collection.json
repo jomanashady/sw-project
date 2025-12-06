@@ -1,0 +1,1795 @@
+{
+  "clientName": "Payroll APIs - Complete Collection",
+  "collectionName": "Payroll System APIs",
+  "folders": [
+    {
+      "name": "1. Payroll Configuration",
+      "requests": []
+    },
+    {
+      "name": "2. Payroll Execution",
+      "requests": []
+    },
+    {
+      "name": "3. Payroll Tracking",
+      "requests": []
+    }
+  ],
+  "requests": [
+    {
+      "name": "Get All Pay Grades✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "status",
+          "value": "draft",
+          "description": "Filter by status: draft, approved, rejected"
+        },
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "limit",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "name": "Get Pay Grade by ID✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades/{{payGradeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Pay Grade (DRAFT)✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"grade\": \"Senior Developer\",\n  \"baseSalary\": 15000,\n  \"grossSalary\": 18000\n}"
+      }
+    },
+    {
+      "name": "Update Pay Grade (DRAFT only) ✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades/{{payGradeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"baseSalary\": 16000,\n  \"grossSalary\": 19000\n}"
+      }
+    },
+    {
+      "name": "Approve Pay Grade By Payroll Manager✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades/{{payGradeId}}/approve",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"comment\": \"Approved by Payroll Manager\"\n}"
+      }
+    },
+    {
+      "name": "Reject Pay Grade By Payroll Manager✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades/{{payGradeId}}/reject",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"comment\": \"Gross salary does not meet requirements\"\n}"
+      }
+    },
+    {
+      "name": "Delete Pay Grade (DRAFT only)✅",
+      "method": "DELETE",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-grades/{{payGradeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get All Allowances✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/allowances",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "status",
+          "value": "approved"
+        },
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "limit",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "name": "Create Allowance (DRAFT)✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/allowances",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"name\": \"Transportation Allowance\",\n  \"amount\": 500\n}"
+      }
+    },
+    {
+      "name": "Update Allowance (DRAFT only)✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/allowances/{{allowanceId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"amount\": 600\n}"
+      }
+    },
+    {
+      "name": "Approve Allowance By Payroll Manager✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/allowances/{{allowanceId}}/approve",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"comment\": \"Approved\"\n}"
+      }
+    },
+    {
+      "name": "Get All Pay Types ✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-types",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Pay Type (DRAFT)✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pay-types",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"type\": \"Monthly\",\n  \"amount\": 0\n}"
+      }
+    },
+    {
+      "name": "Get All Tax Rules ✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/tax-rules",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Tax Rule (DRAFT) ✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/tax-rules",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"name\": \"Income Tax - 20%\",\n  \"description\": \"Standard income tax rate\",\n  \"rate\": 0.20\n}"
+      }
+    },
+    {
+      "name": "Update Tax Rule (Can edit APPROVED for legal updates) ✅",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/tax-rules/{{taxRuleId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"rate\": 0.22\n}"
+      }
+    },
+    {
+      "name": "Get All Insurance Brackets ✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/insurance-brackets",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Insurance Bracket (DRAFT) ✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/insurance-brackets",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"name\": \"Social Insurance - Tier 1\",\n  \"minSalary\": 6000,\n  \"maxSalary\": 15000,\n  \"employeeRate\": 0.11,\n  \"employerRate\": 0.18\n}"
+      }
+    },
+    {
+      "name": "Approve Insurance Bracket (HR Manager) ✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/insurance-brackets/{{insuranceBracketId}}/approve",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"comment\": \"Approved by HR Manager\"\n}"
+      }
+    },
+    {
+      "name": "Get All Signing Bonuses ✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/signing-bonuses",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Signing Bonus (DRAFT) ✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/signing-bonuses",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"positionName\": \"Senior Developer\",\n  \"amount\": 5000\n}"
+      }
+    },
+    {
+      "name": "Get All Termination Benefits✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/termination-benefits",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Termination Benefit (DRAFT) ✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/termination-benefits",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"name\": \"Severance Pay\",\n  \"amount\": 10000,\n  \"terms\": \"Standard severance package\"\n}"
+      }
+    },
+    {
+      "name": "Get All Payroll Policies✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/policies",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Payroll Policy (DRAFT)✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/policies",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"policyName\": \"Late Arrival Penalty\",\n  \"policyType\": \"Misconduct\",\n  \"description\": \"Deduction for late arrivals\",\n  \"effectiveDate\": \"2025-01-01T00:00:00.000Z\",\n  \"ruleDefinition\": {\n    \"percentage\": 0,\n    \"fixedAmount\": 50,\n    \"thresholdAmount\": 50\n  },\n  \"applicability\": \"All Employees\"\n}"
+      }
+    },
+    {
+      "name": "Get Company Settings ✅",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/company-settings",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Create Company Settings✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/company-settings",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payDate\": \"2025-01-25T00:00:00.000Z\",\n  \"timeZone\": \"Africa/Cairo\",\n  \"currency\": \"EGP\"\n}"
+      }
+    },
+    {
+      "name": "Get Configuration Stats",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/stats",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Pending Approvals",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-configuration/pending-approvals",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "userId",
+          "value": "{{userId}}"
+        }
+      ]
+    },
+    {
+      "name": "Create Payroll Run✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/create",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"runId\": \"PR-2025-0001\",\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office\",\n  \"employees\": 50,\n  \"exceptions\": 0,\n  \"totalnetpay\": 0,\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"payrollManagerId\": \"{{payrollManagerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Process Payroll Initiation✅",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-initiation",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office|EGP\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"currency\": \"EGP\",\n  \"payrollManagerId\": \"{{payrollManagerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Review Payroll Initiation",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-initiation/{{runId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"approved\": true,\n  \"reviewerId\": \"{{reviewerId}}\",\n  \"rejectionReason\": null\n}"
+      }
+    },
+    {
+      "name": "Review Payroll Period",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-payroll-period",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"status\": \"approved\",\n  \"rejectionReason\": null\n}"
+      }
+    },
+    {
+      "name": "Edit Payroll Period",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-payroll-period",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"payrollPeriod\": \"2025-02-28T00:00:00.000Z\"\n}"
+      }
+    },
+    {
+      "name": "Edit Payroll Initiation",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-initiation/{{runId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-02-28T00:00:00.000Z\",\n  \"entity\": \"Main Office|USD\"\n}"
+      }
+    },
+    {
+      "name": "Process Signing Bonuses",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-signing-bonuses",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Create Employee Signing Bonus",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/create-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"signingBonusId\": \"{{signingBonusId}}\",\n  \"givenAmount\": 5000\n}"
+      }
+    },
+    {
+      "name": "Review Signing Bonus",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"status\": \"approved\",\n  \"paymentDate\": \"2025-02-01T00:00:00.000Z\"\n}"
+      }
+    },
+    {
+      "name": "Edit Signing Bonus",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll/edit-signing-bonus",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeSigningBonusId\": \"{{employeeSigningBonusId}}\",\n  \"givenAmount\": 6000\n}"
+      }
+    },
+    {
+      "name": "Process Termination Benefits",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/process-termination-benefits",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Create Employee Termination Benefit",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/create-termination-benefit",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"benefitId\": \"{{benefitId}}\",\n  \"terminationId\": \"{{terminationId}}\",\n  \"givenAmount\": 10000,\n  \"status\": \"pending\"\n}"
+      }
+    },
+    {
+      "name": "Review Termination Benefit",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/review-termination-benefit",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeTerminationBenefitId\": \"{{employeeTerminationBenefitId}}\",\n  \"status\": \"approved\",\n  \"paymentDate\": \"2025-02-01T00:00:00.000Z\"\n}"
+      }
+    },
+    {
+      "name": "Calculate Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-payroll",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"baseSalary\": 15000\n}"
+      }
+    },
+    {
+      "name": "Calculate Prorated Salary",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/calculate-prorated-salary",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"baseSalary\": 15000,\n  \"startDate\": \"2025-01-15T00:00:00.000Z\",\n  \"endDate\": \"2025-01-31T00:00:00.000Z\",\n  \"payrollPeriodEnd\": \"2025-01-31T00:00:00.000Z\"\n}"
+      }
+    },
+    {
+      "name": "Apply Statutory Rules",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/apply-statutory-rules",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"baseSalary\": 15000,\n  \"employeeId\": \"{{employeeId}}\"\n}"
+      }
+    },
+    {
+      "name": "Generate Draft Payroll Run",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/generate-draft",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollPeriod\": \"2025-01-31T00:00:00.000Z\",\n  \"entity\": \"Main Office|EGP\",\n  \"payrollSpecialistId\": \"{{payrollSpecialistId}}\",\n  \"currency\": \"EGP\",\n  \"payrollManagerId\": \"{{payrollManagerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Payroll Preview",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/preview/{{payrollRunId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "currency",
+          "value": "USD"
+        }
+      ]
+    },
+    {
+      "name": "Get Pre-Initiation Validation Status",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/pre-initiation-validation",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Flag Payroll Exception",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/flag-exception",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"code\": \"MISSING_BANK_ACCOUNT\",\n  \"message\": \"Employee missing bank account information\",\n  \"employeeId\": \"{{employeeId}}\"\n}"
+      }
+    },
+    {
+      "name": "Detect Irregularities",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/detect-irregularities/{{payrollRunId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Review Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/review",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"status\": \"under review\",\n  \"comments\": \"Ready for manager review\"\n}"
+      }
+    },
+    {
+      "name": "Send for Approval",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/send-for-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"managerId\": \"{{managerId}}\",\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Manager Approval",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/manager-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"status\": \"approved\",\n  \"managerComments\": \"Approved by manager\",\n  \"managerDecision\": \"approved\"\n}"
+      }
+    },
+    {
+      "name": "Finance Approval",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/finance-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"approved\": true,\n  \"financeStaffId\": \"{{financeStaffId}}\",\n  \"comments\": \"Approved by finance\"\n}"
+      }
+    },
+    {
+      "name": "Lock Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/lock",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Freeze Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/freeze",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}"
+      }
+    },
+    {
+      "name": "Unlock Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/unlock",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"unlockReason\": \"Correction needed for employee salary\"\n}"
+      }
+    },
+    {
+      "name": "Unfreeze Payroll",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/{{payrollRunId}}/unfreeze",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"unlockReason\": \"Correction needed\"\n}"
+      }
+    },
+    {
+      "name": "Resolve Irregularity",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/resolve-irregularity",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"exceptionCode\": \"MISSING_BANK_ACCOUNT\",\n  \"resolution\": \"Bank account added\",\n  \"managerId\": \"{{managerId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Employee Exceptions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/employee-exceptions/{{employeeId}}/{{payrollRunId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get All Payroll Exceptions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll/payroll-exceptions/{{payrollRunId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Generate and Distribute Payslips",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll/generate-payslips",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollRunId\": \"{{payrollRunId}}\",\n  \"distributionMethod\": \"PORTAL\"\n}"
+      }
+    },
+    {
+      "name": "Create Claim",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Business travel expenses\",\n  \"claimType\": \"Travel\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"amount\": 1500\n}"
+      }
+    },
+    {
+      "name": "Get Pending Claims",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/pending",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Approved Claims for Finance",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/approved",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Claims by Employee",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/employee/{{employeeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Claim by ID",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/{{claimId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Update Claim",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/{{claimId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Updated business travel expenses\",\n  \"amount\": 1600\n}"
+      }
+    },
+    {
+      "name": "Approve Claim by Specialist",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/{{claimId}}/approve-by-specialist",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"approvedAmount\": 1500,\n  \"resolutionComment\": \"Approved by specialist\"\n}"
+      }
+    },
+    {
+      "name": "Reject Claim by Specialist",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/{{claimId}}/reject-by-specialist",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"rejectionReason\": \"Insufficient documentation\"\n}"
+      }
+    },
+    {
+      "name": "Confirm Claim Approval (Manager)",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/claims/{{claimId}}/confirm-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"managerId\": \"{{managerId}}\",\n  \"approved\": true,\n  \"comments\": \"Confirmed by manager\"\n}"
+      }
+    },
+    {
+      "name": "Create Dispute",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Incorrect tax deduction on payslip\",\n  \"employeeId\": \"{{employeeId}}\",\n  \"payslipId\": \"{{payslipId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Pending Disputes",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/pending",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Approved Disputes for Finance",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/approved",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Disputes by Employee",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/employee/{{employeeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Dispute by ID",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/{{disputeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Update Dispute",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/{{disputeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Updated dispute description\"\n}"
+      }
+    },
+    {
+      "name": "Approve Dispute by Specialist",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/{{disputeId}}/approve-by-specialist",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"resolutionComment\": \"Dispute is valid, will be processed\"\n}"
+      }
+    },
+    {
+      "name": "Reject Dispute by Specialist",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/{{disputeId}}/reject-by-specialist",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"rejectionReason\": \"Tax deduction is correct according to tax rules\"\n}"
+      }
+    },
+    {
+      "name": "Confirm Dispute Approval (Manager)",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/disputes/{{disputeId}}/confirm-approval",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"managerId\": \"{{managerId}}\",\n  \"approved\": true,\n  \"comments\": \"Confirmed by manager\"\n}"
+      }
+    },
+    {
+      "name": "Create Refund",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"refundDetails\": {\n    \"description\": \"Refund for approved dispute\",\n    \"amount\": 500\n  },\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Pending Refunds",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/pending",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Refunds by Employee",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/employee/{{employeeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Refund by ID",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/{{refundId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Update Refund",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/{{refundId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refundDetails\": {\n    \"description\": \"Updated refund description\",\n    \"amount\": 600\n  }\n}"
+      }
+    },
+    {
+      "name": "Process Refund (Mark as Paid)",
+      "method": "PUT",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/{{refundId}}/process",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"paidInPayrollRunId\": \"{{payrollRunId}}\"\n}"
+      }
+    },
+    {
+      "name": "Generate Refund for Dispute",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/dispute/{{disputeId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refundDetails\": {\n    \"description\": \"Refund for approved dispute\",\n    \"amount\": 500\n  },\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Generate Refund for Claim",
+      "method": "POST",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/refunds/claim/{{claimId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refundDetails\": {\n    \"description\": \"Refund for approved claim\",\n    \"amount\": 1500\n  },\n  \"financeStaffId\": \"{{financeStaffId}}\"\n}"
+      }
+    },
+    {
+      "name": "Get Payslips by Employee",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/payslips",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Payslip by ID",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/payslips/{{payslipId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Employee Base Salary",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/base-salary",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Leave Encashment",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/leave-encashment",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payrollRunId",
+          "value": "{{payrollRunId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Transportation Allowance",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/transportation-allowance",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Tax Deductions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/tax-deductions",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Insurance Deductions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/insurance-deductions",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Misconduct Deductions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/misconduct-deductions",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Unpaid Leave Deductions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/unpaid-leave-deductions",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Salary History",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/salary-history",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "limit",
+          "value": "12"
+        }
+      ]
+    },
+    {
+      "name": "Get Employer Contributions",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/employer-contributions",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payslipId",
+          "value": "{{payslipId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Tax Documents",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/employee/{{employeeId}}/tax-documents",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "year",
+          "value": "2024"
+        }
+      ]
+    },
+    {
+      "name": "Get Payroll Report by Department",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/reports/department/{{departmentId}}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "payrollRunId",
+          "value": "{{payrollRunId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Payroll Summary",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/reports/payroll-summary",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "period",
+          "value": "month"
+        },
+        {
+          "name": "date",
+          "value": "2025-01-31"
+        },
+        {
+          "name": "departmentId",
+          "value": "{{departmentId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Tax Insurance Benefits Report",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/reports/tax-insurance-benefits",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "period",
+          "value": "year"
+        },
+        {
+          "name": "date",
+          "value": "2025-01-31"
+        },
+        {
+          "name": "departmentId",
+          "value": "{{departmentId}}"
+        }
+      ]
+    },
+    {
+      "name": "Get Active Departments",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/departments",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ]
+    },
+    {
+      "name": "Get Payroll Summary by All Departments",
+      "method": "GET",
+      "url": "http://localhost:5000/api/v1/payroll-tracking/reports/departments-summary",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_JWT_TOKEN"
+        }
+      ],
+      "params": [
+        {
+          "name": "period",
+          "value": "month"
+        },
+        {
+          "name": "date",
+          "value": "2025-01-31"
+        }
+      ]
+    }
+  ]
+}
+

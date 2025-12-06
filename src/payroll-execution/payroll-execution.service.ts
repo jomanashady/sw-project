@@ -44,6 +44,8 @@ import { TerminationBenefitReviewDto } from './dto/TerminationBenefitReviewDto.d
 import { TerminationBenefitEditDto } from './dto/TerminationBenefitEditDto.dto';
 import { FinanceDecisionDto } from './dto/FinanceDecisionDto.dto';
 import { ManagerApprovalReviewDto } from './dto/ManagerApprovalReviewDto.dto';
+import { ReviewPayrollPeriodDto } from './dto/ReviewPayrollPeriodDto.dto';
+import { EditPayrollPeriodDto } from './dto/EditPayrollPeriodDto.dto';
 import { terminationAndResignationBenefits, terminationAndResignationBenefitsDocument } from '../payroll-configuration/models/terminationAndResignationBenefits';
 import { allowance, allowanceDocument } from '../payroll-configuration/models/allowance.schema';
 import { taxRules, taxRulesDocument } from '../payroll-configuration/models/taxRules.schema';
@@ -61,6 +63,62 @@ import { EmployeeStatus, SystemRole } from '../employee-profile/enums/employee-p
 import { TerminationStatus } from '../recruitment/enums/termination-status.enum';
 import { EmployeeSystemRole, EmployeeSystemRoleDocument } from '../employee-profile/models/employee-system-role.schema';
 
+/**
+ * ====================================================================================
+ * PAYROLL EXECUTION SERVICE - COMPLETE PAYROLL PROCESSING WORKFLOW
+ * ====================================================================================
+ * 
+ * This service implements the complete payroll processing workflow organized by phases:
+ * 
+ * PHASE 0 - Pre-Run Reviews & Approvals:
+ *   - Review, edit, approve/reject signing bonuses
+ *   - Review, edit, approve/reject termination/resignation benefits
+ *   - Ensures all pending items are reviewed before payroll initiation
+ * 
+ * PHASE 1 - Payroll Initiation:
+ *   - Process payroll initiation (create payroll run)
+ *   - Review payroll period (approve/reject)
+ *   - Edit payroll initiation if rejected
+ * 
+ * PHASE 1.1 - Payroll Draft Generation:
+ *   - Phase 1.1.A: Fetch employees & check HR events (new hire, termination, resignation)
+ *     * Auto-process signing bonuses for new hires
+ *     * Auto-process termination/resignation benefits
+ *   - Phase 1.1.B: Salary calculations
+ *     * Calculate base salary from PayGrade
+ *     * Calculate allowances
+ *     * Calculate deductions (Taxes = % of Base Salary, Insurance)
+ *     * Calculate Net Salary = Gross - Taxes - Insurance
+ *     * Calculate penalties (missing hours/days, unpaid leave)
+ *     * Calculate refunds
+ *     * Calculate Net Pay = Net Salary - Penalties + Refunds
+ *     * Prorated salary for mid-month hires/terminations
+ *   - Phase 1.1.C: Draft generation with full breakdowns
+ * 
+ * PHASE 2 - Payroll Draft Review:
+ *   - Flag irregularities (salary spikes, missing bank accounts, negative net pay)
+ *   - Status changes to UNDER_REVIEW
+ * 
+ * PHASE 3 - Review & Approval:
+ *   - Payroll Specialist: Review in preview dashboard, publish for approval
+ *   - Payroll Manager: Review, resolve exceptions, approve/reject
+ *   - Finance Staff: Review, approve/reject (sets paymentStatus to PAID if approved)
+ *   - Payroll Manager: Lock/freeze payroll after Finance approval
+ *   - Payroll Manager: Unfreeze with reason if needed
+ * 
+ * PHASE 5 - Execution:
+ *   - Auto-generate and distribute payslips (PDF, Email, Portal)
+ *   - Only after Finance approval and Lock status
+ * 
+ * All calculations follow business rules:
+ * - Net Salary = Gross Salary (Base + Allowances) - Taxes (% of Base) - Insurance
+ * - Net Pay = Net Salary - Penalties + Refunds
+ * - All deductions applied after gross salary calculation
+ * - Contract validation before processing
+ * - Multi-currency support
+ * - Prorated salaries for partial periods
+ * ====================================================================================
+ */
 @Injectable()
 export class PayrollExecutionService {
   constructor(
@@ -86,6 +144,13 @@ export class PayrollExecutionService {
     private readonly leavesService: LeavesService,
   ) {}
 
+  // ====================================================================================
+  // PHASE 0: PRE-RUN REVIEWS & APPROVALS
+  // ====================================================================================
+  // Phase 0 ensures all signing bonuses and termination benefits are reviewed/approved
+  // before payroll initiation can begin.
+  // ====================================================================================
+
   async createPayrollRun(createPayrollRunDto: CreatePayrollRunDto, currentUserId: string): Promise<payrollRuns> {
     // Ensure payrollManagerId is set - use provided one or find default
     let payrollManagerId = createPayrollRunDto.payrollManagerId;
@@ -104,6 +169,7 @@ export class PayrollExecutionService {
 
     const payrollRun = new this.payrollRunModel({
       ...createPayrollRunDto,
+      exceptions: createPayrollRunDto.exceptions ?? 0, // Default to 0 if not provided
       payrollManagerId: new mongoose.Types.ObjectId(payrollManagerId) as any,
       createdBy: currentUserId,
       updatedBy: currentUserId,
@@ -265,6 +331,9 @@ export class PayrollExecutionService {
     }
   }
 
+  // ====================================================================================
+  // PHASE 2: PAYROLL DRAFT REVIEW & IRREGULARITY FLAGGING
+  // ====================================================================================
   // REQ-PY-5: Auto-detect and flag irregularities
   // BR 9: Irregularity flagging with detailed tracking per employee
   async detectIrregularities(
@@ -821,6 +890,9 @@ export class PayrollExecutionService {
     return Math.round(converted * 100) / 100;
   }
 
+  // ====================================================================================
+  // PHASE 1: PAYROLL INITIATION
+  // ====================================================================================
   // REQ-PY-23: Automatically process payroll initiation
   // Creates a payroll run that requires review before draft generation
   // BR 1: Employment contract requirements
@@ -888,10 +960,11 @@ export class PayrollExecutionService {
     }
 
     // Generate runId (e.g., PR-2025-0001)
+    // Count ALL payroll runs for the year to ensure unique runId across all months
     const count = await this.payrollRunModel.countDocuments({
       payrollPeriod: {
-        $gte: new Date(year, month, 1),
-        $lt: new Date(year, month + 1, 1),
+        $gte: new Date(year, 0, 1), // Start of year
+        $lt: new Date(year + 1, 0, 1), // Start of next year
       },
     });
     const runId = `PR-${year}-${String(count + 1).padStart(4, '0')}`;
@@ -1117,6 +1190,7 @@ export class PayrollExecutionService {
       }
 
       // Reload the payroll run to get updated totals and exceptions
+      // This ensures we return the payroll run with all the latest updates from draft generation
       const updatedPayrollRun = await this.payrollRunModel.findById(
         payrollRun._id,
       );
@@ -1124,6 +1198,8 @@ export class PayrollExecutionService {
         throw new Error('Payroll run not found after draft generation');
       }
 
+      // Ensure the payroll run is saved with all updates (exceptions, totalnetpay, etc.)
+      // The generateDraftDetailsForPayrollRun already saved these, but we reload to ensure consistency
       return updatedPayrollRun;
     } else {
       // Validate status transition (DRAFT → REJECTED)
@@ -1213,6 +1289,88 @@ export class PayrollExecutionService {
     return await payrollRun.save();
   }
 
+  // REQ-PY-25: Review Payroll period (Approve or Reject)
+  // This method reviews the payroll period and updates the status accordingly
+  async reviewPayrollPeriod(
+    reviewDto: ReviewPayrollPeriodDto,
+    currentUserId: string,
+  ): Promise<payrollRuns> {
+    const payrollRun = await this.payrollRunModel.findById(reviewDto.payrollRunId);
+    if (!payrollRun) {
+      throw new Error('Payroll run not found');
+    }
+
+    // Validate that payroll run is in a state that can be reviewed
+    if (payrollRun.status !== PayRollStatus.DRAFT && payrollRun.status !== PayRollStatus.UNDER_REVIEW) {
+      throw new Error(
+        `Payroll run ${reviewDto.payrollRunId} is in ${payrollRun.status} status and cannot be reviewed. Only DRAFT or UNDER_REVIEW status payroll runs can be reviewed.`,
+      );
+    }
+
+    // Update status based on review
+    if (reviewDto.status === PayRollStatus.APPROVED || reviewDto.status === PayRollStatus.UNDER_REVIEW) {
+      // Approve or move to under review
+      payrollRun.status = reviewDto.status;
+      // Clear any previous rejection reason if re-approved
+      if ((payrollRun as any).rejectionReason) {
+        (payrollRun as any).rejectionReason = undefined;
+      }
+    } else if (reviewDto.status === PayRollStatus.REJECTED) {
+      // Reject the payroll period
+      payrollRun.status = PayRollStatus.REJECTED;
+      (payrollRun as any).rejectionReason =
+        reviewDto.rejectionReason || 'Rejected during payroll period review';
+    } else {
+      throw new Error(`Invalid status ${reviewDto.status} for payroll period review`);
+    }
+
+    (payrollRun as any).updatedBy = currentUserId;
+    return await payrollRun.save();
+  }
+
+  // REQ-PY-26: Edit payroll initiation (period) if rejected
+  // This method allows editing just the payroll period for rejected payroll runs
+  async editPayrollPeriod(
+    editDto: EditPayrollPeriodDto,
+    currentUserId: string,
+  ): Promise<payrollRuns> {
+    const payrollRun = await this.payrollRunModel.findById(editDto.payrollRunId);
+    if (!payrollRun) {
+      throw new Error('Payroll run not found');
+    }
+
+    // Can only edit period if payroll is in DRAFT or REJECTED status
+    if (
+      payrollRun.status !== PayRollStatus.DRAFT &&
+      payrollRun.status !== PayRollStatus.REJECTED
+    ) {
+      throw new Error(
+        `Cannot edit payroll period for payroll run in ${payrollRun.status} status. Only DRAFT or REJECTED payroll runs can have their period edited.`,
+      );
+    }
+
+    // Validate payroll period against contracts
+    await this.validatePayrollPeriodAgainstContracts(
+      new Date(editDto.payrollPeriod),
+    );
+
+    // Update the payroll period
+    payrollRun.payrollPeriod = new Date(editDto.payrollPeriod);
+
+    // If it was rejected, change status back to DRAFT to allow re-review
+    if (payrollRun.status === PayRollStatus.REJECTED) {
+      payrollRun.status = PayRollStatus.DRAFT;
+      // Clear rejection reason since it's being re-edited
+      (payrollRun as any).rejectionReason = undefined;
+    }
+
+    (payrollRun as any).updatedBy = currentUserId;
+    return await payrollRun.save();
+  }
+
+  // ====================================================================================
+  // PHASE 0.1: SIGNING BONUS MANAGEMENT
+  // ====================================================================================
   // REQ-PY-27: Automatically process signing bonuses
   // BR 24: Signing bonuses must be processed only for employees flagged as eligible in their contracts (linked through Employee Profile)
   async processSigningBonuses(
@@ -1522,6 +1680,9 @@ export class PayrollExecutionService {
     return await bonus.save();
   }
 
+  // ====================================================================================
+  // PHASE 0.2: TERMINATION/RESIGNATION BENEFITS MANAGEMENT
+  // ====================================================================================
   // REQ-PY-30 & REQ-PY-33: Automatically process benefits upon resignation/termination
   async processTerminationResignationBenefits(
     currentUserId: string,
@@ -2853,9 +3014,12 @@ export class PayrollExecutionService {
     };
   }
 
+  // ====================================================================================
+  // PHASE 1.1: PAYROLL DRAFT GENERATION
+  // ====================================================================================
   // REQ-PY-4: Generate draft payroll runs automatically at the end of each cycle
-  // 1.1.A: Auto process signing bonus in case of new hire
-  // 1.1.A: Auto process resignation and termination benefits
+  // Phase 1.1.A: Auto process signing bonus in case of new hire
+  // Phase 1.1.A: Auto process resignation and termination benefits
   // This method creates a complete draft payroll run with all employee calculations
   // BR 1: Employment contract requirements
   // BR 2: Contract terms validation
@@ -2920,10 +3084,11 @@ export class PayrollExecutionService {
     }
 
     // Generate runId (e.g., PR-2025-0001)
+    // Count ALL payroll runs for the year to ensure unique runId across all months
     const count = await this.payrollRunModel.countDocuments({
       payrollPeriod: {
-        $gte: new Date(year, month, 1),
-        $lt: new Date(year, month + 1, 1),
+        $gte: new Date(year, 0, 1), // Start of year
+        $lt: new Date(year + 1, 0, 1), // Start of next year
       },
     });
     const runId = `PR-${year}-${String(count + 1).padStart(4, '0')}`;
@@ -3317,6 +3482,9 @@ export class PayrollExecutionService {
     };
   }
 
+  // ====================================================================================
+  // PHASE 5: EXECUTION - PAYSLIP GENERATION & DISTRIBUTION
+  // ====================================================================================
   // REQ-PY-8: Automatically generate and distribute employee payslips
   // Should only generate after REQ-PY-15 (Finance approval) & REQ-PY-7 (Lock)
   // BR 17: Auto-generated payslips with clear breakdown
@@ -3345,6 +3513,29 @@ export class PayrollExecutionService {
       .populate('employeeId')
       .exec();
 
+    console.log(`[Generate Payslips] Found ${payrollDetails.length} employee payroll details for payroll run ${payrollRunId}`);
+
+    if (payrollDetails.length === 0) {
+      // Check payroll run status to provide more helpful error message
+      const payrollRunStatus = payrollRun.status;
+      const payrollRunPeriod = payrollRun.payrollPeriod;
+      
+      let errorMessage = `No employee payroll details found for payroll run ${payrollRunId}.\n\n`;
+      errorMessage += `Payroll Run Status: ${payrollRunStatus}\n`;
+      errorMessage += `Payroll Period: ${new Date(payrollRunPeriod).toISOString().split('T')[0]}\n\n`;
+      errorMessage += `To generate payslips, you must first generate the payroll draft.\n\n`;
+      errorMessage += `Option 1: Review and approve payroll initiation (auto-generates draft):\n`;
+      errorMessage += `  POST /api/v1/payroll/review-initiation/${payrollRunId}\n`;
+      errorMessage += `  Body: { "approved": true, "reviewerId": "...", "rejectionReason": null }\n\n`;
+      errorMessage += `Option 2: Generate draft directly:\n`;
+      errorMessage += `  POST /api/v1/payroll/generate-draft\n`;
+      errorMessage += `  Body: { "payrollPeriod": "${new Date(payrollRunPeriod).toISOString()}", "entity": "${payrollRun.entity}", ... }\n\n`;
+      errorMessage += `After generating the draft, complete the approval workflow:\n`;
+      errorMessage += `  1. Send for approval → 2. Manager approval → 3. Finance approval → 4. Lock → 5. Generate payslips`;
+      
+      throw new Error(errorMessage);
+    }
+
     const generatedPayslips: any[] = [];
 
     // Get all approved allowances, tax rules, and insurance brackets once (shared across employees)
@@ -3367,14 +3558,47 @@ export class PayrollExecutionService {
     const allInsuranceBrackets = insuranceBracketsResult?.data || [];
 
     for (const detail of payrollDetails) {
-      const employeeId = detail.employeeId.toString();
+      // Handle employeeId whether it's populated (object with _id) or just ObjectId
+      const employeeIdString = 
+        (detail.employeeId as any)?._id?.toString() ||
+        (detail.employeeId as any)?.toString() ||
+        detail.employeeId?.toString();
+      
+      if (!employeeIdString || !mongoose.Types.ObjectId.isValid(employeeIdString)) {
+        const errorMsg = `Invalid employeeId in payroll detail: ${JSON.stringify(detail.employeeId)}`;
+        console.error(`[Generate Payslips] ${errorMsg}`);
+        await this.flagPayrollException(
+          payrollRunId,
+          'INVALID_EMPLOYEE_ID',
+          errorMsg,
+          currentUserId,
+          'unknown',
+        );
+        continue;
+      }
+      
+      const employeeId = employeeIdString;
       const baseSalary = detail.baseSalary;
 
       // Get deductions breakdown from stored data (BR 31)
       const deductionsBreakdown = this.getDeductionsBreakdown(detail);
 
       // Get employee for allowance filtering
-      const employee = await this.employeeProfileService.findOne(employeeId);
+      let employee;
+      try {
+        employee = await this.employeeProfileService.findOne(employeeId);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Generate Payslips] Error fetching employee ${employeeId}: ${errorMessage}`);
+        await this.flagPayrollException(
+          payrollRunId,
+          'EMPLOYEE_NOT_FOUND',
+          `Employee ${employeeId} not found or invalid: ${errorMessage}`,
+          currentUserId,
+          employeeId,
+        );
+        continue;
+      }
 
       // Get applicable allowances for this employee (BR 20, BR 38, BR 39)
       const employeeAllowances = await this.getApplicableAllowancesForEmployee(
@@ -3395,9 +3619,10 @@ export class PayrollExecutionService {
         }));
 
       // Get approved signing bonuses for this employee
+      const employeeObjectId = new mongoose.Types.ObjectId(employeeId);
       const approvedSigningBonuses = await this.employeeSigningBonusModel
         .find({
-          employeeId: detail.employeeId,
+          employeeId: employeeObjectId,
           status: BonusStatus.APPROVED,
         })
         .populate('signingBonusId')
@@ -3443,7 +3668,7 @@ export class PayrollExecutionService {
       // Get approved termination/resignation benefits for this employee
       const approvedBenefits = await this.employeeTerminationResignationModel
         .find({
-          employeeId: detail.employeeId,
+          employeeId: employeeObjectId,
           status: BenefitStatus.APPROVED,
         })
         .populate('benefitId')
@@ -3550,7 +3775,7 @@ export class PayrollExecutionService {
       // This model access is kept for legacy/compatibility but penalties are primarily calculated from TimeManagement and Leaves
       const penalties = await this.employeePenaltiesModel
         .findOne({
-          employeeId: detail.employeeId,
+          employeeId: employeeObjectId,
           // Would filter by payroll period if available
         })
         .exec();
@@ -3600,39 +3825,91 @@ export class PayrollExecutionService {
       const totaDeductions =
         totalTaxAmount + totalInsuranceAmount + totalPenaltiesAmount;
 
-      // Create payslip with proper structure matching schema
-      const payslip = new this.paySlipModel({
-        employeeId: detail.employeeId,
+      // Check if payslip already exists for this employee and payroll run to avoid duplicates
+      const existingPayslip = await this.paySlipModel.findOne({
+        employeeId: employeeObjectId,
         payrollRunId: new mongoose.Types.ObjectId(payrollRunId) as any,
-        earningsDetails: {
-          baseSalary: baseSalary,
-          allowances: applicableAllowances,
-          bonuses:
-            signingBonusConfigs.length > 0 ? signingBonusConfigs : undefined,
-          benefits:
-            terminationBenefitConfigs.length > 0
-              ? terminationBenefitConfigs
-              : undefined,
-          refunds: refundDetailsList.length > 0 ? refundDetailsList : undefined,
-        },
-        deductionsDetails: {
-          taxes: applicableTaxRules,
-          insurances:
-            applicableInsuranceBrackets.length > 0
-              ? applicableInsuranceBrackets
-              : undefined,
-          penalties: penalties || undefined,
-        },
-        totalGrossSalary: totalGrossSalary,
-        totaDeductions: totaDeductions,
-        netPay: detail.netPay,
-        paymentStatus: PaySlipPaymentStatus.PENDING, // Default status
-        createdBy: currentUserId,
-        updatedBy: currentUserId,
       });
 
-      await payslip.save();
-      generatedPayslips.push(payslip as any);
+      if (existingPayslip) {
+        console.log(`[Generate Payslips] Payslip already exists for employee ${employeeId} in payroll run ${payrollRunId}. Skipping creation.`);
+        generatedPayslips.push(existingPayslip as any);
+        continue;
+      }
+
+      // Create payslip with proper structure matching schema
+      let payslip: any = null;
+      try {
+        console.log(`[Generate Payslips] Creating payslip for employee ${employeeId}...`);
+        
+        const payrollRunObjectId = new mongoose.Types.ObjectId(payrollRunId);
+        
+        // Ensure arrays are always arrays (not undefined) to match schema requirements
+        const payslipData = {
+          employeeId: employeeObjectId,
+          payrollRunId: payrollRunObjectId,
+          earningsDetails: {
+            baseSalary: baseSalary,
+            allowances: Array.isArray(applicableAllowances) ? applicableAllowances : [],
+            bonuses: Array.isArray(signingBonusConfigs) && signingBonusConfigs.length > 0 
+              ? signingBonusConfigs 
+              : undefined,
+            benefits: Array.isArray(terminationBenefitConfigs) && terminationBenefitConfigs.length > 0
+              ? terminationBenefitConfigs
+              : undefined,
+            refunds: Array.isArray(refundDetailsList) && refundDetailsList.length > 0 
+              ? refundDetailsList 
+              : undefined,
+          },
+          deductionsDetails: {
+            taxes: Array.isArray(applicableTaxRules) ? applicableTaxRules : [],
+            insurances: Array.isArray(applicableInsuranceBrackets) && applicableInsuranceBrackets.length > 0
+              ? applicableInsuranceBrackets
+              : undefined,
+            penalties: penalties ? penalties : undefined,
+          },
+          totalGrossSalary: totalGrossSalary,
+          totaDeductions: totaDeductions,
+          netPay: detail.netPay,
+          paymentStatus: PaySlipPaymentStatus.PENDING, // Default status
+        };
+
+        payslip = new this.paySlipModel(payslipData);
+
+        console.log(`[Generate Payslips] Saving payslip for employee ${employeeId}...`);
+        const savedPayslip = await payslip.save();
+        console.log(`[Generate Payslips] Successfully saved payslip ${savedPayslip._id} for employee ${employeeId} in MongoDB`);
+        
+        // Verify the payslip was actually saved by querying it back
+        const verifiedPayslip = await this.paySlipModel.findById(savedPayslip._id);
+        if (!verifiedPayslip) {
+          throw new Error(`Payslip was not found in database after save. Save operation may have failed.`);
+        }
+        
+        generatedPayslips.push(savedPayslip as any);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Generate Payslips] Error creating/saving payslip for employee ${employeeId}: ${errorMessage}`);
+        if (error instanceof Error && (error as any).errors) {
+          console.error(`[Generate Payslips] Validation errors:`, JSON.stringify((error as any).errors, null, 2));
+        }
+        // Flag as exception but continue with other employees
+        await this.flagPayrollException(
+          payrollRunId,
+          'PAYSLIP_GENERATION_ERROR',
+          `Failed to generate payslip for employee ${employeeId}: ${errorMessage}`,
+          currentUserId,
+          employeeId.toString(),
+        );
+        // Continue with next employee instead of failing entire process
+        continue;
+      }
+
+      // Only process refunds and distribute if payslip was successfully created
+      if (!payslip) {
+        console.warn(`[Generate Payslips] Skipping refund processing and distribution for employee ${employeeId} - payslip creation failed`);
+        continue;
+      }
 
       // Process refunds that were included in this payslip (mark as PAID)
       // Integration with PayrollTrackingService: Mark refunds as paid after payslip generation
@@ -3665,9 +3942,9 @@ export class PayrollExecutionService {
       // Distribute payslip based on method
       try {
         if (distributionMethod === 'PDF') {
-          await this.distributePayslipAsPDF(payslip, detail.employeeId);
+          await this.distributePayslipAsPDF(payslip, employeeObjectId);
         } else if (distributionMethod === 'EMAIL') {
-          await this.distributePayslipViaEmail(payslip, detail.employeeId);
+          await this.distributePayslipViaEmail(payslip, employeeObjectId);
         } else if (distributionMethod === 'PORTAL') {
           await this.distributePayslipViaPortal(payslip);
         }
@@ -3689,10 +3966,21 @@ export class PayrollExecutionService {
       }
     }
 
+    console.log(`[Generate Payslips] Completed. Generated ${generatedPayslips.length} payslips out of ${payrollDetails.length} employees via ${distributionMethod}`);
+
+    if (generatedPayslips.length === 0) {
+      throw new Error(
+        `Failed to generate any payslips. Check the logs for validation errors.`,
+      );
+    }
+
     return {
       message: `Generated ${generatedPayslips.length} payslips via ${distributionMethod}`,
       payslips: generatedPayslips,
       distributionMethod,
+      totalEmployees: payrollDetails.length,
+      successful: generatedPayslips.length,
+      failed: payrollDetails.length - generatedPayslips.length,
     };
   }
 
@@ -4109,6 +4397,9 @@ export class PayrollExecutionService {
     }
   }
 
+  // ====================================================================================
+  // PHASE 3: REVIEW & APPROVAL WORKFLOW
+  // ====================================================================================
   // REQ-PY-12: Send payroll run for approval to Manager and Finance
   // BR: Enforce proper workflow sequence
   async sendForApproval(

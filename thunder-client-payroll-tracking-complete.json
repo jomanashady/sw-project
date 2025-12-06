@@ -1,0 +1,978 @@
+{
+  "clientName": "Payroll Tracking API - Complete Collection",
+  "collectionName": "Payroll Tracking APIs",
+  "folders": [
+    {
+      "name": "Claims",
+      "id": "claims-folder"
+    },
+    {
+      "name": "Disputes",
+      "id": "disputes-folder"
+    },
+    {
+      "name": "Refunds",
+      "id": "refunds-folder"
+    },
+    {
+      "name": "Employee Self-Service",
+      "id": "employee-self-service-folder"
+    },
+    {
+      "name": "Reports",
+      "id": "reports-folder"
+    }
+  ],
+  "requests": [
+    {
+      "name": "1. Create Claim (Employee)✅",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Business trip expenses for client meeting in Cairo\",\n  \"claimType\": \"travel\",\n  \"employeeId\": \"507f1f77bcf86cd799439011\",\n  \"amount\": 2500.00,\n  \"financeStaffId\": \"507f1f77bcf86cd799439012\"\n}"
+      },
+      "tests": []
+    },
+    {
+      "name": "2. Get Pending Claims (Payroll Specialist)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/pending",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "3. Get Approved Claims for Finance✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/approved",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "4. Get Claims by Employee ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/employee/507f1f77bcf86cd799439011",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "5. Get Claim by ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/507f1f77bcf86cd799439020",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}  
+    },
+    {
+      "name": "6. Update Claim✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/507f1f77bcf86cd799439020",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Updated: Business trip expenses for client meeting in Cairo - Updated amount\",\n  \"amount\": 2800.00,\n  \"claimType\": \"travel\"\n}"
+      }
+    },
+    {
+      "name": "7. Approve Claim by Specialist✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/507f1f77bcf86cd799439020/approve-by-specialist",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollSpecialistId\": \"507f1f77bcf86cd799439013\",\n  \"approvedAmount\": 2500.00,\n  \"resolutionComment\": \"All receipts verified. Approved for full amount.\"\n}"
+      }
+    },
+    {
+      "name": "8. Reject Claim by Specialist✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/507f1f77bcf86cd799439020/reject-by-specialist",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollSpecialistId\": \"507f1f77bcf86cd799439013\",\n  \"rejectionReason\": \"Missing receipts for expenses over $500. Please provide all required documentation.\"\n}"
+      }
+    },
+    {
+      "name": "9. Confirm Claim Approval (Manager)✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/claims/507f1f77bcf86cd799439020/confirm-approval",
+      "folder": "claims-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollManagerId\": \"507f1f77bcf86cd799439014\",\n  \"resolutionComment\": \"Manager confirmation: Approved and ready for finance processing.\"\n}"
+      }
+    },
+    {
+      "name": "10. Create Dispute (Employee)✅",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"I believe my overtime hours were not included in my payslip. I worked 15 extra hours this month.\",\n  \"employeeId\": \"507f1f77bcf86cd799439011\",\n  \"payslipId\": \"507f1f77bcf86cd799439030\"\n}"
+      }
+    },
+    {
+      "name": "11. Get Pending Disputes (Payroll Specialist)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/pending",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "12. Get Approved Disputes for Finance✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/approved",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "13. Get Disputes by Employee ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/employee/507f1f77bcf86cd799439011",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "14. Get Dispute by ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/507f1f77bcf86cd799439040",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "15. Update Dispute✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/507f1f77bcf86cd799439040",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"description\": \"Updated: I believe my overtime hours (15 hours) were not included in my payslip. I have timesheet records to support this.\",\n  \"resolutionComment\": \"Added supporting documentation\"\n}"
+      }
+    },
+    {
+      "name": "16. Approve Dispute by Specialist✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/507f1f77bcf86cd799439040/approve-by-specialist",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollSpecialistId\": \"507f1f77bcf86cd799439013\",\n  \"resolutionComment\": \"Timesheet verified. Overtime hours confirmed. Dispute is valid.\"\n}"
+      }
+    },
+    {
+      "name": "17. Reject Dispute by Specialist✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/507f1f77bcf86cd799439040/reject-by-specialist",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollSpecialistId\": \"507f1f77bcf86cd799439013\",\n  \"rejectionReason\": \"Timesheet records do not match. Overtime hours were already included in the payslip.\"\n}"
+      }
+    },
+    {
+      "name": "18. Confirm Dispute Approval (Manager)✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/disputes/507f1f77bcf86cd799439040/confirm-approval",
+      "folder": "disputes-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"payrollManagerId\": \"507f1f77bcf86cd799439014\",\n  \"resolutionComment\": \"Manager confirmation: Dispute approved. Finance can proceed with refund.\"\n}"
+      }
+    },
+    {
+      "name": "19. Create Refund (Finance)✅",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refundDetails\": {\n    \"description\": \"Refund for approved expense claim - Business trip expenses\",\n    \"amount\": 2500.00\n  },\n  \"employeeId\": \"507f1f77bcf86cd799439011\",\n  \"financeStaffId\": \"507f1f77bcf86cd799439012\",\n  \"claimId\": \"507f1f77bcf86cd799439020\"\n}"
+      }
+    },
+    {
+      "name": "20. Get Pending Refunds (Finance)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/pending",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "21. Get Refunds by Employee ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/employee/507f1f77bcf86cd799439011",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "22. Get Refund by ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/507f1f77bcf86cd799439050",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "23. Update Refund✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/507f1f77bcf86cd799439050",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refundDetails\": {\n    \"description\": \"Updated: Refund for approved expense claim - Business trip expenses (corrected amount)\",\n    \"amount\": 2800.00\n  }\n}"
+      }
+    },
+    {
+      "name": "24. Process Refund (Mark as Paid)✅",
+      "method": "PUT",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/507f1f77bcf86cd799439050/process",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"paidInPayrollRunId\": \"507f1f77bcf86cd799439060\"\n}"
+      }
+    },
+    {
+      "name": "25. Generate Refund for Dispute✅",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/dispute/507f1f77bcf86cd799439040",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"financeStaffId\": \"507f1f77bcf86cd799439012\",\n  \"refundDetails\": {\n    \"description\": \"Refund for approved dispute - Overtime hours compensation\",\n    \"amount\": 1500.00\n  }\n}"
+      }
+    },
+    {
+      "name": "26. Generate Refund for Claim✅",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/refunds/claim/507f1f77bcf86cd799439020",
+      "folder": "refunds-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "type": "text"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"financeStaffId\": \"507f1f77bcf86cd799439012\",\n  \"refundDetails\": {\n    \"description\": \"Refund for approved expense claim - Business trip expenses\",\n    \"amount\": 2500.00\n  }\n}"
+      }
+    },
+    {
+      "name": "27. Get Payslips by Employee ID✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/payslips",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "28. Get Payslip by ID ✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/payslips/507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "29. Get Employee Base Salary✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/base-salary",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "30. Get Leave Encashment✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/leave-encashment",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "31. Get Leave Encashment (with Payroll Run ID) ✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/leave-encashment?payrollRunId=507f1f77bcf86cd799439060",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "32. Get Transportation Allowance✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/transportation-allowance",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "33. Get Transportation Allowance (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/transportation-allowance?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "34. Get Tax Deductions✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/tax-deductions",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "35. Get Tax Deductions (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/tax-deductions?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "36. Get Insurance Deductions✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/insurance-deductions",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "37. Get Insurance Deductions (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/insurance-deductions?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "38. Get Misconduct Deductions ✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/misconduct-deductions",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "39. Get Misconduct Deductions (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/misconduct-deductions?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "40. Get Unpaid Leave Deductions✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/unpaid-leave-deductions",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "41. Get Unpaid Leave Deductions (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/unpaid-leave-deductions?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "42. Get Salary History✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/salary-history",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "43. Get Salary History (with Limit)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/salary-history?limit=6",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "44. Get Employer Contributions✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/employer-contributions",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "45. Get Employer Contributions (with Payslip ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/employer-contributions?payslipId=507f1f77bcf86cd799439030",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "46. Get Tax Documents✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/tax-documents",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "47. Get Tax Documents (with Year)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/employee/507f1f77bcf86cd799439011/tax-documents?year=2025",
+      "folder": "employee-self-service-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "48. Get Payroll Report by Department✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/department/507f1f77bcf86cd799439070",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "49. Get Payroll Report by Department (with Payroll Run ID)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/department/507f1f77bcf86cd799439070?payrollRunId=507f1f77bcf86cd799439060",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "50. Get Payroll Summary (Month)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/payroll-summary?period=month&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "51. Get Payroll Summary (Year)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/payroll-summary?period=year&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "52. Get Payroll Summary (Month with Department)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/payroll-summary?period=month&date=2025-01-15&departmentId=507f1f77bcf86cd799439070",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "53. Get Tax Insurance Benefits Report (Month)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/tax-insurance-benefits?period=month&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "54. Get Tax Insurance Benefits Report (Year)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/tax-insurance-benefits?period=year&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "55. Get Tax Insurance Benefits Report (Month with Department)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/tax-insurance-benefits?period=month&date=2025-01-15&departmentId=507f1f77bcf86cd799439070",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "56. Get Active Departments✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/departments",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "57. Get Payroll Summary by All Departments (Month)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/departments-summary?period=month&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "name": "58. Get Payroll Summary by All Departments (Year)✅",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/v1/payroll-tracking/reports/departments-summary?period=year&date=2025-01-15",
+      "folder": "reports-folder",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{jwt_token}}",
+          "type": "text"
+        }
+      ],
+      "body": {}
+    }
+  ],
+  "environments": [
+    {
+      "name": "Local Development",
+      "data": {
+        "baseUrl": "http://localhost:3000",
+        "jwt_token": "YOUR_JWT_TOKEN_HERE"
+      }
+    },
+    {
+      "name": "Production",
+      "data": {
+        "baseUrl": "https://api.yourdomain.com",
+        "jwt_token": "YOUR_JWT_TOKEN_HERE"
+      }
+    }
+  ]
+}
+
