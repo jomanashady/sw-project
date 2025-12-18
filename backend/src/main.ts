@@ -1,4 +1,3 @@
-// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -33,25 +32,19 @@ async function bootstrap() {
           console.log('✅ CORS: Allowing request with no origin');
           return callback(null, true);
         }
-        
-        // Check if origin is in allowed list
+
+        // Ensure the origin is in the allowed list
         if (uniqueOrigins.includes(origin)) {
           console.log(`✅ CORS: Allowing origin: ${origin}`);
           return callback(null, true);
         }
-        
+
         // Allow all Netlify domains (including preview deployments)
         if (origin.endsWith('.netlify.app')) {
           console.log(`✅ CORS: Allowing Netlify domain: ${origin}`);
           return callback(null, true);
         }
-        
-        // Allow localhost for development
-        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-          console.log(`✅ CORS: Allowing localhost: ${origin}`);
-          return callback(null, true);
-        }
-        
+
         // Log blocked origins for debugging
         console.log(`❌ CORS: Blocking origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
