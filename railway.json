@@ -8,6 +8,6 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
-  "$comment": "This is for the backend service. Frontend service should use frontend/railway.json"
+  "$comment": "This railway.json is for the BACKEND service. The frontend service should have Root Directory set to 'frontend' in Railway settings."
 }
 
