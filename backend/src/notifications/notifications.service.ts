@@ -14,7 +14,7 @@ import { RecruitmentNotificationsService } from './services/recruitment-notifica
 @Injectable()
 export class NotificationsService {
   constructor(
-    @InjectModel('NotificationLog')
+    @InjectModel('ExtendedNotification')
     private notificationLogModel: Model<any>,
     @InjectModel('ShiftAssignment')
     private shiftAssignmentModel: Model<any>,
@@ -185,9 +185,27 @@ export class NotificationsService {
     }>,
     currentUserId: string,
   ) {
+    // If no HR Admin IDs provided, fetch all HR Admins and System Admins
+    let targetAdminIds = hrAdminIds;
+    if (!hrAdminIds || hrAdminIds.length === 0) {
+      console.log('[BULK NOTIFICATION] No HR Admin IDs provided, fetching all HR Admins and System Admins...');
+      
+      // Query the employee_system_roles collection for users with HR_ADMIN or SYSTEM_ADMIN roles
+      const hrAdminRoles = await this.employeeSystemRoleModel
+        .find({
+          roles: { $in: [SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN] },
+          isActive: true,
+        })
+        .select('employeeProfileId')
+        .exec();
+      
+      targetAdminIds = hrAdminRoles.map(role => role.employeeProfileId.toString());
+      console.log(`[BULK NOTIFICATION] Found ${targetAdminIds.length} HR Admins/System Admins`);
+    }
+
     const notifications: any[] = [];
 
-    for (const hrAdminId of hrAdminIds) {
+    for (const hrAdminId of targetAdminIds) {
       // Create summary message for HR Admin
       const message =
         `${expiringAssignments.length} shift assignment(s) expiring soon:\n` +
@@ -210,6 +228,7 @@ export class NotificationsService {
     return {
       notificationsSent: notifications.length,
       notifications,
+      hrAdminsNotified: targetAdminIds.length,
     };
   }
 
@@ -698,14 +717,20 @@ export class NotificationsService {
         `[SCHEDULED TASK] Found ${expiringAssignments.length} expiring shift assignments`,
       );
 
-      // Get all HR ADMIN users
-      const hrAdmins = await this.employeeProfileModel
+      // Get all HR ADMIN users from the employee_system_roles collection
+      const hrAdminRoles = await this.employeeSystemRoleModel
         .find({
-          systemRole: { $in: ['HR_ADMIN', 'SYSTEM_ADMIN'] },
-          active: true,
+          roles: { $in: [SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN] },
+          isActive: true,
         })
-        .select('_id firstName lastName')
+        .populate('employeeProfileId', 'firstName lastName')
         .exec();
+      
+      const hrAdmins = hrAdminRoles.map(role => ({
+        _id: role.employeeProfileId,
+        firstName: (role.employeeProfileId as any)?.firstName,
+        lastName: (role.employeeProfileId as any)?.lastName,
+      }));
 
       if (!hrAdmins || hrAdmins.length === 0) {
         console.log('[SCHEDULED TASK] No HR admins found to notify');

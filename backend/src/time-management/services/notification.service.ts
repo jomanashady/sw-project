@@ -50,12 +50,12 @@ export class NotificationService {
     sendNotificationDto: SendNotificationDto,
     currentUserId: string,
   ) {
+    // Using basic NotificationLog schema (TA's version)
+    // For rich notifications with isRead, data, title, etc., use NotificationsService from notifications module
     const notification = new this.notificationLogModel({
       to: sendNotificationDto.to,
       type: sendNotificationDto.type,
       message: sendNotificationDto.message ?? '',
-      createdBy: currentUserId,
-      updatedBy: currentUserId,
     });
     await notification.save();
     await this.logTimeManagementChange(

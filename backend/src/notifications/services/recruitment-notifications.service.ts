@@ -19,7 +19,7 @@ import { NotificationType } from '../enums/notification-type.enum';
 @Injectable()
 export class RecruitmentNotificationsService {
   constructor(
-    @InjectModel('NotificationLog')
+    @InjectModel('ExtendedNotification')
     private notificationLogModel: Model<any>,
   ) {}
 

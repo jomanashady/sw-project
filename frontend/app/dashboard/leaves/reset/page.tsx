@@ -40,6 +40,44 @@ export default function ResetLeaveBalancesPage() {
     }
   };
 
+  const handleTestReset = async () => {
+    try {
+      setLoading(true);
+      console.log('[ResetPage] Starting test reset...');
+      const result = await leavesApi.resetLeaveBalancesForTest();
+      console.log('[ResetPage] Test reset result:', result);
+      showToast(
+        result.message || `Test reset completed. Reset ${result.reset || 0} of ${result.total || 0} entitlements.`,
+        "success"
+      );
+    } catch (error: any) {
+      console.error('[ResetPage] Test reset error:', error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to reset leave balances";
+      showToast(errorMessage, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAllEmployees = async () => {
+    try {
+      setLoading(true);
+      console.log('[ResetPage] Starting add all employees...');
+      const result = await leavesApi.addAllEmployeesToEntitlements();
+      console.log('[ResetPage] Add employees result:', result);
+      showToast(
+        result.message || `Successfully added ${result.totalEmployees || 0} employees to entitlements.`,
+        "success"
+      );
+    } catch (error: any) {
+      console.error('[ResetPage] Add employees error:', error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to add employees to entitlements";
+      showToast(errorMessage, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-6 py-8">
       <Toast
@@ -88,13 +126,44 @@ export default function ResetLeaveBalancesPage() {
             </p>
           </div>
 
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            variant="primary"
-            className="w-full"
-          >
-            Reset Leave Balances
-          </Button>
+          <div className="space-y-3">
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              variant="primary"
+              className="w-full"
+            >
+              Reset Leave Balances (Based on Criterion)
+            </Button>
+            
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">For Testing:</h3>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleAddAllEmployees}
+                  variant="outline"
+                  className="w-full bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                  disabled={loading}
+                >
+                  {loading ? "Processing..." : "Add All Employees to Entitlements"}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  This will add all employees to leave entitlements for all leave types and set their contract type to Full-Time.
+                </p>
+                
+                <Button
+                  onClick={handleTestReset}
+                  variant="outline"
+                  className="w-full bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+                  disabled={loading}
+                >
+                  {loading ? "Resetting..." : "Reset All to Zero (Test Mode)"}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  ⚠️ This will immediately reset ALL leave balances to zero for all employees. Use only for testing.
+                </p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

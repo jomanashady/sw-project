@@ -40,7 +40,7 @@ import {
   EmployeeSystemRole,
   EmployeeSystemRoleDocument,
 } from '../employee-profile/models/employee-system-role.schema';
-import { EmployeeStatus, SystemRole } from '../employee-profile/enums/employee-profile.enums';
+import { EmployeeStatus, SystemRole, ContractType } from '../employee-profile/enums/employee-profile.enums';
 // import { PositionAssignment, PositionAssignmentDocument } from '../organization-structure/models/position-assignment.schema';
 // import { Position, PositionDocument } from '../organization-structure/models/position.schema';
 
@@ -498,6 +498,41 @@ export class LeavesService {
       throw new BadRequestException(validationResult.errorMessage || 'Invalid leave request. Please check your input and try again.');
     }
 
+    // Check if employee is a department head, HR Manager, or HR Admin
+    const employeeSystemRole = await this.systemRoleModel
+      .findOne({ employeeProfileId: employeeObjectId, isActive: true })
+      .exec();
+    const isDepartmentHead = employeeSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+    const isHRManager = employeeSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+    const isHRAdmin = employeeSystemRole?.roles?.includes(SystemRole.HR_ADMIN) || false;
+
+    // Determine approval flow based on employee role
+    // Department heads' requests go directly to HR Manager
+    // HR Managers' requests go directly to CEO (John Doe)
+    // HR Admin requests go directly to HR Manager
+    let approvalRole = 'Manager';
+    if (isDepartmentHead) {
+      approvalRole = 'HR Manager';
+    } else if (isHRAdmin) {
+      approvalRole = 'HR Manager';
+    } else if (isHRManager) {
+      // Find CEO (John Doe) by name
+      const ceo = await this.employeeProfileModel
+        .findOne({ 
+          firstName: 'John', 
+          lastName: 'Doe',
+          status: { $ne: 'TERMINATED' } // Only active employees
+        })
+        .exec();
+      
+      if (ceo) {
+        approvalRole = 'CEO';
+      } else {
+        // Fallback: if CEO not found, route to HR Manager
+        approvalRole = 'HR Manager';
+      }
+    }
+
     // Create leave request with initial approval flow, ensuring ObjectId fields are set
     const leaveRequest = new this.leaveRequestModel({
       ...createLeaveRequestDto,
@@ -509,7 +544,7 @@ export class LeavesService {
       status: LeaveStatus.PENDING,
       approvalFlow: [
         {
-          role: 'Manager',
+          role: approvalRole,
           status: 'PENDING',
           decidedBy: undefined,
           decidedAt: undefined,
@@ -658,11 +693,22 @@ export class LeavesService {
   async updateLeaveRequest(
     id: string,
     updateLeaveRequestDto: UpdateLeaveRequestDto,
+    userId?: string, // Optional: user ID to validate ownership
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
     if (!leaveRequest) {
       throw new Error(`LeaveRequest with ID ${id} not found`);
+    }
+
+    // Validate ownership: user can only edit their own requests
+    if (userId) {
+      const requestEmployeeId = leaveRequest.employeeId.toString();
+      if (requestEmployeeId !== userId) {
+        throw new BadRequestException(
+          'You can only edit your own leave requests.'
+        );
+      }
     }
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
@@ -744,11 +790,21 @@ export class LeavesService {
   }
 
   // Phase 2: REQ-018 - Cancel a leave request before final approval
-  async cancelLeaveRequest(id: string): Promise<LeaveRequestDocument> {
+  async cancelLeaveRequest(id: string, userId?: string): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
     if (!leaveRequest) {
       throw new Error(`LeaveRequest with ID ${id} not found`);
+    }
+
+    // Validate ownership: user can only cancel their own requests
+    if (userId) {
+      const requestEmployeeId = leaveRequest.employeeId.toString();
+      if (requestEmployeeId !== userId) {
+        throw new BadRequestException(
+          'You can only cancel your own leave requests.'
+        );
+      }
     }
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
@@ -817,30 +873,117 @@ export class LeavesService {
       );
     }
 
-    // Step 4: Check if the approver is a delegated employee
+    // Step 3.5: Prevent department head from approving their own leave requests
+    // Department head's own requests should be handled by HR Manager
+    const requestEmployeeId = leaveRequest.employeeId.toString();
+    if (requestEmployeeId === managerId) {
+      // Check if the manager is a department head
+      const managerSystemRole = await this.systemRoleModel
+        .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+        .exec();
+      const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+
+      if (isDepartmentHead) {
+        throw new BadRequestException(
+          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.',
+        );
+      }
+    }
+
+    // Step 4: Check the approval flow role to determine who should approve
+    const pendingApproval = leaveRequest.approvalFlow.find(
+      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING,
+    );
+    const approvalRole = pendingApproval?.role || 'Manager';
+
+    // Step 5: Check if the approver is a delegated employee (only for Department Head approvals)
     // If they are a delegate, they're approving on behalf of the manager who delegated to them
     const delegatedManagerId = this.getDelegatedManagerId(managerId);
-    const isDelegate = delegatedManagerId !== null;
+    const isDelegate = delegatedManagerId !== null && approvalRole !== 'HR Manager';
 
     // The actual manager ID (either the approver themselves or the manager they're delegated for)
     // This is used for tracking purposes, but decidedBy will always record who actually made the decision
     const actualManagerId = isDelegate ? delegatedManagerId! : managerId;
 
-    // Step 5: Update the approval flow with the manager's decision
-    // Note: decidedBy records who actually made the decision (could be delegate), role is always Department_Head
-    leaveRequest.approvalFlow.push({
-      role: 'Departement_Head', // Role of the person approving/rejecting (always Department Head)
-      status: status, // Status can be APPROVED or REJECTED
-      decidedBy: new Types.ObjectId(managerId), // The actual person who made the decision (could be delegate)
-      decidedAt: new Date(), // Timestamp of when the decision was made
-    });
+    // Step 6: If approval role is HR Manager, verify the approver is an HR Manager
+    // If approval role is CEO, verify the approver is CEO (John Doe)
+    if (approvalRole === 'HR Manager') {
+      const approverSystemRole = await this.systemRoleModel
+        .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+        .exec();
+      const isHRManager = approverSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+
+      if (!isHRManager) {
+        throw new BadRequestException(
+          'Only HR Managers can approve/reject department head and HR Admin leave requests.',
+        );
+      }
+    } else if (approvalRole === 'CEO') {
+      // Verify approver is CEO (John Doe) - HR Admin can no longer approve
+      const approver = await this.employeeProfileModel.findById(managerId).exec();
+      const isCEO = approver && approver.firstName === 'John' && approver.lastName === 'Doe';
+      
+      if (!isCEO) {
+        throw new BadRequestException(
+          'Only CEO (John Doe) can approve/reject HR Manager leave requests.',
+        );
+      }
+    }
+    
+    // Prevent HR Admin from approving any requests (they can only view)
+    const approverSystemRoleCheck = await this.systemRoleModel
+      .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+      .exec();
+    const isApproverHRAdmin = approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
+    
+    if (isApproverHRAdmin) {
+      throw new BadRequestException(
+        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.',
+      );
+    }
+
+    // Step 7: Update the approval flow with the approver's decision
+    // Update the existing pending approval entry instead of pushing a new one
+    if (pendingApproval) {
+      // Find the index of the pending approval in the array by matching role and status
+      const pendingIndex = leaveRequest.approvalFlow.findIndex(
+        (approval) => 
+          approval.role === approvalRole && 
+          (approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING)
+      );
+      
+      if (pendingIndex !== -1) {
+        // Update the existing pending approval entry
+        leaveRequest.approvalFlow[pendingIndex].status = status;
+        leaveRequest.approvalFlow[pendingIndex].decidedBy = new Types.ObjectId(managerId);
+        leaveRequest.approvalFlow[pendingIndex].decidedAt = new Date();
+        // Mark the array as modified so Mongoose detects the change
+        leaveRequest.markModified('approvalFlow');
+      } else {
+        // Fallback: if index not found, push a new entry
+        leaveRequest.approvalFlow.push({
+          role: approvalRole,
+          status: status,
+          decidedBy: new Types.ObjectId(managerId),
+          decidedAt: new Date(),
+        });
+      }
+    } else {
+      // Fallback: if no pending approval found, push a new entry
+      leaveRequest.approvalFlow.push({
+        role: approvalRole, // Role from approval flow (HR Manager or Department Head)
+        status: status, // Status can be APPROVED or REJECTED
+        decidedBy: new Types.ObjectId(managerId), // The actual person who made the decision (could be delegate)
+        decidedAt: new Date(), // Timestamp of when the decision was made
+      });
+    }
 
     leaveRequest.status = status; // Set the leave status to APPROVED or REJECTED
 
-    // Step 6: Save the updated leave request
+    // Step 8: Save the updated leave request
     const updatedLeaveRequest = await leaveRequest.save();
 
-    // Step 7: Notify employee when leave request is approved/rejected
+    // Step 9: Notify employee when leave request is approved/rejected
     if (status === LeaveStatus.APPROVED) {
       await this.notifyStakeholders(updatedLeaveRequest, 'approved');
     } else if (status === LeaveStatus.REJECTED) {
@@ -886,13 +1029,108 @@ export class LeavesService {
       );
     }
 
-    // Step 4: Update the approval flow with the manager's decision
-    leaveRequest.approvalFlow.push({
-      role: 'Departement_Head', // Role of the person approving/rejecting
-      status: LeaveStatus.REJECTED,
-      decidedBy: new Types.ObjectId(managerId), // The manager's ID from the logged-in user
-      decidedAt: new Date(), // Timestamp of when the decision was made
-    });
+    // Step 3.5: Prevent department head and HR Manager from rejecting their own leave requests
+    // Department head's own requests should be handled by HR Manager
+    // HR Manager's own requests should be handled by CEO
+    const requestEmployeeId = leaveRequest.employeeId.toString();
+    if (requestEmployeeId === managerId) {
+      // Check if the manager is a department head or HR Manager
+      const managerSystemRole = await this.systemRoleModel
+        .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+        .exec();
+      const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+      const isHRManager = managerSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+
+      if (isDepartmentHead) {
+        throw new BadRequestException(
+          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.',
+        );
+      }
+      if (isHRManager) {
+        throw new BadRequestException(
+          'HR Managers cannot approve or reject their own leave requests. Your requests are handled by CEO.',
+        );
+      }
+    }
+
+    // Step 4: Check the approval flow role to determine who should reject
+    const pendingApproval = leaveRequest.approvalFlow.find(
+      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING,
+    );
+    const approvalRole = pendingApproval?.role || 'Manager';
+
+    // Step 5: If approval role is HR Manager, verify the approver is an HR Manager
+    // If approval role is CEO, verify the approver is CEO (John Doe)
+    if (approvalRole === 'HR Manager') {
+      const approverSystemRole = await this.systemRoleModel
+        .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+        .exec();
+      const isHRManager = approverSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+
+      if (!isHRManager) {
+        throw new BadRequestException(
+          'Only HR Managers can approve/reject department head and HR Admin leave requests.',
+        );
+      }
+    } else if (approvalRole === 'CEO') {
+      // Verify approver is CEO (John Doe) - HR Admin can no longer approve
+      const approver = await this.employeeProfileModel.findById(managerId).exec();
+      const isCEO = approver && approver.firstName === 'John' && approver.lastName === 'Doe';
+      
+      if (!isCEO) {
+        throw new BadRequestException(
+          'Only CEO (John Doe) can approve/reject HR Manager leave requests.',
+        );
+      }
+    }
+    
+    // Prevent HR Admin from approving any requests (they can only view)
+    const approverSystemRoleCheck = await this.systemRoleModel
+      .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+      .exec();
+    const isApproverHRAdmin = approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
+    
+    if (isApproverHRAdmin) {
+      throw new BadRequestException(
+        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.',
+      );
+    }
+
+    // Step 6: Update the approval flow with the approver's decision
+    // Update the existing pending approval entry instead of pushing a new one
+    if (pendingApproval) {
+      // Find the index of the pending approval in the array by matching role and status
+      const pendingIndex = leaveRequest.approvalFlow.findIndex(
+        (approval) => 
+          approval.role === approvalRole && 
+          (approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING)
+      );
+      
+      if (pendingIndex !== -1) {
+        // Update the existing pending approval entry
+        leaveRequest.approvalFlow[pendingIndex].status = LeaveStatus.REJECTED;
+        leaveRequest.approvalFlow[pendingIndex].decidedBy = new Types.ObjectId(managerId);
+        leaveRequest.approvalFlow[pendingIndex].decidedAt = new Date();
+        // Mark the array as modified so Mongoose detects the change
+        leaveRequest.markModified('approvalFlow');
+      } else {
+        // Fallback: if index not found, push a new entry
+        leaveRequest.approvalFlow.push({
+          role: approvalRole,
+          status: LeaveStatus.REJECTED,
+          decidedBy: new Types.ObjectId(managerId),
+          decidedAt: new Date(),
+        });
+      }
+    } else {
+      // Fallback: if no pending approval found, push a new entry
+      leaveRequest.approvalFlow.push({
+        role: approvalRole, // Role from approval flow (HR Manager or Department Head)
+        status: LeaveStatus.REJECTED,
+        decidedBy: new Types.ObjectId(managerId), // The manager's ID from the logged-in user
+        decidedAt: new Date(), // Timestamp of when the decision was made
+      });
+    }
 
     // Step 5: Set the leave status to REJECTED
     leaveRequest.status = LeaveStatus.REJECTED;
@@ -1396,6 +1634,43 @@ export class LeavesService {
     return updated as LeaveEntitlementDocument;
   }
 
+  // Test function: Reset all leave balances to zero immediately (for testing)
+  async resetAllLeaveBalancesForTest(): Promise<any> {
+    console.log('[resetAllLeaveBalancesForTest] Starting bulk reset...');
+    const startTime = Date.now();
+    
+    try {
+      // Use bulk update for better performance
+      const result = await this.leaveEntitlementModel.updateMany(
+        {}, // Match all documents
+        {
+          $set: {
+            accruedActual: 0,
+            accruedRounded: 0,
+            carryForward: 0,
+            remaining: 0,
+            taken: 0,
+            pending: 0,
+            lastAccrualDate: new Date(),
+          },
+        }
+      ).exec();
+
+      const duration = Date.now() - startTime;
+      console.log(`[resetAllLeaveBalancesForTest] Completed in ${duration}ms. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+
+      return {
+        total: result.matchedCount,
+        reset: result.modifiedCount,
+        errors: 0,
+        duration: `${duration}ms`,
+      };
+    } catch (error: any) {
+      console.error('[resetAllLeaveBalancesForTest] Error:', error);
+      throw new Error(`Failed to reset leave balances: ${error.message}`);
+    }
+  }
+
   // Business Rule: Reset leave balances based on criterion date (Hire date, First Vacation Date, etc.)
   async resetLeaveBalancesForNewYear(
     criterion:
@@ -1403,6 +1678,7 @@ export class LeavesService {
       | 'FIRST_VACATION_DATE'
       | 'REVISED_HIRE_DATE'
       | 'WORK_RECEIVING_DATE' = 'HIRE_DATE',
+    force: boolean = false,
   ): Promise<void> {
     const leaveEntitlements: LeaveEntitlementDocument[] =
       await this.leaveEntitlementModel.find({}).exec();
@@ -1421,8 +1697,8 @@ export class LeavesService {
         const resetDateOnly = new Date(resetDate);
         resetDateOnly.setHours(0, 0, 0, 0);
 
-        // Check if reset date has passed
-        if (resetDateOnly <= today) {
+        // Check if reset date has passed, or if force is true
+        if (force || resetDateOnly <= today) {
           // Get policy to check carry-forward settings
           const leavePolicy = await this.leavePolicyModel
             .findOne({ leaveTypeId: entitlement.leaveTypeId })
@@ -1466,6 +1742,132 @@ export class LeavesService {
         );
         // Continue with next entitlement
       }
+    }
+  }
+
+  // Function to add all employees to leave entitlements and set as full-time
+  async addAllEmployeesToLeaveEntitlements(): Promise<any> {
+    console.log('[addAllEmployeesToLeaveEntitlements] Starting...');
+    const startTime = Date.now();
+    
+    try {
+      // Get all employees (including inactive ones to ensure we process everyone)
+      const employees = await this.employeeProfileModel.find({}).exec();
+      console.log(`[addAllEmployeesToLeaveEntitlements] Found ${employees.length} employees`);
+      
+      // Log contract type distribution
+      const contractTypeCounts: Record<string, number> = {};
+      employees.forEach(emp => {
+        const ct = emp.contractType || 'NOT_SET';
+        contractTypeCounts[ct] = (contractTypeCounts[ct] || 0) + 1;
+      });
+      console.log(`[addAllEmployeesToLeaveEntitlements] Contract type distribution:`, contractTypeCounts);
+      
+      // Get all leave types
+      const leaveTypes = await this.leaveTypeModel.find({}).exec();
+      console.log(`[addAllEmployeesToLeaveEntitlements] Found ${leaveTypes.length} leave types`);
+      
+      if (leaveTypes.length === 0) {
+        throw new Error('No leave types found. Please create leave types first.');
+      }
+      
+      let employeesUpdated = 0;
+      let employeesProcessed = 0;
+      let employeesFailed = 0;
+      let entitlementsCreated = 0;
+      let entitlementsSkipped = 0;
+      const failedEmployees: Array<{ employeeId: string; error: string }> = [];
+      
+      for (const employee of employees) {
+        try {
+          const employeeId = employee._id.toString();
+          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
+          
+          console.log(`[addAllEmployeesToLeaveEntitlements] Processing employee ${employeeName} (${employeeId})`);
+          
+          // Update contract type to FULL_TIME_CONTRACT if not set
+          if (!employee.contractType || employee.contractType !== ContractType.FULL_TIME_CONTRACT) {
+            await this.employeeProfileModel.findByIdAndUpdate(
+              employee._id,
+              { $set: { contractType: ContractType.FULL_TIME_CONTRACT } }
+            ).exec();
+            employeesUpdated++;
+            console.log(`[addAllEmployeesToLeaveEntitlements] Updated contract type for ${employeeName}`);
+          }
+          
+          // Create entitlements for each leave type
+          let employeeEntitlementsCreated = 0;
+          let employeeEntitlementsSkipped = 0;
+          
+          for (const leaveType of leaveTypes) {
+            try {
+              // Check if entitlement already exists
+              const existingEntitlement = await this.leaveEntitlementModel
+                .findOne({
+                  employeeId: employee._id,
+                  leaveTypeId: leaveType._id,
+                })
+                .exec();
+              
+              if (existingEntitlement) {
+                entitlementsSkipped++;
+                employeeEntitlementsSkipped++;
+                continue;
+              }
+              
+              // Create new entitlement with default values
+              await this.createLeaveEntitlement({
+                employeeId: employeeId,
+                leaveTypeId: leaveType._id.toString(),
+                yearlyEntitlement: 0,
+                accruedActual: 0,
+                accruedRounded: 0,
+                carryForward: 0,
+                taken: 0,
+                pending: 0,
+                remaining: 0,
+              });
+              
+              entitlementsCreated++;
+              employeeEntitlementsCreated++;
+            } catch (leaveTypeError: any) {
+              console.error(`[addAllEmployeesToLeaveEntitlements] Error creating entitlement for ${employeeName} and leave type ${leaveType.name}:`, leaveTypeError.message);
+              // Continue with next leave type
+            }
+          }
+          
+          employeesProcessed++;
+          console.log(`[addAllEmployeesToLeaveEntitlements] ✅ Completed ${employeeName}: Created ${employeeEntitlementsCreated} entitlements, skipped ${employeeEntitlementsSkipped}`);
+        } catch (error: any) {
+          employeesFailed++;
+          const employeeId = employee._id?.toString() || 'unknown';
+          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
+          const errorMessage = error.message || String(error);
+          console.error(`[addAllEmployeesToLeaveEntitlements] ❌ Error processing employee ${employeeName} (${employeeId}):`, errorMessage);
+          console.error(`[addAllEmployeesToLeaveEntitlements] Error stack:`, error.stack);
+          failedEmployees.push({ employeeId, error: errorMessage });
+          // Continue with next employee
+        }
+      }
+      
+      const duration = Date.now() - startTime;
+      console.log(`[addAllEmployeesToLeaveEntitlements] Completed in ${duration}ms`);
+      console.log(`[addAllEmployeesToLeaveEntitlements] Summary: ${employeesProcessed} processed, ${employeesFailed} failed, ${entitlementsCreated} entitlements created`);
+      
+      return {
+        totalEmployees: employees.length,
+        employeesProcessed,
+        employeesFailed,
+        employeesUpdated,
+        totalLeaveTypes: leaveTypes.length,
+        entitlementsCreated,
+        entitlementsSkipped,
+        failedEmployees: failedEmployees.length > 0 ? failedEmployees : undefined,
+        duration: `${duration}ms`,
+      };
+    } catch (error: any) {
+      console.error('[addAllEmployeesToLeaveEntitlements] Error:', error);
+      throw new Error(`Failed to add employees to leave entitlements: ${error.message}`);
     }
   }
 
@@ -1610,6 +2012,30 @@ export class LeavesService {
       throw new BadRequestException('You cannot delegate approval authority to yourself. Please select a different employee to delegate to.');
     }
 
+    // Check if manager is a department head and has their own pending leave requests
+    // Note: HR Managers can now delegate even with pending requests (removed restriction)
+    const managerSystemRole = await this.systemRoleModel
+      .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
+      .exec();
+    const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+
+    if (isDepartmentHead) {
+      // Check if department head has any pending leave requests
+      const pendingRequests = await this.leaveRequestModel
+        .find({
+          employeeId: new Types.ObjectId(managerId),
+          status: LeaveStatus.PENDING,
+        })
+        .exec();
+
+      if (pendingRequests.length > 0) {
+        throw new BadRequestException(
+          'Department heads cannot delegate approval authority while they have pending leave requests. Please resolve your pending requests first or wait for them to be processed.',
+        );
+      }
+    }
+    // HR Managers can now delegate even with pending requests (restriction removed)
+
     // Get or create delegation array for this manager
     if (!this.delegationMap.has(managerId)) {
       this.delegationMap.set(managerId, []);
@@ -1703,11 +2129,25 @@ export class LeavesService {
       );
     }
 
-    // Step 3: Check if leave request is approved by Department Head and ready for HR finalization
+    // Step 3: Check if leave request is approved and ready for finalization
+    // For regular requests: must be approved by Department Head
+    // For department head requests: must be approved by HR Manager
+    // For HR Manager requests: must be approved by CEO
     if (leaveRequest.status !== LeaveStatus.APPROVED) {
-      throw new BadRequestException(
-        `Leave request must be APPROVED by Department Head before HR finalization. Current status: ${leaveRequest.status}`,
-      );
+      const initialApproval = leaveRequest.approvalFlow[0];
+      const isHRManagerRequest = initialApproval?.role === 'CEO';
+      const isDepartmentHeadRequest = initialApproval?.role === 'HR Manager';
+      
+      let errorMessage = `Leave request must be APPROVED before finalization. Current status: ${leaveRequest.status}`;
+      if (isHRManagerRequest) {
+        errorMessage = `Leave request must be APPROVED by CEO before finalization. Current status: ${leaveRequest.status}`;
+      } else if (isDepartmentHeadRequest) {
+        errorMessage = `Leave request must be APPROVED by HR Manager before finalization. Current status: ${leaveRequest.status}`;
+      } else {
+        errorMessage = `Leave request must be APPROVED by Department Head before HR finalization. Current status: ${leaveRequest.status}`;
+      }
+      
+      throw new BadRequestException(errorMessage);
     }
 
     // Check if already finalized by HR Manager
@@ -1723,20 +2163,28 @@ export class LeavesService {
       );
     }
 
-    // Check if there's a Department Head approval in the approval flow
-    // This allows finalization even if HR Manager overrode (last approval might be HR Manager)
-    const hasDepartmentHeadApproval = leaveRequest.approvalFlow.some(
-      (approval) =>
-        (approval.role === 'Departement_Head' || 
-         approval.role === 'Department Head' ||
-         approval.role?.toLowerCase().includes('department')) &&
-        approval.status === LeaveStatus.APPROVED,
-    );
+    // Check if this is a department head request (approval flow starts with HR Manager)
+    const initialApproval = leaveRequest.approvalFlow[0];
+    const isDepartmentHeadRequest = initialApproval?.role === 'HR Manager';
+    const isHRManagerRequest = initialApproval?.role === 'CEO';
 
-    if (!hasDepartmentHeadApproval) {
-      throw new BadRequestException(
-        'Leave request must be approved by Department Head before HR finalization.',
+    // For department head requests, they go directly to HR Manager, so no Department Head approval needed
+    // For HR Manager requests, they go directly to CEO, so no HR Manager approval needed
+    // For regular requests, require Department Head approval before HR finalization
+    if (!isDepartmentHeadRequest && !isHRManagerRequest) {
+      const hasDepartmentHeadApproval = leaveRequest.approvalFlow.some(
+        (approval) =>
+          (approval.role === 'Departement_Head' ||
+           approval.role === 'Department Head' ||
+           approval.role?.toLowerCase().includes('department')) &&
+          approval.status === LeaveStatus.APPROVED,
       );
+
+      if (!hasDepartmentHeadApproval) {
+        throw new BadRequestException(
+          'Leave request must be approved by Department Head before HR finalization.',
+        );
+      }
     }
 
     // Step 4: REQ-028 - Verify medical documents if required
@@ -2701,7 +3149,44 @@ export class LeavesService {
         }
       }
       
+      // Check if userId is a department head or HR Manager viewing their own requests
+      // Only show team requests (excluding own) if:
+      // 1. userId === employeeId (viewing own ID)
+      // 2. User is a department head or HR Manager
+      // 3. Status filter is "pending" AND no other filters (fromDate/toDate/leaveTypeId)
+      //    This indicates it's the "Delegated Pending Requests" view, not personal history
+      let isDepartmentHeadViewingOwn = false;
+      let isHRManagerViewingOwn = false;
+      if (userId && userId === employeeId) {
+        const userSystemRole = await this.systemRoleModel
+          .findOne({ employeeProfileId: new Types.ObjectId(userId), isActive: true })
+          .exec();
+        const isDeptHead = userSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+        const isHRManager = userSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+        
+        // Only apply team requests logic for delegated pending requests view
+        // Check if it's specifically a pending-only query (no other filters)
+        const isPendingOnlyQuery = filters?.status === 'pending' || filters?.status === 'PENDING';
+        const hasOtherFilters = !!(filters?.fromDate || filters?.toDate || filters?.leaveTypeId);
+        
+        if (isDeptHead && isPendingOnlyQuery && !hasOtherFilters) {
+          isDepartmentHeadViewingOwn = true;
+          console.log(`[DEPARTMENT_HEAD] Department head ${userId} viewing delegated pending requests - showing team requests (excluding own)`);
+        } else if (isDeptHead) {
+          console.log(`[DEPARTMENT_HEAD] Department head ${userId} viewing personal requests - showing own requests`);
+        }
+        
+        // HR Manager viewing own ID with pending status = show requests that need HR Manager approval
+        if (isHRManager && isPendingOnlyQuery && !hasOtherFilters) {
+          isHRManagerViewingOwn = true;
+          console.log(`[HR_MANAGER] HR Manager ${userId} viewing delegated pending requests - showing department head requests`);
+        } else if (isHRManager) {
+          console.log(`[HR_MANAGER] HR Manager ${userId} viewing personal requests - showing own requests`);
+        }
+      }
+      
       // If user is a delegate, get requests for the manager's team members
+      // If department head is viewing their own ID, get team requests (excluding their own)
       // Otherwise, get requests for the specified employeeId
       let query: any;
       
@@ -2724,11 +3209,80 @@ export class LeavesService {
         
         const teamMemberIds = teamMembers.map((m: any) => m._id);
         
-        query = { 
-          employeeId: { $in: teamMemberIds },
+        // Exclude the manager's own requests from delegate view
+        // Also exclude the delegate's own requests if the delegate is an HR Manager
+        const managerObjectId = new Types.ObjectId(actualManagerId);
+        const delegateObjectId = userId ? new Types.ObjectId(userId) : null;
+        
+        // Check if delegate is an HR Manager or HR Admin
+        let excludeDelegateOwn = false;
+        if (delegateObjectId) {
+          const delegateSystemRole = await this.systemRoleModel
+            .findOne({ employeeProfileId: delegateObjectId, isActive: true })
+            .exec();
+          const isHRManagerDelegate = delegateSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+          const isHRAdminDelegate = delegateSystemRole?.roles?.includes(SystemRole.HR_ADMIN) || false;
+          excludeDelegateOwn = isHRManagerDelegate || isHRAdminDelegate;
+        }
+        
+        // Build query to exclude manager's own requests
+        // If delegate is HR Manager, also exclude delegate's own requests
+        const excludedIds = [managerObjectId];
+        if (excludeDelegateOwn && delegateObjectId) {
+          excludedIds.push(delegateObjectId);
+          console.log(`[DELEGATE] HR Manager delegate ${userId} - excluding both manager's and delegate's own requests`);
+        }
+        
+        query = {
+          employeeId: {
+            $in: teamMemberIds,
+            $nin: excludedIds, // Exclude manager's and delegate's own requests
+          },
         };
         
-        console.log(`[DELEGATE] Found ${teamMemberIds.length} team members for delegate to review`);
+        console.log(`[DELEGATE] Found ${teamMemberIds.length} team members for delegate to review (excluding ${excludedIds.length} excluded employee(s))`);
+      } else if (isDepartmentHeadViewingOwn) {
+        // Department head viewing their own ID: show team requests (excluding their own)
+        const manager = await this.employeeProfileModel.findById(userId).exec();
+        if (!manager || !manager.primaryPositionId) {
+          // If no position, return empty (can't determine team)
+          return [];
+        }
+        
+        // Find all team members (employees with supervisorPositionId matching manager's primaryPositionId)
+        const teamMembers = await this.employeeProfileModel
+          .find({
+            supervisorPositionId: manager.primaryPositionId,
+            status: { $in: [EmployeeStatus.ACTIVE, EmployeeStatus.PROBATION] },
+          })
+          .select('_id')
+          .lean()
+          .exec();
+        
+        const teamMemberIds = teamMembers.map((m: any) => m._id);
+        
+        // Exclude the department head's own requests
+        const managerObjectId = new Types.ObjectId(userId);
+        query = { 
+          employeeId: { 
+            $in: teamMemberIds,
+            $ne: managerObjectId, // Exclude department head's own requests
+          },
+        };
+        
+        console.log(`[DEPARTMENT_HEAD] Found ${teamMemberIds.length} team members (excluding own requests)`);
+      } else if (isHRManagerViewingOwn) {
+        // HR Manager viewing their own ID: show requests that need HR Manager approval
+        // These are department head requests (approvalFlow[0].role === "HR Manager")
+        // Query for all pending requests where initial approval role is "HR Manager"
+        query = {
+          status: LeaveStatus.PENDING,
+          'approvalFlow.0.role': 'HR Manager',
+          'approvalFlow.0.status': { $in: ['PENDING', 'pending'] },
+          // Exclude HR Manager's own requests (they go to CEO)
+          employeeId: { $ne: new Types.ObjectId(userId) },
+        };
+        console.log(`[HR_MANAGER] Querying for department head requests needing HR Manager approval (excluding own)`);
       } else {
         // Regular query: get requests for specific employee
         query = { employeeId: new Types.ObjectId(employeeId) };
@@ -2758,10 +3312,13 @@ export class LeavesService {
         } else {
           console.warn(`[getPastLeaveRequests] Invalid status value: "${filters.status}" (normalized: "${normalizedStatus}"). Valid values are: ${validStatuses.join(', ')}`);
         }
-      } else if (isDelegate && (!filters?.status || (typeof filters.status === 'string' && filters.status.trim() === ''))) {
-        // For delegates, default to pending if no status filter is provided
-        query.status = LeaveStatus.PENDING;
-        console.log(`[getPastLeaveRequests] Delegate query - defaulting to PENDING status`);
+      } else if ((isDelegate || isDepartmentHeadViewingOwn || isHRManagerViewingOwn) && (!filters?.status || (typeof filters.status === 'string' && filters.status.trim() === ''))) {
+        // For delegates, department heads, and HR managers viewing team requests, default to pending if no status filter is provided
+        if (!isHRManagerViewingOwn) {
+          // Only set status if not already set by HR Manager query logic above
+          query.status = LeaveStatus.PENDING;
+        }
+        console.log(`[getPastLeaveRequests] ${isDelegate ? 'Delegate' : isHRManagerViewingOwn ? 'HR Manager' : 'Department Head'} query - defaulting to PENDING status`);
       }
 
       if (filters?.leaveTypeId) {
@@ -3393,10 +3950,17 @@ export class LeavesService {
       }
       
       const memberIds = teamMembers.map((m) => m._id);
+      
+      // Exclude department head's own requests from the list
+      // Department heads should not see their own leave requests in the pending requests bar
+      const managerObjectId = new Types.ObjectId(managerId);
+      const filteredMemberIds = memberIds.filter(
+        (id) => !id.equals(managerObjectId)
+      );
 
-      // If no team members found, return empty results
-      if (memberIds.length === 0) {
-        console.warn('[filterTeamLeaveData] No team members found. Base query:', JSON.stringify(baseQuery));
+      // If no team members found (excluding manager), return empty results
+      if (filteredMemberIds.length === 0) {
+        console.warn('[filterTeamLeaveData] No team members found (excluding manager). Base query:', JSON.stringify(baseQuery));
         return {
           total: 0,
           filters: {
@@ -3413,7 +3977,7 @@ export class LeavesService {
         };
       }
 
-      const query: any = { employeeId: { $in: memberIds } };
+      const query: any = { employeeId: { $in: filteredMemberIds } };
 
       if (filters.leaveTypeId) {
         query.leaveTypeId = new Types.ObjectId(filters.leaveTypeId);
@@ -3854,6 +4418,23 @@ export class LeavesService {
         .find(query)
         .exec();
       
+      // Check for duplicate entitlements (same employee + leave type)
+      const employeeLeaveTypeMap = new Map<string, any[]>();
+      entitlements.forEach(ent => {
+        const key = `${ent.employeeId?.toString()}_${ent.leaveTypeId?.toString()}`;
+        if (!employeeLeaveTypeMap.has(key)) {
+          employeeLeaveTypeMap.set(key, []);
+        }
+        employeeLeaveTypeMap.get(key)!.push(ent);
+      });
+      
+      // Log duplicates if found
+      employeeLeaveTypeMap.forEach((ents, key) => {
+        if (ents.length > 1) {
+          console.warn(`[runCarryForward] ⚠️ Found ${ents.length} duplicate entitlements for ${key}`);
+        }
+      });
+      
       console.log(`[runCarryForward] Found ${entitlements.length} entitlements to process for leaveTypeId: ${leaveTypeId}`);
       
       const results: any[] = [];
@@ -3916,16 +4497,41 @@ export class LeavesService {
 
       for (const entitlement of entitlements) {
         try {
+          // IMPORTANT: Recalculate remaining balance before calculating carry forward
+          // This ensures we're using the correct current balance
+          const currentRemaining = this.calculateRemaining(entitlement);
+          
+          // For carry forward, we need to consider what CAN be carried forward
+          // This is typically the remaining balance, but if remaining is 0 and there's
+          // accrued that hasn't been accounted for, we should check yearlyEntitlement - taken
+          // However, the standard approach is: carry forward = remaining balance (up to max)
+          
+          // Calculate potential carry forward from remaining balance
+          let potentialCarryForward = currentRemaining;
+          
+          // If remaining is 0 or very small, but there's yearly entitlement and taken is less than entitlement,
+          // this might indicate we're at year-end and should carry forward unused entitlement
+          // However, this should typically be handled by the reset process, not carry forward
+          // For now, we'll stick with remaining balance as the source
+          
           console.log(`[runCarryForward] Processing entitlement:`, {
             employeeId: entitlement.employeeId?.toString(),
-            remaining: entitlement.remaining,
-            maxCarryForward: effectiveMaxCarryForward,
+            yearlyEntitlement: entitlement.yearlyEntitlement,
+            accruedRounded: entitlement.accruedRounded,
+            accruedActual: entitlement.accruedActual,
             currentCarryForward: entitlement.carryForward || 0,
+            taken: entitlement.taken,
+            pending: entitlement.pending,
+            storedRemaining: entitlement.remaining,
+            calculatedRemaining: currentRemaining,
+            maxCarryForward: effectiveMaxCarryForward,
+            potentialCarryForward: potentialCarryForward,
           });
 
           // Use effectiveMaxCarryForward (handles case where maxCarryForward is 0 but carryForwardAllowed is true)
+          // Use the RECALCULATED remaining balance, not the stored one
           const carryForwardAmount = Math.min(
-            entitlement.remaining,
+            potentialCarryForward,
             effectiveMaxCarryForward,
           );
 
@@ -3934,20 +4540,41 @@ export class LeavesService {
           // Only process if there's something to carry forward
           if (carryForwardAmount <= 0) {
             console.log(`[runCarryForward] Skipping - carryForwardAmount is ${carryForwardAmount}`);
+            console.log(`[runCarryForward] ⚠️ WARNING: No balance to carry forward. Details:`, {
+              employeeId: entitlement.employeeId?.toString(),
+              yearlyEntitlement: entitlement.yearlyEntitlement,
+              accruedRounded: entitlement.accruedRounded,
+              taken: entitlement.taken,
+              pending: entitlement.pending,
+              currentCarryForward: entitlement.carryForward || 0,
+              calculatedRemaining: currentRemaining,
+              suggestion: currentRemaining === 0 && entitlement.yearlyEntitlement > 0 
+                ? 'Consider running accruals first, or this may be expected if all leave was used/reset'
+                : 'This is expected if remaining balance is 0'
+            });
             results.push({
               employeeId: entitlement.employeeId,
               status: 'skipped',
               reason: effectiveMaxCarryForward === 0 
                 ? 'Max carry forward is 0 in policy' 
-                : 'No remaining balance to carry forward',
+                : `No remaining balance to carry forward (current remaining: ${currentRemaining.toFixed(2)} days). Accrued: ${entitlement.accruedRounded}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending}`,
               carryForwardAmount: 0,
-              newBalance: entitlement.remaining,
+              newBalance: currentRemaining,
+              details: {
+                yearlyEntitlement: entitlement.yearlyEntitlement,
+                accruedRounded: entitlement.accruedRounded,
+                accruedActual: entitlement.accruedActual,
+                taken: entitlement.taken,
+                pending: entitlement.pending,
+                currentCarryForward: entitlement.carryForward || 0,
+                calculatedRemaining: currentRemaining,
+              }
             });
             continue;
           }
 
           // Record the previous remaining balance and carryForward for reference
-          const previousRemaining = entitlement.remaining;
+          const previousRemaining = currentRemaining; // Use recalculated remaining
           const previousCarryForward = entitlement.carryForward || 0;
           
           // Calculate new remaining: subtract the carry forward amount from current remaining
@@ -3958,7 +4585,16 @@ export class LeavesService {
           
           // Ensure remaining doesn't go negative (shouldn't happen if carryForwardAmount <= remaining)
           if (newRemaining < 0) {
-            throw new Error(`Carry forward amount (${carryForwardAmount}) exceeds remaining balance (${previousRemaining})`);
+            console.error(`[runCarryForward] ❌ Carry forward amount exceeds remaining:`, {
+              employeeId: entitlement.employeeId?.toString(),
+              carryForwardAmount,
+              previousRemaining,
+              newRemaining,
+              accruedRounded: entitlement.accruedRounded,
+              taken: entitlement.taken,
+              pending: entitlement.pending,
+            });
+            throw new Error(`Carry forward amount (${carryForwardAmount}) exceeds remaining balance (${previousRemaining}). This should not happen - carryForwardAmount should be min(remaining, maxCarryForward)`);
           }
           
           // Round to 2 decimal places to avoid floating point precision issues
@@ -3982,24 +4618,65 @@ export class LeavesService {
             .exec();
 
           if (!freshEntitlement) {
-            throw new Error(`Entitlement not found: ${entitlement._id}`);
+            throw new Error(`Entitlement not found: ${entitlement._id} for employee ${entitlement.employeeId?.toString()}`);
           }
 
           // Update the fields
           freshEntitlement.carryForward = roundedCarryForward;
           freshEntitlement.remaining = roundedRemaining;
           
-          // Save the document
-          const updated = await freshEntitlement.save();
-
+          // Save the document with error handling
+          let updated;
+          try {
+            updated = await freshEntitlement.save();
+          } catch (saveError: any) {
+            console.error(`[runCarryForward] ❌ Save error:`, {
+              entitlementId: entitlement._id.toString(),
+              error: saveError.message,
+              validationErrors: saveError.errors,
+            });
+            throw new Error(`Failed to save entitlement: ${saveError.message || 'Unknown save error'}`);
+          }
+          
           if (!updated) {
-            throw new Error('Failed to save entitlement');
+            throw new Error(`Save returned null for entitlement ${entitlement._id}`);
+          }
+          
+          // Verify the calculation is correct after save
+          // After updating carryForward and remaining, recalculate to ensure consistency
+          const verifyRemaining = this.calculateRemaining(updated);
+          
+          console.log(`[runCarryForward] Verification after save:`, {
+            employeeId: entitlement.employeeId?.toString(),
+            accruedRounded: updated.accruedRounded,
+            carryForward: updated.carryForward,
+            taken: updated.taken,
+            pending: updated.pending,
+            savedRemaining: updated.remaining,
+            calculatedRemaining: verifyRemaining,
+            difference: Math.abs(verifyRemaining - updated.remaining),
+          });
+          
+          // If there's a mismatch, update remaining to match the calculation
+          // This ensures remaining = accruedRounded + carryForward - taken - pending
+          let finalRemaining = updated.remaining;
+          if (Math.abs(verifyRemaining - updated.remaining) > 0.01) {
+            console.warn(`[runCarryForward] ⚠️ Remaining mismatch after save. Saved: ${updated.remaining}, Calculated: ${verifyRemaining}. Updating...`);
+            updated.remaining = verifyRemaining;
+            finalRemaining = verifyRemaining;
+            try {
+              await updated.save();
+              console.log(`[runCarryForward] ✅ Corrected remaining to ${verifyRemaining}`);
+            } catch (recalcError: any) {
+              console.error(`[runCarryForward] ❌ Error saving recalculated remaining:`, recalcError.message);
+              // Don't throw - the main update succeeded, this is just a correction
+            }
           }
 
           // Verify the update persisted by fetching again
           const verification = await this.leaveEntitlementModel
             .findById(entitlement._id)
-            .select('carryForward remaining')
+            .select('carryForward remaining accruedRounded taken pending')
             .lean()
             .exec();
 
@@ -4007,22 +4684,53 @@ export class LeavesService {
             employeeId: entitlement.employeeId?.toString(),
             carryForward: updated.carryForward,
             remaining: updated.remaining,
+            finalRemaining,
             verificationCarryForward: verification?.carryForward,
             verificationRemaining: verification?.remaining,
+            verificationAccruedRounded: verification?.accruedRounded,
+            verificationTaken: verification?.taken,
+            verificationPending: verification?.pending,
           });
 
           // Double-check the values were saved correctly
-          if (verification && (
-            Math.abs((verification.carryForward || 0) - roundedCarryForward) > 0.01 ||
-            Math.abs((verification.remaining || 0) - roundedRemaining) > 0.01
-          )) {
-            console.error(`[runCarryForward] ⚠️ WARNING: Values may not have persisted correctly!`, {
-              expectedCarryForward: roundedCarryForward,
-              actualCarryForward: verification.carryForward,
-              expectedRemaining: roundedRemaining,
-              actualRemaining: verification.remaining,
-            });
-            throw new Error(`Update verification failed. Expected carryForward: ${roundedCarryForward}, got: ${verification.carryForward}`);
+          // Use finalRemaining (which may have been corrected) for comparison
+          if (verification) {
+            const carryForwardDiff = Math.abs((verification.carryForward || 0) - roundedCarryForward);
+            const remainingDiff = Math.abs((verification.remaining || 0) - finalRemaining);
+            
+            // Also verify the calculation matches
+            const verificationCalculatedRemaining = (verification.accruedRounded || 0) + 
+              (verification.carryForward || 0) - 
+              (verification.taken || 0) - 
+              (verification.pending || 0);
+            const calculationDiff = Math.abs(verification.remaining - verificationCalculatedRemaining);
+            
+            if (carryForwardDiff > 0.01 || remainingDiff > 0.01) {
+              console.error(`[runCarryForward] ⚠️ WARNING: Values may not have persisted correctly!`, {
+                expectedCarryForward: roundedCarryForward,
+                actualCarryForward: verification.carryForward,
+                carryForwardDiff: carryForwardDiff,
+                expectedRemaining: finalRemaining,
+                actualRemaining: verification.remaining,
+                remainingDiff: remainingDiff,
+                verificationCalculatedRemaining,
+                calculationDiff,
+              });
+              
+              // Create detailed error message showing which value(s) failed
+              const errors: string[] = [];
+              if (carryForwardDiff > 0.01) {
+                errors.push(`carryForward: expected ${roundedCarryForward}, got ${verification.carryForward}`);
+              }
+              if (remainingDiff > 0.01) {
+                errors.push(`remaining: expected ${finalRemaining}, got ${verification.remaining}`);
+              }
+              if (calculationDiff > 0.01) {
+                errors.push(`remaining calculation mismatch: saved ${verification.remaining}, but calculated ${verificationCalculatedRemaining} from (accruedRounded: ${verification.accruedRounded} + carryForward: ${verification.carryForward} - taken: ${verification.taken} - pending: ${verification.pending})`);
+              }
+              
+              throw new Error(`Update verification failed. ${errors.join('; ')}`);
+            }
           }
 
           results.push({
@@ -4036,15 +4744,34 @@ export class LeavesService {
         } catch (err) {
           failed++;
           const errorMessage = (err as any).message || String(err);
+          const errorStack = (err as any).stack;
           console.error(`[runCarryForward] ❌ Error processing entitlement:`, {
             employeeId: entitlement.employeeId?.toString(),
+            entitlementId: entitlement._id?.toString(),
             error: errorMessage,
-            stack: (err as any).stack,
+            stack: errorStack,
+            entitlementData: {
+              accruedRounded: entitlement.accruedRounded,
+              accruedActual: entitlement.accruedActual,
+              taken: entitlement.taken,
+              pending: entitlement.pending,
+              carryForward: entitlement.carryForward,
+              remaining: entitlement.remaining,
+            }
           });
           results.push({
             employeeId: entitlement.employeeId,
             status: 'failed',
             error: errorMessage,
+            entitlementId: entitlement._id?.toString(),
+            details: {
+              accruedRounded: entitlement.accruedRounded,
+              accruedActual: entitlement.accruedActual,
+              taken: entitlement.taken,
+              pending: entitlement.pending,
+              carryForward: entitlement.carryForward || 0,
+              remaining: entitlement.remaining,
+            }
           });
         }
       }

@@ -59,6 +59,7 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
+    
     // ============================================================
     // CHANGED: Fixed syntax errors in error handler
     // Issue: errorDetails object was incorrectly structured as inline
@@ -297,6 +298,20 @@ api.interceptors.response.use(
     (detailedError as any).originalError = error;
     
     return Promise.reject(detailedError);
+
+//FOR LEAVES
+    // ============================================================
+    // CHANGED: Suppress logging for expected 404 errors (not found)
+    // These are common when checking for entitlements that don't exist yet
+    // ============================================================
+    const isNotFoundError = error.response?.status === 404;
+    const isEntitlementCheck = error.config?.url?.includes('/leaves/entitlement/');
+    
+    // Don't log 404 errors for entitlement checks - these are expected
+    if (isNotFoundError && isEntitlementCheck) {
+      // Just return the error without logging - let the calling code handle it
+      return Promise.reject(error);
+    }
   }
 );
 

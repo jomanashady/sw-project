@@ -17,10 +17,13 @@ import { SystemRole } from "@/types";
 import { leavesApi } from "@/lib/api/leaves/leaves";
 import { employeeProfileApi } from "@/lib/api/employee-profile/employee-profile";
 import { LeaveRequest } from "@/types/leaves";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/shared/ui/Card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/shared/ui/Card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/shared/ui/Tabs";
 import { Button } from "@/components/shared/ui/Button";
 import { Select } from "@/components/leaves/Select";
 import FinalizeLeaveRequestButton from "@/components/leaves/FinalizeLeaveRequestButton";
+import ApproveLeaveRequestButton from "@/components/leaves/ApproveLeaveRequestButton";
+import RejectLeaveRequestButton from "@/components/leaves/RejectLeaveRequestButton";
 import OverrideDecisionDialog from "@/components/leaves/OverrideDecisionDialog";
 import BulkProcessDialog from "@/components/leaves/BulkProcessDialog";
 
@@ -42,12 +45,17 @@ export default function HRManagerLeavePage() {
   // NEW: State for employee dropdown
   const [employees, setEmployees] = useState<Array<{ _id: string; employeeId: string; firstName: string; lastName: string }>>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  
+  // NEW: State for delegated pending requests
+  const [delegatedPendingRequests, setDelegatedPendingRequests] = useState<LeaveRequest[]>([]);
+  const [loadingDelegatedRequests, setLoadingDelegatedRequests] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
-  // NEW CODE: Role-based access control - only HR_MANAGER can access (HR_ADMIN excluded)
+  // NEW CODE: Role-based access control - HR_MANAGER and HR_ADMIN can access
   useEffect(() => {
     if (!loading && isAuthenticated && user) {
       const roles = user.roles || [];
-      if (!roles.includes(SystemRole.HR_MANAGER)) {
+      if (!roles.includes(SystemRole.HR_MANAGER) && !roles.includes(SystemRole.HR_ADMIN)) {
         router.replace("/dashboard");
       }
     }
@@ -57,6 +65,110 @@ export default function HRManagerLeavePage() {
   useEffect(() => {
     loadEmployees();
   }, []);
+
+  // NEW: Fetch delegated pending requests (requests that need HR Manager/HR Admin approval)
+  useEffect(() => {
+    const fetchDelegatedRequests = async () => {
+      // IMPORTANT: always prefer employee profile _id so delegation uses same id
+      const userId = (user as any)?._id || user?.userId || (user as any)?.id;
+      if (!userId) return;
+      setLoadingDelegatedRequests(true);
+      try {
+        const roles = user?.roles || [];
+        const isHRAdmin = roles.includes(SystemRole.HR_ADMIN);
+        const isHRManager = roles.includes(SystemRole.HR_MANAGER);
+        
+        // Fetch all pending requests using a dummy employee ID
+        // The backend will return requests based on the user's role
+        // For HR Managers: department head requests (approvalFlow role "HR Manager")
+        // For HR Admin: department head requests AND HR Manager requests (approvalFlow role "CEO")
+        const allEmployees = await employeeProfileApi.getAllEmployees({ limit: 1000 });
+        const employeesList = Array.isArray(allEmployees.data) ? allEmployees.data : [];
+        
+        // Fetch pending requests for all employees and filter based on role
+        const hrManagerRequests: LeaveRequest[] = [];
+        
+        // Process in batches to avoid overwhelming the API
+        const batchSize = 10;
+        for (let i = 0; i < employeesList.length; i += batchSize) {
+          const batch = employeesList.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(async (emp: any) => {
+              const empId = emp._id || emp.employeeId;
+              if (!empId || empId === userId) return; // Skip own employee profile when querying
+              
+              try {
+                const requests = await leavesApi.getEmployeeLeaveRequests(empId, {
+                  status: "pending",
+                });
+                const pending = Array.isArray(requests) 
+                  ? requests.filter((req: LeaveRequest) => {
+                      // Only include requests that need approval
+                      if (req.status?.toLowerCase() !== "pending") return false;
+                      if (req.approvalFlow && req.approvalFlow.length > 0) {
+                        const initialApproval = req.approvalFlow[0];
+                        const isPending = initialApproval?.status?.toLowerCase() === "pending";
+                        
+                        // HR Manager: department head + HR Admin requests (initial role "HR Manager")
+                        if (isHRManager && !isHRAdmin) {
+                          return initialApproval?.role === "HR Manager" && isPending;
+                        }
+                        
+                        // HR Admin: can only view, not approve - so don't show any delegated requests
+                        if (isHRAdmin) {
+                          return false;
+                        }
+                      }
+                      return false;
+                    })
+                  : [];
+                hrManagerRequests.push(...pending);
+              } catch (err) {
+                // Skip if employee has no requests or error
+                return;
+              }
+            })
+          );
+        }
+        
+        // Extra safety: remove any requests that belong to the logged-in user (HR Manager)
+        const normalizedUserId = userId.toString();
+        const filteredRequests = hrManagerRequests.filter((req) => {
+          const rawEmployeeId: any = (req as any).employeeId;
+          let employeeIdStr: string | null = null;
+
+          if (typeof rawEmployeeId === "string") {
+            employeeIdStr = rawEmployeeId;
+          } else if (rawEmployeeId && typeof rawEmployeeId === "object") {
+            employeeIdStr =
+              (rawEmployeeId as any)._id ||
+              (rawEmployeeId as any).id ||
+              (typeof rawEmployeeId.toString === "function"
+                ? rawEmployeeId.toString()
+                : null);
+          }
+
+          return !employeeIdStr || employeeIdStr !== normalizedUserId;
+        });
+        
+        // Deduplicate requests by _id to prevent showing duplicates
+        const uniqueRequests = filteredRequests.filter((request, index, self) =>
+          index === self.findIndex((r) => r._id === request._id)
+        );
+        
+        setDelegatedPendingRequests(uniqueRequests);
+      } catch (error: any) {
+        console.error("Error fetching delegated requests:", error);
+        setDelegatedPendingRequests([]);
+      } finally {
+        setLoadingDelegatedRequests(false);
+      }
+    };
+
+    if (isAuthenticated && user) {
+      fetchDelegatedRequests();
+    }
+  }, [isAuthenticated, user]);
 
   const loadEmployees = async () => {
     try {
@@ -194,6 +306,74 @@ export default function HRManagerLeavePage() {
     );
   };
 
+  // NEW CODE: Check if request is from a department head (initial approval is HR Manager)
+  const isDepartmentHeadRequest = (request: LeaveRequest): boolean => {
+    if (!request.approvalFlow || request.approvalFlow.length === 0) {
+      return false;
+    }
+    // Department head requests have "HR Manager" as the initial approval role
+    const initialApproval = request.approvalFlow[0];
+    return initialApproval?.role === "HR Manager";
+  };
+
+  // NEW CODE: Check if request is from an HR Manager (initial approval is CEO)
+  const isHRManagerRequest = (request: LeaveRequest): boolean => {
+    if (!request.approvalFlow || request.approvalFlow.length === 0) {
+      return false;
+    }
+    // HR Manager requests have "CEO" as the initial approval role
+    const initialApproval = request.approvalFlow[0];
+    return initialApproval?.role === "CEO";
+  };
+
+  // NEW CODE: Check if request needs HR Manager approval (has pending HR Manager approval in flow)
+  const needsHRManagerApproval = (request: LeaveRequest): boolean => {
+    if (!request.approvalFlow || request.approvalFlow.length === 0) {
+      return false;
+    }
+    // Check if there's a pending approval with role "HR Manager"
+    // Status can be 'PENDING', 'pending', or LeaveStatus.PENDING
+    const pendingHRApproval = request.approvalFlow.find(
+      (approval) => {
+        const status = approval.status?.toString().toUpperCase();
+        return approval.role === "HR Manager" && status === "PENDING";
+      }
+    );
+    return !!pendingHRApproval;
+  };
+
+  // NEW CODE: Check if request needs CEO/HR Admin approval (has pending CEO approval in flow)
+  const needsCEOApproval = (request: LeaveRequest): boolean => {
+    if (!request.approvalFlow || request.approvalFlow.length === 0) {
+      return false;
+    }
+    // Check if there's a pending approval with role "CEO"
+    // Status can be 'PENDING', 'pending', or LeaveStatus.PENDING
+    const pendingCEOApproval = request.approvalFlow.find(
+      (approval) => {
+        const status = approval.status?.toString().toUpperCase();
+        return approval.role === "CEO" && status === "PENDING";
+      }
+    );
+    return !!pendingCEOApproval;
+  };
+
+  // NEW CODE: Check if request needs any approval (has any pending approval in flow)
+  // This is a fallback to show Approve/Reject for any pending request when viewed by HR Manager/Admin
+  const needsAnyApproval = (request: LeaveRequest): boolean => {
+    if (!request.approvalFlow || request.approvalFlow.length === 0) {
+      return false;
+    }
+    // Check if there's any pending approval
+    const pendingApproval = request.approvalFlow.find(
+      (approval) => {
+        const status = approval.status?.toString().toUpperCase();
+        return status === "PENDING";
+      }
+    );
+    return !!pendingApproval;
+  };
+
   // ENHANCED: Check if leave request is overridden by HR Manager (not finalized)
   const isOverridden = (request: LeaveRequest): boolean => {
     if (!request.approvalFlow || request.approvalFlow.length === 0) {
@@ -216,6 +396,13 @@ export default function HRManagerLeavePage() {
     
     if (firstHrIndex === -1) {
       return false;
+    }
+    
+    // Check if the initial approval role is "HR Manager" (department head request)
+    // If so, HR Manager approval is the initial approval, not an override
+    const initialApproval = request.approvalFlow[0];
+    if (initialApproval?.role === "HR Manager") {
+      return false; // This is initial approval for department head, not an override
     }
     
     // Check if there's a Department Head decision before the first HR Manager entry
@@ -336,9 +523,13 @@ export default function HRManagerLeavePage() {
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">HR Manager - Leave Requests</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {user?.roles?.includes(SystemRole.HR_ADMIN) ? "HR Admin - Leave Requests" : "HR Manager - Leave Requests"}
+        </h1>
         <p className="text-gray-600">
-          Manage leave requests: finalize approved requests, override decisions, and process in bulk
+          {user?.roles?.includes(SystemRole.HR_ADMIN) 
+            ? "View leave requests (HR Admin can only view, not approve)"
+            : "Manage leave requests: approve department head and HR Admin requests, finalize approved requests, override decisions, and process in bulk"}
         </p>
       </div>
 
@@ -355,8 +546,23 @@ export default function HRManagerLeavePage() {
         </div>
       )}
 
-      {/* Search and Filters - More Compact */}
-      <Card className="mb-8 shadow-sm">
+      {/* Tabs for Quick Access */}
+      <Tabs defaultValue="all" onValueChange={setActiveTab} className="mb-6">
+        <TabsList className={`grid w-full ${delegatedPendingRequests.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <TabsTrigger value="all">All Requests</TabsTrigger>
+          {delegatedPendingRequests.length > 0 && (
+            <TabsTrigger value="delegated" className="relative">
+              Delegated Requests
+              <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-orange-500 text-white rounded-full">
+                {delegatedPendingRequests.length}
+              </span>
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6">
+          {/* Search and Filters - More Compact */}
+          <Card className="mb-8 shadow-sm">
         <CardContent className="pt-6 pb-4">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1 w-full sm:w-auto">
@@ -591,6 +797,33 @@ export default function HRManagerLeavePage() {
                   {/* Right Section - Actions */}
                   <div className="lg:col-span-4 flex flex-col gap-2 lg:items-end lg:justify-start">
                     <div className="flex flex-wrap gap-2">
+                      {/* NEW: Approve/Reject buttons for pending requests that need HR Manager approval */}
+                      {/* HR Admin can only view, not approve */}
+                      {(() => {
+                        const roles = user?.roles || [];
+                        const isHRAdminUser = roles.includes(SystemRole.HR_ADMIN);
+                        return request.status?.toLowerCase() === "pending" && 
+                         !isHRAdminUser && 
+                         (needsHRManagerApproval(request) || needsCEOApproval(request) || needsAnyApproval(request));
+                      })() && (
+                        <>
+                          <ApproveLeaveRequestButton
+                            leaveRequestId={request._id}
+                            onSuccess={handleFinalizeSuccess}
+                            onError={handleError}
+                            variant="primary"
+                            size="sm"
+                          />
+                          <RejectLeaveRequestButton
+                            leaveRequestId={request._id}
+                            onSuccess={handleFinalizeSuccess}
+                            onError={handleError}
+                            variant="danger"
+                            size="sm"
+                          />
+                        </>
+                      )}
+                      {/* Finalize button for approved requests */}
                       {request.status?.toLowerCase() === "approved" && !isFinalized(request) && (
                         <FinalizeLeaveRequestButton
                           leaveRequestId={request._id}
@@ -599,13 +832,34 @@ export default function HRManagerLeavePage() {
                           size="sm"
                         />
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenOverride(request)}
-                      >
-                        Override
-                      </Button>
+                      {/* Override button - only show when it's actually an override situation */}
+                      {/* Don't show Override for pending requests that need approval (these use Approve/Reject buttons) */}
+                      {/* Override is only for changing existing decisions, not for initial approvals */}
+                      {(() => {
+                        const isPending = request.status?.toLowerCase() === "pending";
+                        const needsApproval = needsHRManagerApproval(request) || needsCEOApproval(request) || needsAnyApproval(request);
+                        
+                        // Never show Override for pending requests that need approval (use Approve/Reject instead)
+                        if (isPending && needsApproval) {
+                          return null;
+                        }
+                        
+                        // For non-pending requests or requests that don't need approval, show Override
+                        // Override is for changing decisions that were already made
+                        if (!isPending || !needsApproval) {
+                          return (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenOverride(request)}
+                            >
+                              Override
+                            </Button>
+                          );
+                        }
+                        
+                        return null;
+                      })()}
                       {/* NEW CODE: Verify Document button - Always visible for HR Managers */}
                       <Button
                         variant="primary"
@@ -637,6 +891,204 @@ export default function HRManagerLeavePage() {
           ))}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="delegated" className="mt-6">
+          {/* Bulk Process Button for Delegated Requests */}
+          {delegatedPendingRequests.length > 0 && (
+            <div className="mb-4 flex justify-end">
+              <Button
+                onClick={() => setShowBulkDialog(true)}
+                variant="outline"
+                disabled={delegatedPendingRequests.length === 0}
+              >
+                Bulk Process Delegated Requests
+              </Button>
+            </div>
+          )}
+          
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="text-orange-900">Delegated Pending Requests</CardTitle>
+              <CardDescription className="text-orange-700">
+                You have been delegated to review and approve these leave requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingDelegatedRequests ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Loading pending requests...</p>
+                </div>
+              ) : delegatedPendingRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No delegated pending requests at this time.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {delegatedPendingRequests
+                    .filter((request) => request._id) // Ensure only requests with valid IDs are rendered
+                    .map((request) => {
+                    const leaveTypeName = (request as any).leaveTypeName ||
+                      (typeof request.leaveTypeId === "object" && request.leaveTypeId !== null
+                        ? (request.leaveTypeId as any).name
+                        : "Unknown Leave Type");
+                    
+                    return (
+                      <Card key={request._id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="pt-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                            {/* Left Section - Main Info */}
+                            <div className="lg:col-span-8 space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      Employee: {request.employeeId}
+                                    </span>
+                                    <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(request.status)}`}>
+                                      {request.status}
+                                    </span>
+                                    {isOverridden(request) && (
+                                      <span
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800"
+                                        title="Overridden by HR Manager"
+                                      >
+                                        Overridden
+                                      </span>
+                                    )}
+                                    {isFinalized(request) && (
+                                      <span
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800"
+                                        title="Finalized by HR Manager"
+                                      >
+                                        Finalized
+                                      </span>
+                                    )}
+                                    {getDocumentVerificationBadge(request)}
+                                  </div>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">{leaveTypeName}</span> • {request.durationDays} day{request.durationDays !== 1 ? 's' : ''}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {request.dates?.from && new Date(request.dates.from).toLocaleDateString()} - {request.dates?.to && new Date(request.dates.to).toLocaleDateString()}
+                                  </p>
+                                  {request.justification && (
+                                    <p className="text-xs text-gray-600 mt-2 italic">
+                                      {request.justification}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {/* Right Section - Actions */}
+                            <div className="lg:col-span-4 flex flex-col gap-2 lg:items-end lg:justify-start">
+                              <div className="flex flex-wrap gap-2">
+                                {/* NEW: Approve/Reject buttons for pending requests that need HR Manager approval */}
+                                {/* HR Admin can only view, not approve */}
+                                {(() => {
+                                  const roles = user?.roles || [];
+                                  const isHRAdminUser = roles.includes(SystemRole.HR_ADMIN);
+                                  return request.status?.toLowerCase() === "pending" && 
+                                   !isHRAdminUser && 
+                                   (needsHRManagerApproval(request) || needsCEOApproval(request) || needsAnyApproval(request));
+                                })() && (
+                                  <>
+                                    <ApproveLeaveRequestButton
+                                      leaveRequestId={request._id}
+                                      onSuccess={handleFinalizeSuccess}
+                                      onError={handleError}
+                                      variant="primary"
+                                      size="sm"
+                                    />
+                                    <RejectLeaveRequestButton
+                                      leaveRequestId={request._id}
+                                      onSuccess={handleFinalizeSuccess}
+                                      onError={handleError}
+                                      variant="danger"
+                                      size="sm"
+                                    />
+                                  </>
+                                )}
+                                {/* Finalize button for approved requests */}
+                                {request.status?.toLowerCase() === "approved" && !isFinalized(request) && (
+                                  <FinalizeLeaveRequestButton
+                                    leaveRequestId={request._id}
+                                    onSuccess={handleFinalizeSuccess}
+                                    onError={handleError}
+                                    size="sm"
+                                  />
+                                )}
+                                {/* Override button - only show when it's actually an override situation */}
+                                {/* Don't show Override for pending requests that need approval (these use Approve/Reject buttons) */}
+                                {/* Override is only for changing existing decisions, not for initial approvals */}
+                                {(() => {
+                                  const isPending = request.status?.toLowerCase() === "pending";
+                                  const needsApproval = needsHRManagerApproval(request) || needsCEOApproval(request) || needsAnyApproval(request);
+                                  
+                                  // Never show Override for pending requests that need approval (use Approve/Reject instead)
+                                  if (isPending && needsApproval) {
+                                    return null;
+                                  }
+                                  
+                                  // For non-pending requests or requests that don't need approval, show Override
+                                  // Override is for changing decisions that were already made
+                                  if (!isPending || !needsApproval) {
+                                    return (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenOverride(request)}
+                                      >
+                                        Override
+                                      </Button>
+                                    );
+                                  }
+                                  
+                                  return null;
+                                })()}
+                                {request.attachmentId && (
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => router.push(`/dashboard/leaves/requests/${request._id}/document`)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white border-blue-700"
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-1.5"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                      />
+                                    </svg>
+                                    Verify Document
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  <Link
+                    href="/dashboard/leaves/requests/review"
+                    className="block mt-4 text-center text-orange-600 hover:underline font-medium"
+                  >
+                    View All Delegated Requests →
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* NEW CODE: Override Decision Dialog */}
       {showOverrideDialog && selectedRequestForOverride && (
@@ -656,7 +1108,7 @@ export default function HRManagerLeavePage() {
       {/* NEW CODE: Bulk Process Dialog */}
       {showBulkDialog && (
         <BulkProcessDialog
-          leaveRequests={leaveRequests}
+          leaveRequests={activeTab === "delegated" ? delegatedPendingRequests : leaveRequests}
           onSuccess={handleBulkProcessSuccess}
           onError={handleError}
           onClose={() => setShowBulkDialog(false)}

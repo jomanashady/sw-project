@@ -13,11 +13,78 @@ import {
   CardContent,
 } from "@/components/shared/ui/Card";
 import { Button } from "@/components/shared/ui/Button";
+import { useEffect, useState } from "react";
+import { leavesApi } from "@/lib/api/leaves/leaves";
+import type { LeaveRequest } from "@/types/leaves";
 
 export default function HRManagerDashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
   useRequireAuth(SystemRole.HR_MANAGER);
+
+  // NEW: Delegated pending requests for HR Manager (exclude own requests)
+  const [delegatedPendingRequests, setDelegatedPendingRequests] = useState<
+    LeaveRequest[]
+  >([]);
+  const [loadingDelegated, setLoadingDelegated] = useState(false);
+  const hasDelegated = delegatedPendingRequests.length > 0;
+
+  useEffect(() => {
+    const fetchDelegatedForHRManager = async () => {
+      if (!user) return;
+
+      const userId =
+        (user as any)._id || (user as any).userId || (user as any).id;
+      if (!userId) return;
+
+      setLoadingDelegated(true);
+      try {
+        // Ask backend for pending requests for this user as manager/delegate
+        const requests = await leavesApi.getEmployeeLeaveRequests(userId, {
+          status: "pending",
+        });
+
+        const normalizedUserId = userId.toString();
+
+        const filtered: LeaveRequest[] = Array.isArray(requests)
+          ? requests.filter((req: any) => {
+              if (req.status?.toLowerCase() !== "pending") return false;
+
+              // Normalize employeeId from the request (can be string or populated object)
+              const rawEmployeeId: any = req.employeeId;
+              let employeeIdStr: string | null = null;
+
+              if (typeof rawEmployeeId === "string") {
+                employeeIdStr = rawEmployeeId;
+              } else if (rawEmployeeId && typeof rawEmployeeId === "object") {
+                employeeIdStr =
+                  rawEmployeeId._id ||
+                  rawEmployeeId.id ||
+                  (typeof rawEmployeeId.toString === "function"
+                    ? rawEmployeeId.toString()
+                    : null);
+              }
+
+              // Exclude HR Manager's own requests from delegated list
+              if (employeeIdStr && employeeIdStr === normalizedUserId) {
+                return false;
+              }
+
+              return true;
+            })
+          : [];
+
+        setDelegatedPendingRequests(filtered);
+      } catch (err) {
+        console.error("Failed to load delegated pending requests for HR:", err);
+        setDelegatedPendingRequests([]);
+      } finally {
+        setLoadingDelegated(false);
+      }
+    };
+
+    fetchDelegatedForHRManager();
+  }, [user]);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -180,6 +247,36 @@ export default function HRManagerDashboardPage() {
         <h2 className="text-2xl font-semibold text-gray-900 mb-4">
           Leave Management
         </h2>
+
+        {/* NEW: Delegated Pending Requests banner for HR Manager */}
+        {hasDelegated && (
+          <Card className="mb-6 border-2 border-orange-300 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="text-orange-900">
+                Delegated Pending Leave Requests
+              </CardTitle>
+              <CardDescription className="text-orange-700">
+                You have been delegated{" "}
+                <span className="font-semibold">
+                  {delegatedPendingRequests.length} pending request
+                  {delegatedPendingRequests.length !== 1 ? "s" : ""}
+                </span>{" "}
+                to review and approve.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="border-orange-500 text-orange-700 hover:bg-orange-100"
+                onClick={() => router.push("/dashboard/leaves/hr-manager")}
+                disabled={loadingDelegated}
+              >
+                View Delegated Requests
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-orange-200">
             <CardHeader>

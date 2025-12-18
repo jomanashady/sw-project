@@ -524,13 +524,13 @@ export default function LeavePoliciesPage() {
                                 ],
                               });
                             } else {
-                              setEligibilityData({
-                                ...eligibilityData,
+                    setEligibilityData({
+                      ...eligibilityData,
                                 positionsAllowed: eligibilityData.positionsAllowed.filter(
                                   (code) => code !== position.code
                                 ),
                               });
-                            }
+                  }
                           }}
                           className="mr-2"
                         />

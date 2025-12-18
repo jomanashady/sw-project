@@ -141,9 +141,18 @@ export default function LeaveEntitlementsPage() {
   };
 
   // Get employees filtered by contract type
+  // If no contract type is selected, show all employees
+  // If a contract type is selected, show employees with that type OR employees without a contract type (to help identify missing data)
   const getFilteredEmployees = () => {
     if (!selectedContractType) return employees;
-    return employees.filter(emp => emp.contractType === selectedContractType);
+    // Show employees with matching contract type OR employees without a contract type set
+    return employees.filter(emp => 
+      emp.contractType === selectedContractType || 
+      !emp.contractType || 
+      emp.contractType === '' ||
+      emp.contractType === null ||
+      emp.contractType === undefined
+    );
   };
 
   // Load entitlements for all employees with selected contract type and leave type
@@ -166,7 +175,10 @@ export default function LeaveEntitlementsPage() {
           entitlementsList.push(entitlement);
         } catch (error: any) {
           // Skip employees without entitlements - they might need to be created
-          console.warn(`No entitlement for employee ${emp._id}:`, error.message);
+          // Only log if it's not a 404 (not found) error, as those are expected
+          if (error.response?.status !== 404) {
+            console.warn(`Error loading entitlement for employee ${emp._id}:`, error.message);
+          }
         }
       }
       
@@ -479,7 +491,18 @@ export default function LeaveEntitlementsPage() {
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-700">
                 <strong>Employees with {selectedContractType.replace(/_/g, ' ')}:</strong> {getFilteredEmployees().length} employee(s)
+                {getFilteredEmployees().length < employees.length && (
+                  <span className="text-orange-600 ml-2">
+                    ({employees.length - getFilteredEmployees().length} employee(s) without contract type - they will also be shown)
+                  </span>
+                )}
               </p>
+              {employees.filter(emp => !emp.contractType || emp.contractType === '').length > 0 && (
+                <p className="text-xs text-orange-600 mt-1">
+                  ⚠️ {employees.filter(emp => !emp.contractType || emp.contractType === '').length} employee(s) don't have a contract type set. 
+                  Use "Add All Employees to Entitlements" to set them all to Full-Time.
+                </p>
+              )}
             </div>
           )}
           <div className="flex gap-3">

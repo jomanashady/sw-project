@@ -173,17 +173,21 @@ export class LeaveController {
   @UseGuards(RolesGuard)
   @Roles(
     SystemRole.DEPARTMENT_EMPLOYEE,
-    SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN,
   )
   async updateLeaveRequest(
     @Param('id') id: string,
     @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
+    @Req() req: any,
   ) {
+    const userId = req.user?.userId || req.user?._id || req.user?.id;
     return await this.leavesService.updateLeaveRequest(
       id,
       updateLeaveRequestDto,
+      userId,
     );
   }
 
@@ -441,9 +445,16 @@ export class LeaveController {
 
   @Post('request/:id/cancel')
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_EMPLOYEE, SystemRole.HR_ADMIN)
-  async cancelLeaveRequest(@Param('id') id: string) {
-    return await this.leavesService.cancelLeaveRequest(id);
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.HR_ADMIN
+  )
+  async cancelLeaveRequest(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.userId || req.user?._id || req.user?.id;
+    return await this.leavesService.cancelLeaveRequest(id, userId);
   }
 
   // REQ-031: Get detailed leave balance
@@ -712,15 +723,62 @@ export class LeaveController {
         | 'FIRST_VACATION_DATE'
         | 'REVISED_HIRE_DATE'
         | 'WORK_RECEIVING_DATE';
+      force?: boolean; // Force reset regardless of date
     },
   ) {
-    const { criterion = 'HIRE_DATE' } = body;
+    const { criterion = 'HIRE_DATE', force = false } = body;
 
     try {
-      await this.leavesService.resetLeaveBalancesForNewYear(criterion);
+      await this.leavesService.resetLeaveBalancesForNewYear(criterion, force);
       return { message: 'Leave balances reset successfully for the new year.' };
     } catch (error) {
       return { message: 'Error resetting leave balances.' };
+    }
+  }
+
+  // Test endpoint: Reset all leave balances to zero immediately
+  @Post('reset-leave-balances-test')
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_ADMIN) // Only HR Admin for test reset
+  async resetLeaveBalancesForTest() {
+    try {
+      console.log('[resetLeaveBalancesForTest] Endpoint called');
+      const result = await this.leavesService.resetAllLeaveBalancesForTest();
+      console.log('[resetLeaveBalancesForTest] Result:', result);
+      return { 
+        message: `All leave balances reset to zero for testing. Reset ${result.reset} of ${result.total} entitlements in ${result.duration}.`,
+        success: true,
+        ...result
+      };
+    } catch (error: any) {
+      console.error('[resetLeaveBalancesForTest] Error:', error);
+      return { 
+        message: `Error resetting leave balances: ${error.message}`,
+        success: false 
+      };
+    }
+  }
+
+  // Endpoint to add all employees to leave entitlements and set as full-time
+  @Post('add-all-employees-to-entitlements')
+  @UseGuards(RolesGuard)
+  @Roles(SystemRole.HR_ADMIN) // Only HR Admin
+  async addAllEmployeesToEntitlements() {
+    try {
+      console.log('[addAllEmployeesToEntitlements] Endpoint called');
+      const result = await this.leavesService.addAllEmployeesToLeaveEntitlements();
+      console.log('[addAllEmployeesToEntitlements] Result:', result);
+      return {
+        message: `Successfully processed ${result.totalEmployees} employees. Created ${result.entitlementsCreated} entitlements, updated ${result.employeesUpdated} contract types.`,
+        success: true,
+        ...result
+      };
+    } catch (error: any) {
+      console.error('[addAllEmployeesToEntitlements] Error:', error);
+      return {
+        message: `Error adding employees to entitlements: ${error.message}`,
+        success: false
+      };
     }
   }
 

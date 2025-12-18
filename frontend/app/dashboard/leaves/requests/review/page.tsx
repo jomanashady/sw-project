@@ -76,7 +76,7 @@ export default function ManagerLeaveReviewPage() {
   };
 
   const fetchPendingRequests = async (employeeId?: string) => {
-    // If no employeeId provided, check if user is a delegate and show delegated requests
+    // If no employeeId provided, check if user is a delegate, Payroll Manager, or Department Head
     if (!employeeId) {
       // Check if there's an employeeId in URL query params (for delegates clicking from dashboard)
       const urlParams = new URLSearchParams(window.location.search);
@@ -88,31 +88,63 @@ export default function ManagerLeaveReviewPage() {
         return;
       }
       
-      // If user is a delegate, fetch all pending requests for the manager's team
-      // The backend will handle this when userId is passed
-      const userId = user?.userId || (user as any)?._id || (user as any)?.id;
+      const roles = user?.roles || [];
+      const isPayrollManager = roles.includes(SystemRole.PAYROLL_MANAGER);
+      const isDepartmentHead = roles.includes(SystemRole.DEPARTMENT_HEAD);
+      const userId = (user as any)?._id || user?.userId || (user as any)?.id;
+      
       if (userId) {
         setLoadingRequests(true);
         setError(null);
         setHasSearched(true);
         try {
-          console.log("Fetching delegated pending requests for user:", userId);
-          // Pass userId to backend - it will check if user is a delegate and return appropriate requests
-          const requests = await leavesApi.getEmployeeLeaveRequests(userId, {
-            status: "pending",
-          });
-          console.log("Received delegated requests:", requests);
-          const pendingOnly = requests.filter(
-            (req) => req.status?.toLowerCase() === "pending"
-          );
-          console.log("Filtered delegated pending requests:", pendingOnly);
-          setPendingRequests(pendingOnly);
-          if (pendingOnly.length > 0) {
-            setSuccessMessage(`Found ${pendingOnly.length} pending request(s) delegated to you`);
+          // If Payroll Manager, fetch team leave requests using filterTeamLeaveData
+          if (isPayrollManager) {
+            console.log("Fetching team pending requests for Payroll Manager:", userId);
+            const result = await leavesApi.filterTeamLeaveData(userId, {
+              status: "pending",
+              limit: 1000, // Get all pending requests
+            });
+            console.log("Received team requests:", result);
+            const teamRequests = Array.isArray(result.items) ? result.items : [];
+            const pendingOnly = teamRequests.filter(
+              (req: any) => req.status?.toLowerCase() === "pending"
+            );
+            console.log("Filtered team pending requests:", pendingOnly);
+            setPendingRequests(pendingOnly);
+          } else if (isDepartmentHead) {
+            // Department Head: fetch team requests using filterTeamLeaveData
+            console.log("Fetching team pending requests for Department Head:", userId);
+            const result = await leavesApi.filterTeamLeaveData(userId, {
+              status: "pending",
+              limit: 1000,
+            });
+            console.log("Received team requests:", result);
+            const teamRequests = Array.isArray(result.items) ? result.items : [];
+            const pendingOnly = teamRequests.filter(
+              (req: any) => req.status?.toLowerCase() === "pending"
+            );
+            console.log("Filtered team pending requests:", pendingOnly);
+            setPendingRequests(pendingOnly);
+          } else {
+            // If user is a delegate, fetch all pending requests for the manager's team
+            // The backend will handle this when userId is passed
+            // IMPORTANT: always prefer employee profile _id to match backend delegationMap
+            console.log("Fetching delegated pending requests for user:", userId);
+            // Pass userId to backend - it will check if user is a delegate and return appropriate requests
+            const requests = await leavesApi.getEmployeeLeaveRequests(userId, {
+              status: "pending",
+            });
+            console.log("Received delegated requests:", requests);
+            const pendingOnly = requests.filter(
+              (req) => req.status?.toLowerCase() === "pending"
+            );
+            console.log("Filtered delegated pending requests:", pendingOnly);
+            setPendingRequests(pendingOnly);
           }
         } catch (err: any) {
-          console.error("Error fetching delegated requests:", err);
-          // If error, user might not be a delegate - that's okay
+          console.error("Error fetching requests:", err);
+          // If error, user might not have access - that's okay
           setPendingRequests([]);
           setHasSearched(false);
         } finally {
@@ -173,6 +205,9 @@ export default function ManagerLeaveReviewPage() {
     // Refresh the list
     if (employeeIdFilter.trim()) {
       fetchPendingRequests(employeeIdFilter.trim());
+    } else {
+      // Refresh team requests if no specific employee filter
+      fetchPendingRequests();
     }
   };
 
@@ -181,6 +216,9 @@ export default function ManagerLeaveReviewPage() {
     // Refresh the list
     if (employeeIdFilter.trim()) {
       fetchPendingRequests(employeeIdFilter.trim());
+    } else {
+      // Refresh team requests if no specific employee filter
+      fetchPendingRequests();
     }
   };
 
@@ -258,16 +296,69 @@ export default function ManagerLeaveReviewPage() {
     );
   };
 
-  // ENHANCED: Check if leave request is overridden by HR Manager
+  // ENHANCED: Check if leave request is overridden by HR Manager (not finalized)
   const isOverridden = (request: LeaveRequest): boolean => {
     if (!request.approvalFlow || request.approvalFlow.length === 0) {
       return false;
     }
-    // Check if approvalFlow contains an HR Manager override (can be approved or rejected)
-    const hrApproval = request.approvalFlow.find(
+    
+    // Find all HR Manager entries
+    const hrManagerEntries = request.approvalFlow.filter(
       (approval) => approval.role === "HR Manager"
     );
-    return hrApproval !== undefined;
+    
+    if (hrManagerEntries.length === 0) {
+      return false;
+    }
+    
+    // Find the first HR Manager entry index
+    const firstHrIndex = request.approvalFlow.findIndex(
+      (approval) => approval.role === "HR Manager"
+    );
+    
+    if (firstHrIndex === -1) {
+      return false;
+    }
+    
+    // Check if the initial approval role is "HR Manager" (department head request)
+    // If so, HR Manager approval is the initial approval, not an override
+    const initialApproval = request.approvalFlow[0];
+    if (initialApproval?.role === "HR Manager") {
+      return false; // This is initial approval for department head, not an override
+    }
+    
+    // Check if there's a Department Head decision before the first HR Manager entry
+    const deptHeadEntry = request.approvalFlow
+      .slice(0, firstHrIndex)
+      .reverse()
+      .find((approval) => 
+        approval.role === "Departement_Head" || 
+        approval.role === "Department Head" ||
+        approval.role?.toLowerCase().includes("department")
+      );
+    
+    if (!deptHeadEntry) {
+      // No Department Head decision before HR Manager = it's an override
+      return true;
+    }
+    
+    // Get the HR Manager entry and Department Head status
+    const hrEntry = request.approvalFlow[firstHrIndex];
+    const deptHeadStatus = deptHeadEntry.status?.toLowerCase();
+    const hrStatus = hrEntry.status?.toLowerCase();
+    
+    // Finalization: Department Head approved → HR Manager approves (same status, normal flow)
+    // Override: Department Head rejected → HR Manager approves (status changed)
+    // Override: Department Head approved → HR Manager rejects (status changed)
+    // Override: Any status change by HR Manager
+    
+    // If both are approved and Department Head approved first = finalization (not override)
+    if (deptHeadStatus === "approved" && hrStatus === "approved") {
+      return false; // This is finalization, not override
+    }
+    
+    // If statuses don't match = override (HR changed the decision)
+    return true;
   };
 
   const getStatusColor = (status: string): string => {
@@ -298,11 +389,12 @@ export default function ManagerLeaveReviewPage() {
 
   const roles = user?.roles || [];
   const isDepartmentHead = roles.includes(SystemRole.DEPARTMENT_HEAD);
+  const isPayrollManager = roles.includes(SystemRole.PAYROLL_MANAGER);
   
-  // Allow access if user is department head OR if they have delegated requests
-  const hasDelegatedRequests = pendingRequests.length > 0 && !isDepartmentHead;
+  // Allow access if user is department head, Payroll Manager, OR if they have delegated requests
+  const hasDelegatedRequests = pendingRequests.length > 0 && !isDepartmentHead && !isPayrollManager;
   
-  if (!isDepartmentHead && !hasDelegatedRequests && hasSearched) {
+  if (!isDepartmentHead && !isPayrollManager && !hasDelegatedRequests && hasSearched) {
     return (
       <div className="container mx-auto max-w-4xl px-4 py-8">
         <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
@@ -327,6 +419,8 @@ export default function ManagerLeaveReviewPage() {
         <p className="text-gray-600 mt-1">
           {isDepartmentHead 
             ? "As a department head, review and approve or reject leave requests from your team members"
+            : isPayrollManager
+            ? "As a payroll manager, review and approve or reject leave requests from your team members"
             : "Review and approve or reject leave requests delegated to you"
           }
         </p>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/shared/ui/Card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/shared/ui/Tabs";
 import { useRequireAuth } from "@/lib/hooks/use-auth";
 import { SystemRole } from "@/types";
 import { useEffect, useState } from "react";
@@ -17,11 +18,12 @@ export default function LeavesPage() {
   const [delegatedPendingRequests, setDelegatedPendingRequests] = useState<LeaveRequest[]>([]);
   const [loadingDelegatedRequests, setLoadingDelegatedRequests] = useState(false);
 
+  // Set mounted to true after component mounts (client-side only)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Check if user is HR Admin, HR Manager, or Department Head
+  // Check if user is HR Admin, HR Manager, Department Head, or Payroll Manager
   useEffect(() => {
     // Wait for mount and auth initialization
     if (!mounted || loading) return;
@@ -36,8 +38,9 @@ export default function LeavesPage() {
       const isHRAdmin = roles.includes(SystemRole.HR_ADMIN);
       const isHRManager = roles.includes(SystemRole.HR_MANAGER);
       const isDepartmentHead = roles.includes(SystemRole.DEPARTMENT_HEAD);
+      const isPayrollManager = roles.includes(SystemRole.PAYROLL_MANAGER);
       
-      if (!isHRAdmin && !isHRManager && !isDepartmentHead) {
+      if (!isHRAdmin && !isHRManager && !isDepartmentHead && !isPayrollManager) {
         // Redirect employees to the employee-facing leave page
         router.replace("/dashboard/leaves/requests");
         return;
@@ -48,8 +51,21 @@ export default function LeavesPage() {
   // Fetch pending requests for delegates
   useEffect(() => {
     const fetchDelegatedRequests = async () => {
-      const userId = user?.userId || (user as any)?._id || (user as any)?.id;
+      // IMPORTANT: always prefer employee profile _id to match backend delegation logic
+      const userId = (user as any)?._id || user?.userId || (user as any)?.id;
       if (!userId) return;
+
+      // Only HR Manager / HR Admin should see the delegated banner here.
+      // Department Heads already review team requests in their own section.
+      const roles = user?.roles || [];
+      const isHRAdmin = roles.includes(SystemRole.HR_ADMIN);
+      const isHRManager = roles.includes(SystemRole.HR_MANAGER);
+      if (!isHRAdmin && !isHRManager) {
+        // For Department Heads and others, do not show delegated list on this dashboard.
+        setDelegatedPendingRequests([]);
+        return;
+      }
+
       setLoadingDelegatedRequests(true);
       try {
         // Call with userId to check if user is a delegate
@@ -57,9 +73,35 @@ export default function LeavesPage() {
         const requests = await leavesApi.getEmployeeLeaveRequests(userId, {
           status: "pending",
         });
-        const pendingOnly = requests.filter(
-          (req) => req.status?.toLowerCase() === "pending"
-        );
+
+        // Only keep pending requests that do NOT belong to the current user
+        const normalizedUserId = userId.toString();
+        const pendingOnly = requests.filter((req) => {
+          if (req.status?.toLowerCase() !== "pending") return false;
+
+          // Normalize employeeId from the request (can be string or populated object)
+          const rawEmployeeId: any = (req as any).employeeId;
+          let employeeIdStr: string | null = null;
+
+          if (typeof rawEmployeeId === "string") {
+            employeeIdStr = rawEmployeeId;
+          } else if (rawEmployeeId && typeof rawEmployeeId === "object") {
+            employeeIdStr =
+              (rawEmployeeId as any)._id ||
+              (rawEmployeeId as any).id ||
+              (typeof rawEmployeeId.toString === "function"
+                ? rawEmployeeId.toString()
+                : null);
+          }
+
+          // Exclude the HR Manager's own requests from the delegated list
+          if (employeeIdStr && employeeIdStr === normalizedUserId) {
+            return false;
+          }
+
+          return true;
+        });
+
         setDelegatedPendingRequests(pendingOnly);
       } catch (error: any) {
         console.error("Error fetching delegated requests:", error);
@@ -75,31 +117,21 @@ export default function LeavesPage() {
     }
   }, [isAuthenticated, user]);
 
-  // Only show admin page if user is HR Admin, HR Manager, or Department Head
+  // Only show admin page if user is HR Admin, HR Manager, Department Head, or Payroll Manager
   const roles = user?.roles || [];
   const isHRAdmin = roles.includes(SystemRole.HR_ADMIN);
   const isHRManager = roles.includes(SystemRole.HR_MANAGER);
   const isDepartmentHead = roles.includes(SystemRole.DEPARTMENT_HEAD);
+  const isPayrollManager = roles.includes(SystemRole.PAYROLL_MANAGER);
 
-  // Show loading while checking auth
-  if (!mounted || loading || !isAuthenticated) {
+  // Show loading while checking authentication or if user doesn't have required role
+  // Wait for mounted to avoid hydration mismatch
+  if (!mounted || loading || !isAuthenticated || (!isHRAdmin && !isHRManager && !isDepartmentHead && !isPayrollManager)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // If not HR role, the useEffect will redirect, but show loading in the meantime
-  if (!isHRAdmin && !isHRManager && !isDepartmentHead) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecting...</p>
         </div>
       </div>
     );
@@ -112,9 +144,79 @@ export default function LeavesPage() {
         <p className="text-gray-600 mt-1">Configure and manage leave policies, types, and entitlements</p>
       </div>
 
-      {/* Delegate Pending Requests Section - Show for any user who is a delegate */}
-      {delegatedPendingRequests.length > 0 && (
-        <div className="mb-6 space-y-4">
+      {/* Tabs for Quick Access */}
+      <Tabs defaultValue="overview" className="mb-6">
+        <TabsList className={`grid w-full ${
+          delegatedPendingRequests.length > 0 
+            ? 'grid-cols-2' 
+            : 'grid-cols-1'
+        }`}>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          {delegatedPendingRequests.length > 0 && (
+            <TabsTrigger value="delegated" className="relative">
+              Delegated Requests
+              <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-orange-500 text-white rounded-full">
+                {delegatedPendingRequests.length}
+              </span>
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Only show for non-HR Admin users (HR Admin has their own section below) */}
+            {!isHRAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Leave Requests</CardTitle>
+                  <CardDescription>View and manage your leave requests</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link 
+                    href="/dashboard/leaves/requests" 
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    View & Create Requests →
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+            {isDepartmentHead && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Management</CardTitle>
+                  <CardDescription>Review team leave requests</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link 
+                    href="/dashboard/leaves/requests/review" 
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    Review Pending Requests →
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+            {isHRManager && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>HR Management</CardTitle>
+                  <CardDescription>Finalize and manage leave requests</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link 
+                    href="/dashboard/leaves/hr-manager" 
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    Manage Requests →
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="delegated" className="mt-6">
           <Card className="border-orange-200 bg-orange-50">
             <CardHeader>
               <CardTitle className="text-orange-900">Delegated Pending Requests</CardTitle>
@@ -127,6 +229,10 @@ export default function LeavesPage() {
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
                   <p className="mt-2 text-sm text-gray-600">Loading pending requests...</p>
+                </div>
+              ) : delegatedPendingRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No delegated pending requests at this time.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -171,8 +277,9 @@ export default function LeavesPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+
+      </Tabs>
 
       {/* Department Head Section */}
       {isDepartmentHead && (
@@ -264,25 +371,75 @@ export default function LeavesPage() {
         </div>
       )}
 
-      {/* HR Admin Section */}
-      {isHRAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Payroll Manager Section */}
+      {isPayrollManager && (
+        <div className="mb-6 space-y-4">
           <Card className="border-purple-200 bg-purple-50">
             <CardHeader>
-              <CardTitle className="text-purple-900">Create Leave Request</CardTitle>
+              <CardTitle className="text-purple-900">Payroll Manager Actions</CardTitle>
               <CardDescription className="text-purple-700">
-                Submit a new leave request for approval
+                View team leave balances, manage team leave data, and review/approve leave requests
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link 
-                href="/dashboard/leaves/requests" 
-                className="text-purple-600 hover:underline font-medium"
-              >
-                View & Create Requests →
-              </Link>
+              <div className="space-y-3">
+                <Link 
+                  href="/dashboard/leaves/requests" 
+                  className="block text-purple-600 hover:underline font-medium"
+                >
+                  View & Create Leave Requests →
+                </Link>
+                <Link 
+                  href="/dashboard/leaves/requests/review" 
+                  className="block text-purple-600 hover:underline font-medium"
+                >
+                  Review & Approve Team Requests →
+                </Link>
+                <Link 
+                  href="/dashboard/leaves/team-balances" 
+                  className="block text-purple-600 hover:underline font-medium"
+                >
+                  View Team Leave Balances →
+                </Link>
+                <Link 
+                  href="/dashboard/leaves/team-management" 
+                  className="block text-purple-600 hover:underline font-medium"
+                >
+                  Manage Team Leave Data →
+                </Link>
+              </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* HR Admin Section */}
+      {isHRAdmin && (
+        <div className="mb-6 space-y-4">
+          <Card className="border-purple-200 bg-purple-50">
+            <CardHeader>
+              <CardTitle className="text-purple-900">HR Admin Actions</CardTitle>
+              <CardDescription className="text-purple-700">
+                Manage your leave requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Link 
+                  href="/dashboard/leaves/requests" 
+                  className="block text-purple-600 hover:underline font-medium"
+                >
+                  View & Create Leave Requests →
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {/* HR Admin Admin Tools Grid */}
+      {isHRAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
           <Card>
             <CardHeader>
@@ -436,8 +593,8 @@ export default function LeavesPage() {
         </div>
       )}
 
-      {/* Employee Section - Only show for regular employees (not managers/HR) */}
-      {!isHRAdmin && !isHRManager && !isDepartmentHead && (
+      {/* Employee Section - Only show for regular employees (not managers/HR/Payroll) */}
+      {!isHRAdmin && !isHRManager && !isDepartmentHead && !isPayrollManager && (
         <Card className="mb-6 border-green-200 bg-green-50">
           <CardHeader>
             <CardTitle className="text-green-900">Employee Actions</CardTitle>
@@ -487,7 +644,7 @@ export default function LeavesPage() {
         ].some(role => roles.includes(role));
 
         // Only show if user can create requests and hasn't seen it in another section
-        if (canCreateRequest && !isDepartmentHead && !isHRManager && !isHRAdmin) {
+        if (canCreateRequest && !isDepartmentHead && !isHRManager && !isHRAdmin && !isPayrollManager) {
           return (
             <Card className="mb-6 border-purple-200 bg-purple-50">
               <CardHeader>

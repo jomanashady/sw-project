@@ -125,14 +125,56 @@ export default function NotificationCenter() {
   const handleCheckExpiringShifts = async () => {
     try {
       setChecking(true);
+      console.log('[SHIFT EXPIRY CHECK] Starting check for shifts expiring within', daysBeforeExpiry, 'days');
+      
       const result = await checkExpiringShifts(daysBeforeExpiry);
+      console.log('[SHIFT EXPIRY CHECK] Result:', result);
+      
       setCheckResult(result);
       setExpiringAssignments(result.assignments || []);
-      showToast(
-        `Found ${result.count} expiring shift assignment(s) within ${daysBeforeExpiry} days. Notifications will be automatically sent to HR admins.`,
-        result.count > 0 ? 'warning' : 'success'
-      );
+      
+      // Create notifications for ALL HR Admins and System Admins
+      if (result.count > 0 && result.assignments && result.assignments.length > 0) {
+        try {
+          console.log('[SHIFT EXPIRY CHECK] Creating notifications for', result.count, 'expiring assignments');
+          
+          // The backend endpoint will automatically notify all HR Admins and System Admins
+          const { createShiftExpiryNotifications } = await import('@/lib/api/notifications');
+          
+          // Pass empty array - backend will automatically fetch all HR Admins and System Admins
+          const notifResult = await createShiftExpiryNotifications([], result.assignments);
+          console.log('[SHIFT EXPIRY CHECK] Notifications created:', notifResult);
+          
+          showToast(
+            `Found ${result.count} expiring shift assignment(s). Notifications sent to all HR Admins and System Admins!`,
+            'success'
+          );
+          
+          // Refresh notifications to show the new ones
+          console.log('[SHIFT EXPIRY CHECK] Refreshing notifications...');
+          await refetch();
+          console.log('[SHIFT EXPIRY CHECK] Notifications refreshed');
+        } catch (notifError: any) {
+          console.error('[SHIFT EXPIRY CHECK] Failed to create notifications:', notifError);
+          console.error('[SHIFT EXPIRY CHECK] Error details:', {
+            message: notifError.message,
+            response: notifError.response,
+            data: notifError.response?.data,
+          });
+          showToast(
+            `Found ${result.count} expiring shift assignment(s), but failed to send notifications: ${notifError.message}`,
+            'error'
+          );
+        }
+      } else {
+        console.log('[SHIFT EXPIRY CHECK] No expiring assignments found');
+        showToast(
+          `Found ${result.count} expiring shift assignment(s) within ${daysBeforeExpiry} days.`,
+          result.count > 0 ? 'warning' : 'success'
+        );
+      }
     } catch (error: any) {
+      console.error('[SHIFT EXPIRY CHECK] Failed:', error);
       showToast(error.message || 'Failed to check expiring shifts', 'error');
     } finally {
       setChecking(false);
