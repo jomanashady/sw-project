@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === 'production') {
   
   let logCount = 0;
   let lastLogReset = Date.now();
-  const MAX_LOGS_PER_MINUTE = 50; // Limit to 50 logs per minute
+  const MAX_LOGS_PER_MINUTE = 10; // Limit to 10 logs per minute to avoid Railway rate limits
   
   // Throttle console.log
   console.log = (...args: any[]) => {
@@ -62,7 +62,14 @@ if (process.env.NODE_ENV === 'production') {
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    // Disable verbose NestJS logging in production to avoid Railway rate limits
+    const logger = process.env.NODE_ENV === 'production' 
+      ? ['error', 'warn'] // Only log errors and warnings in production
+      : ['log', 'error', 'warn', 'debug', 'verbose']; // Full logging in development
+    
+    const app = await NestFactory.create(AppModule, {
+      logger: logger as any,
+    });
 
     // -----------------------------------
     // CORS CONFIGURATION
