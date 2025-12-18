@@ -25,6 +25,7 @@
     "seed:employee": "ts-node src/employee-profile/scripts/seed-test-data.ts",
     "add:passwords": "ts-node src/employee-profile/scripts/add-password-to-employees.ts",
     "seed:org": "ts-node src/organization-structure/scripts/seed-org-structure.ts",
+    "verify:deployment": "ts-node scripts/verify-deployment.ts",
     "install:deps": "npm install --legacy-peer-deps"
   },
   "dependencies": {
