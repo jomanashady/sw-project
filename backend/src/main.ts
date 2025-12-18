@@ -6,13 +6,14 @@ import cors from 'cors';
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
-
+    const app = await NestFactory.create(AppModule, { 
+      logger: ['error', 'warn'], // Only log errors and warnings
+    });
+    
     // -----------------------------------
     // CORS CONFIGURATION - MUST BE FIRST
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-
     // Build allowed origins list - explicitly include all Netlify domains
     const allowedOrigins = [
       frontendUrl,
@@ -45,52 +46,19 @@ async function bootstrap() {
 
     // Get Express app FIRST - before any NestJS configuration
     const expressApp = app.getHttpAdapter().getInstance();
-
+    
     // Use cors package for reliable CORS handling at Express level
     // This MUST run before NestJS processes anything
-    expressApp.use(
-      cors({
-        origin: (origin, callback) => {
-          const isAllowed = isOriginAllowed(origin);
-          if (isAllowed) {
-            if (origin) {
-              console.log(`✅ Express CORS: Allowing origin: ${origin}`);
-            }
-            callback(null, true);
-          } else {
-            console.log(`❌ Express CORS: Blocking origin: ${origin || 'no origin'}`);
-            callback(null, false);
-          }
-        },
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-        allowedHeaders: [
-          'Content-Type',
-          'Authorization',
-          'X-Requested-With',
-          'Accept',
-          'Origin',
-          'Access-Control-Request-Method',
-          'Access-Control-Request-Headers',
-        ],
-        exposedHeaders: ['Authorization'],
-        maxAge: 86400,
-        preflightContinue: false,
-        optionsSuccessStatus: 204,
-      })
-    );
-
-    // NestJS CORS configuration - handles actual requests (OPTIONS already handled above)
-    app.enableCors({
+    expressApp.use(cors({
       origin: (origin, callback) => {
         const isAllowed = isOriginAllowed(origin);
         if (isAllowed) {
           if (origin) {
-            console.log(`✅ CORS: Allowing origin: ${origin}`);
+            console.log(`✅ Express CORS: Allowing origin: ${origin}`);
           }
           callback(null, true);
         } else {
-          console.log(`❌ CORS: Blocking origin: ${origin || 'no origin'}`);
+          console.log(`❌ Express CORS: Blocking origin: ${origin || 'no origin'}`);
           callback(null, false);
         }
       },
@@ -106,10 +74,10 @@ async function bootstrap() {
         'Access-Control-Request-Headers',
       ],
       exposedHeaders: ['Authorization'],
-      maxAge: 86400, // 24 hours
+      maxAge: 86400,
       preflightContinue: false,
       optionsSuccessStatus: 204,
-    });
+    }));
 
     // -----------------------------------
     // GLOBAL VALIDATION PIPE
@@ -122,7 +90,7 @@ async function bootstrap() {
         transformOptions: {
           enableImplicitConversion: true,
         },
-      })
+      }),
     );
 
     // -----------------------------------
@@ -145,7 +113,9 @@ async function bootstrap() {
     console.log(`🌐 Frontend: ${frontendUrl}`);
     console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
-    console.log(`🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`);
+    console.log(
+      `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
+    );
     console.log('='.repeat(50));
   } catch (error) {
     console.error('❌ Error starting application:', error);
