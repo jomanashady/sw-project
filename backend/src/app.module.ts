@@ -28,10 +28,22 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     // ✅ FIXED: Use forRootAsync to access ConfigService
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-        dbName: configService.get<string>('DATABASE_NAME', 'hr_system'),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGODB_URI');
+        if (!uri) {
+          console.error('❌ MONGODB_URI is not set!');
+          throw new Error('MONGODB_URI environment variable is required');
+        }
+        return {
+          uri,
+          dbName: configService.get<string>('DATABASE_NAME', 'hr_system'),
+          retryWrites: true,
+          w: 'majority',
+          // Don't fail on connection errors - let it retry
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,
