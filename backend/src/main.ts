@@ -1,24 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, LogLevel } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   try {
-    // Disable NestJS default logger in production to reduce Railway log rate limits
-    const logger: LogLevel[] = process.env.NODE_ENV === 'production' 
-      ? ['error', 'warn'] // Only log errors and warnings in production
-      : ['log', 'error', 'warn', 'debug', 'verbose']; // Full logging in development
-    
-    const app = await NestFactory.create(AppModule, {
-      logger: logger,
-    });
+    const app = await NestFactory.create(AppModule);
 
     // -----------------------------------
     // CORS CONFIGURATION
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
-    // Build allowed origins list - include all possible Netlify URLs
+    // Build allowed origins list - use function to allow all Netlify domains
     const allowedOrigins = [
       frontendUrl,
       'http://localhost:3000',
@@ -27,20 +20,17 @@ async function bootstrap() {
       'https://hr-syst.netlify.app',
     ].filter(Boolean);
     
-    // Log CORS configuration only once at startup (reduced logging for Railway rate limits)
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🌐 CORS configured for:', allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'default origins');
-    }
+    console.log('🌐 CORS Allowed Origins:', allowedOrigins);
+    console.log('🌐 Frontend URL from env:', frontendUrl);
     
-    // Use a function to check origins dynamically (no logging to avoid Railway rate limits)
-    const corsOptions = {
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    app.enableCors({
+      origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
         if (!origin) {
           return callback(null, true);
         }
 
-        // Check if origin is in the allowed list
+        // Check if origin is in the explicit allowed list
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
@@ -55,10 +45,7 @@ async function bootstrap() {
           return callback(null, true);
         }
 
-        // Block other origins - only log in development (rare case)
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('❌ CORS: Blocking origin:', origin);
-        }
+        // Block other origins
         callback(null, false);
       },
       credentials: true,
@@ -76,9 +63,7 @@ async function bootstrap() {
       maxAge: 86400, // 24 hours
       preflightContinue: false,
       optionsSuccessStatus: 204,
-    };
-    
-    app.enableCors(corsOptions);
+    });
 
     // -----------------------------------
     // GLOBAL VALIDATION PIPE
@@ -91,8 +76,6 @@ async function bootstrap() {
         transformOptions: {
           enableImplicitConversion: true,
         },
-        // Disable detailed error messages in production to reduce Railway log rate limits
-        disableErrorMessages: process.env.NODE_ENV === 'production',
       }),
     );
 
@@ -109,43 +92,39 @@ async function bootstrap() {
     const port = process.env.PORT || 3001;
     await app.listen(port);
 
-    // Reduced logging for Railway rate limits - only log essential startup info
-    console.log(`🚀 HR System API started on port ${port}`);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`📍 Local: http://localhost:${port}/api/v1`);
-      console.log(`🌐 Frontend: ${frontendUrl}`);
-    }
+    console.log('='.repeat(50));
+    console.log(`🚀 HR System API`);
+    console.log('='.repeat(50));
+    console.log(`📍 Local: http://localhost:${port}/api/v1`);
+    console.log(`🌐 Frontend: ${frontendUrl}`);
+    console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
+    console.log(
+      `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
+    );
+    console.log('='.repeat(50));
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
   }
 }
 
-// Handle unhandled promise rejections (reduced logging in production)
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.error('❌ Unhandled Rejection:', reason);
-  }
+  console.error('❌ Unhandled Rejection:', reason);
   // Don't exit - keep the server running
 });
 
-// Handle uncaught exceptions (reduced logging in production)
+// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  // Always log critical errors, but reduce verbosity in production
-  if (process.env.NODE_ENV === 'production') {
-    console.error('❌ Uncaught Exception:', error.message);
-  } else {
-    console.error('❌ Uncaught Exception:', error.message);
-    console.error('Stack:', error.stack);
-  }
+  console.error('❌ Uncaught Exception:', error.message);
+  console.error('Stack:', error.stack);
   // Don't exit - keep the server running
 });
 
 // Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('SIGTERM received, shutting down gracefully...');
-  }
+  console.log('SIGTERM received, shutting down gracefully...');
   process.exit(0);
 });
 

@@ -42,12 +42,6 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
           // Don't fail on connection errors - let it retry
           serverSelectionTimeoutMS: 5000,
           socketTimeoutMS: 45000,
-          // Disable Mongoose verbose logging in production to reduce Railway log rate limits
-          ...(process.env.NODE_ENV === 'production' && {
-            // Suppress Mongoose connection logging in production
-            bufferCommands: false,
-            bufferMaxEntries: 0,
-          }),
         };
       },
       inject: [ConfigService],
