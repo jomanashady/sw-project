@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import * as Express from 'express';
+import cors from 'cors';
 
 async function bootstrap() {
   try {
@@ -42,8 +43,42 @@ async function bootstrap() {
       return false;
     };
     
-    // NestJS CORS configuration - PRIMARY CORS HANDLER
-    // This handles both preflight OPTIONS and actual requests
+    // Get Express app FIRST - before any NestJS configuration
+    const expressApp = app.getHttpAdapter().getInstance();
+    
+    // Use cors package for reliable CORS handling at Express level
+    // This MUST run before NestJS processes anything
+    expressApp.use(cors({
+      origin: (origin, callback) => {
+        const isAllowed = isOriginAllowed(origin);
+        if (isAllowed) {
+          if (origin) {
+            console.log(`✅ Express CORS: Allowing origin: ${origin}`);
+          }
+          callback(null, true);
+        } else {
+          console.log(`❌ Express CORS: Blocking origin: ${origin || 'no origin'}`);
+          callback(null, false);
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers',
+      ],
+      exposedHeaders: ['Authorization'],
+      maxAge: 86400,
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+    }));
+    
+    // NestJS CORS configuration - handles actual requests (OPTIONS already handled above)
     app.enableCors({
       origin: (origin, callback) => {
         const isAllowed = isOriginAllowed(origin);
@@ -54,7 +89,7 @@ async function bootstrap() {
           callback(null, true);
         } else {
           console.log(`❌ CORS: Blocking origin: ${origin || 'no origin'}`);
-          callback(null, false); // Reject by returning false, not an error
+          callback(null, false);
         }
       },
       credentials: true,
@@ -70,26 +105,8 @@ async function bootstrap() {
       ],
       exposedHeaders: ['Authorization'],
       maxAge: 86400, // 24 hours
-      preflightContinue: false, // Don't continue to next handler after preflight
-      optionsSuccessStatus: 204, // Return 204 for successful OPTIONS
-    });
-    
-    // Additional Express-level middleware as backup for edge cases
-    // This ensures CORS headers are set even if NestJS CORS somehow misses it
-    const expressApp = app.getHttpAdapter().getInstance();
-    expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-      const origin = req.headers.origin as string | undefined;
-      
-      // Only add headers if origin is allowed (NestJS CORS should handle this, but this is backup)
-      if (isOriginAllowed(origin) && origin) {
-        // Ensure headers are set (NestJS should have done this, but double-check)
-        if (!res.getHeader('Access-Control-Allow-Origin')) {
-          res.setHeader('Access-Control-Allow-Origin', origin);
-          res.setHeader('Access-Control-Allow-Credentials', 'true');
-        }
-      }
-      
-      next();
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
     });
 
     // -----------------------------------
