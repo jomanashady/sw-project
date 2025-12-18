@@ -27,33 +27,51 @@ async function bootstrap() {
     // Get the underlying Express app to add middleware BEFORE NestJS processing
     const expressApp = app.getHttpAdapter().getInstance();
     
-    // CRITICAL: Handle OPTIONS requests at Express level BEFORE any guards
+    // CRITICAL: Handle CORS at Express level BEFORE any other middleware or guards
+    // This must be the FIRST middleware to ensure OPTIONS requests are handled correctly
     expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-      if (req.method === 'OPTIONS') {
-        const origin = req.headers.origin;
-        
-        // Check if origin should be allowed
-        let allowOrigin = false;
-        if (!origin) {
-          allowOrigin = true;
-        } else if (allowedOrigins.includes(origin)) {
-          allowOrigin = true;
-        } else if (origin.endsWith('.netlify.app')) {
-          allowOrigin = true;
-        } else if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-          allowOrigin = true;
-        }
-        
-        if (allowOrigin && origin) {
+      const origin = req.headers.origin as string | undefined;
+      
+      // Check if origin should be allowed
+      let allowOrigin = false;
+      if (!origin) {
+        // Allow requests with no origin (like mobile apps, Postman, curl)
+        allowOrigin = true;
+      } else if (allowedOrigins.includes(origin)) {
+        allowOrigin = true;
+      } else if (origin.endsWith('.netlify.app')) {
+        allowOrigin = true;
+        console.log(`✅ CORS: Allowing Netlify domain: ${origin}`);
+      } else if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+        allowOrigin = true;
+      }
+      
+      // Set CORS headers for allowed origins
+      if (allowOrigin) {
+        if (origin) {
+          // For browser requests with origin, echo back the origin
           res.setHeader('Access-Control-Allow-Origin', origin);
         }
+        // Note: We don't set '*' when credentials are true (browser restriction)
+        
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Max-Age', '86400');
         res.setHeader('Access-Control-Expose-Headers', 'Authorization');
-        return res.status(204).end();
       }
+      
+      // Handle preflight OPTIONS requests
+      if (req.method === 'OPTIONS') {
+        if (allowOrigin) {
+          console.log(`✅ CORS Preflight ALLOWED: ${origin || 'no origin'}`);
+          return res.status(204).end();
+        } else {
+          console.log(`❌ CORS Preflight BLOCKED: ${origin || 'no origin'}`);
+          return res.status(403).json({ message: 'CORS policy: Origin not allowed' });
+        }
+      }
+      
       next();
     });
     
