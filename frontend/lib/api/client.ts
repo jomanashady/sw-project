@@ -4,11 +4,10 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-// CHANGED - Fixed port to match backend (5000)
-
-// Backend API runs on port 5000 by default (can be overridden with PORT env var or NEXT_PUBLIC_API_URL)
+// Backend API URL - use environment variable in production, localhost for development
+// Railway will provide the backend URL via NEXT_PUBLIC_API_URL environment variable
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
 
 // CHANGED - Debug: Log the API base URL on load
 if (typeof window !== "undefined") {

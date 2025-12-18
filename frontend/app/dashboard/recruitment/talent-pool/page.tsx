@@ -252,7 +252,7 @@ export default function TalentPoolPage() {
       
       // Case 2: File path (starts with / or contains uploads) - fetch with auth and open
       if (resumeUrl.startsWith("/") || resumeUrl.includes("uploads")) {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
         const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : '';
         
         // Construct full URL

@@ -2,50 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
-// COMPLETELY suppress all logging in production to avoid Railway rate limits
-// This must happen BEFORE any other code runs
-const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
-
-if (isProduction) {
-  // Completely disable console.log in production
-  console.log = () => {};
-  
-  // Only allow critical errors, heavily throttled
-  let errorCount = 0;
-  let lastErrorReset = Date.now();
-  const MAX_ERRORS_PER_MINUTE = 5; // Only 5 errors per minute
-  
-  const originalError = console.error;
-  console.error = (...args: any[]) => {
-    const now = Date.now();
-    if (now - lastErrorReset > 60000) {
-      errorCount = 0;
-      lastErrorReset = now;
-    }
-    if (errorCount < MAX_ERRORS_PER_MINUTE) {
-      originalError(...args);
-      errorCount++;
-    }
-  };
-  
-  // Disable console.warn
-  console.warn = () => {};
-  
-  // Disable console.debug
-  console.debug = () => {};
-  
-  // Disable console.info
-  console.info = () => {};
-}
-
 async function bootstrap() {
   try {
-    // COMPLETELY disable NestJS logging in production to avoid Railway rate limits
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
-    
-    const app = await NestFactory.create(AppModule, {
-      logger: isProduction ? false : ['log', 'error', 'warn', 'debug', 'verbose'],
-    });
+    const app = await NestFactory.create(AppModule);
 
     // -----------------------------------
     // CORS CONFIGURATION
@@ -63,11 +22,8 @@ async function bootstrap() {
     // Remove duplicates and filter out undefined
     const uniqueOrigins = [...new Set(allowedOrigins.filter(Boolean))];
     
-    // Only log in development to avoid Railway rate limits
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
-      console.log('🌐 Frontend URL from env:', frontendUrl);
-    }
+    console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
+    console.log('🌐 Frontend URL from env:', frontendUrl);
     
     app.enableCors({
       origin: (origin, callback) => {
@@ -83,11 +39,6 @@ async function bootstrap() {
 
         // Allow all Netlify domains (including preview deployments)
         if (origin.endsWith('.netlify.app')) {
-          return callback(null, true);
-        }
-
-        // Allow all Railway domains (for frontend deployment)
-        if (origin.endsWith('.up.railway.app') || origin.includes('.railway.app')) {
           return callback(null, true);
         }
 
@@ -139,56 +90,39 @@ async function bootstrap() {
     const port = process.env.PORT || 6000;
     await app.listen(port);
 
-    // Only log startup info in development to avoid Railway rate limits
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('='.repeat(50));
-      console.log(`🚀 HR System API`);
-      console.log('='.repeat(50));
-      console.log(`📍 Local: http://localhost:${port}/api/v1`);
-      console.log(`🌐 Frontend: ${frontendUrl}`);
-      console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
-      console.log(
-        `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
-      );
-      console.log('='.repeat(50));
-    }
-    // No logging in production - completely silent to avoid Railway rate limits
+    console.log('='.repeat(50));
+    console.log(`🚀 HR System API`);
+    console.log('='.repeat(50));
+    console.log(`📍 Local: http://localhost:${port}/api/v1`);
+    console.log(`🌐 Frontend: ${frontendUrl}`);
+    console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
+    console.log(
+      `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
+    );
+    console.log('='.repeat(50));
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
   }
 }
 
-// Handle unhandled promise rejections (throttled logging)
-let lastRejectionLog = 0;
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  const now = Date.now();
-  // Only log once per 10 seconds to avoid rate limits
-  if (now - lastRejectionLog > 10000) {
-    console.error('❌ Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
-    lastRejectionLog = now;
-  }
+  console.error('❌ Unhandled Rejection:', reason);
   // Don't exit - keep the server running
 });
 
-// Handle uncaught exceptions (throttled logging)
-let lastExceptionLog = 0;
+// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  const now = Date.now();
-  // Only log once per 10 seconds to avoid rate limits
-  if (now - lastExceptionLog > 10000) {
-    console.error('❌ Uncaught Exception:', error.message);
-    lastExceptionLog = now;
-  }
+  console.error('❌ Uncaught Exception:', error.message);
+  console.error('Stack:', error.stack);
   // Don't exit - keep the server running
 });
 
 // Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('SIGTERM received, shutting down gracefully...');
-  }
+  console.log('SIGTERM received, shutting down gracefully...');
   process.exit(0);
 });
 
