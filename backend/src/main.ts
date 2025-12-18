@@ -17,6 +17,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost:3001',
       'https://hr-systemm.netlify.app',
+      'https://hr-syst.netlify.app', // Add the actual Netlify URL
     ];
     
     // Remove duplicates and filter out undefined
@@ -29,26 +30,33 @@ async function bootstrap() {
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
         if (!origin) {
+          console.log('✅ CORS: Allowing request with no origin');
           return callback(null, true);
         }
 
+        console.log('🔍 CORS: Checking origin:', origin);
+
         // Ensure the origin is in the allowed list
         if (uniqueOrigins.includes(origin)) {
+          console.log('✅ CORS: Origin in allowed list');
           return callback(null, true);
         }
 
         // Allow all Netlify domains (including preview deployments)
         if (origin.endsWith('.netlify.app')) {
+          console.log('✅ CORS: Allowing Netlify domain');
           return callback(null, true);
         }
 
         // Allow localhost for development
         if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+          console.log('✅ CORS: Allowing localhost');
           return callback(null, true);
         }
 
         // Block other origins
-        callback(new Error('Not allowed by CORS'));
+        console.log('❌ CORS: Blocking origin:', origin);
+        callback(null, false); // Use false instead of Error for better compatibility
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
@@ -63,6 +71,8 @@ async function bootstrap() {
       ],
       exposedHeaders: ['Authorization'],
       maxAge: 86400, // 24 hours
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
     });
 
     // -----------------------------------
