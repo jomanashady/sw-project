@@ -2,34 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
-// Suppress excessive logging in production to avoid Railway rate limits
-if (process.env.NODE_ENV === 'production') {
-  const originalLog = console.log;
-  const originalError = console.error;
-  const originalWarn = console.warn;
+// COMPLETELY suppress all logging in production to avoid Railway rate limits
+// This must happen BEFORE any other code runs
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
+
+if (isProduction) {
+  // Completely disable console.log in production
+  console.log = () => {};
   
-  let logCount = 0;
-  let lastLogReset = Date.now();
-  const MAX_LOGS_PER_MINUTE = 10; // Limit to 10 logs per minute to avoid Railway rate limits
-  
-  // Throttle console.log
-  console.log = (...args: any[]) => {
-    const now = Date.now();
-    if (now - lastLogReset > 60000) {
-      logCount = 0;
-      lastLogReset = now;
-    }
-    if (logCount < MAX_LOGS_PER_MINUTE) {
-      originalLog(...args);
-      logCount++;
-    }
-  };
-  
-  // Throttle console.error (keep errors but limit them)
+  // Only allow critical errors, heavily throttled
   let errorCount = 0;
   let lastErrorReset = Date.now();
-  const MAX_ERRORS_PER_MINUTE = 20;
+  const MAX_ERRORS_PER_MINUTE = 5; // Only 5 errors per minute
   
+  const originalError = console.error;
   console.error = (...args: any[]) => {
     const now = Date.now();
     if (now - lastErrorReset > 60000) {
@@ -42,33 +28,23 @@ if (process.env.NODE_ENV === 'production') {
     }
   };
   
-  // Throttle console.warn
-  let warnCount = 0;
-  let lastWarnReset = Date.now();
-  const MAX_WARNS_PER_MINUTE = 20;
+  // Disable console.warn
+  console.warn = () => {};
   
-  console.warn = (...args: any[]) => {
-    const now = Date.now();
-    if (now - lastWarnReset > 60000) {
-      warnCount = 0;
-      lastWarnReset = now;
-    }
-    if (warnCount < MAX_WARNS_PER_MINUTE) {
-      originalWarn(...args);
-      warnCount++;
-    }
-  };
+  // Disable console.debug
+  console.debug = () => {};
+  
+  // Disable console.info
+  console.info = () => {};
 }
 
 async function bootstrap() {
   try {
-    // Disable verbose NestJS logging in production to avoid Railway rate limits
-    const logger = process.env.NODE_ENV === 'production' 
-      ? ['error', 'warn'] // Only log errors and warnings in production
-      : ['log', 'error', 'warn', 'debug', 'verbose']; // Full logging in development
+    // COMPLETELY disable NestJS logging in production to avoid Railway rate limits
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
     
     const app = await NestFactory.create(AppModule, {
-      logger: logger as any,
+      logger: isProduction ? false : ['log', 'error', 'warn', 'debug', 'verbose'],
     });
 
     // -----------------------------------
@@ -176,10 +152,8 @@ async function bootstrap() {
         `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
       );
       console.log('='.repeat(50));
-    } else {
-      // Minimal production logging
-      console.log(`🚀 HR System API started on port ${port}`);
     }
+    // No logging in production - completely silent to avoid Railway rate limits
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
