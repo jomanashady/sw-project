@@ -57,12 +57,12 @@ api.interceptors.request.use(
 // ✅ Response interceptor – return data directly
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    console.log(
-      `✅ API Success [${
-        response.status
-      } ${response.config.method?.toUpperCase()} ${response.config.url}]`
-    );
-    console.log('✅ API Response data:', response.data);
+    // Reduced logging - only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `✅ API Success [${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}]`
+      );
+    }
 
     // Return the data property if it exists, otherwise return the full response
     return response.data;

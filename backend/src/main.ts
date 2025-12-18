@@ -20,41 +20,38 @@ async function bootstrap() {
       'https://hr-syst.netlify.app',
     ].filter(Boolean);
     
-    console.log('🌐 CORS Configuration:');
-    console.log('   Frontend URL from env:', frontendUrl);
-    console.log('   Allowed origins:', allowedOrigins);
+    // Log CORS configuration only once at startup (reduced logging for Railway rate limits)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🌐 CORS configured for:', allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'default origins');
+    }
     
-    // Use a function to check origins dynamically
+    // Use a function to check origins dynamically (no logging to avoid Railway rate limits)
     const corsOptions = {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
         if (!origin) {
-          console.log('✅ CORS: Allowing request with no origin');
           return callback(null, true);
         }
 
-        console.log('🔍 CORS: Checking origin:', origin);
-
         // Check if origin is in the allowed list
         if (allowedOrigins.includes(origin)) {
-          console.log('✅ CORS: Origin in allowed list');
           return callback(null, true);
         }
 
         // Allow all Netlify domains (including preview deployments)
         if (origin.endsWith('.netlify.app')) {
-          console.log('✅ CORS: Allowing Netlify domain');
           return callback(null, true);
         }
 
         // Allow localhost for development
         if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-          console.log('✅ CORS: Allowing localhost');
           return callback(null, true);
         }
 
-        // Block other origins
-        console.log('❌ CORS: Blocking origin:', origin);
+        // Block other origins - only log in development (rare case)
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('❌ CORS: Blocking origin:', origin);
+        }
         callback(null, false);
       },
       credentials: true,
@@ -103,17 +100,12 @@ async function bootstrap() {
     const port = process.env.PORT || 3001;
     await app.listen(port);
 
-    console.log('='.repeat(50));
-    console.log(`🚀 HR System API`);
-    console.log('='.repeat(50));
-    console.log(`📍 Local: http://localhost:${port}/api/v1`);
-    console.log(`🌐 Frontend: ${frontendUrl}`);
-    console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
-    console.log(
-      `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
-    );
-    console.log('='.repeat(50));
+    // Reduced logging for Railway rate limits - only log essential startup info
+    console.log(`🚀 HR System API started on port ${port}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📍 Local: http://localhost:${port}/api/v1`);
+      console.log(`🌐 Frontend: ${frontendUrl}`);
+    }
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
