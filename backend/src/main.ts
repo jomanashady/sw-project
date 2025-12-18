@@ -10,9 +10,28 @@ async function bootstrap() {
   // CORS CONFIGURATION
   // -----------------------------------
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-  const allowedOrigins = [frontendUrl, 'http://localhost:3001'];
+  const allowedOrigins = [
+    frontendUrl,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://hr-systemm.netlify.app',
+    'https://*.netlify.app', // Allow all Netlify previews
+  ];
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list or is a Netlify domain
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.netlify.app')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Temporarily allow all for debugging
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
