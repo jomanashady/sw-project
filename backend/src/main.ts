@@ -87,7 +87,9 @@ async function bootstrap() {
     // -----------------------------------
     // START SERVER
     // -----------------------------------
-    const port = process.env.PORT || 6000;
+    // Use PORT from environment (Railway sets this automatically)
+    // Default to 3001 for local development (6000 is blocked by browsers)
+    const port = process.env.PORT || 3001;
     await app.listen(port);
 
     console.log('='.repeat(50));

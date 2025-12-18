@@ -306,7 +306,7 @@ export const leavesApi = {
         ? localStorage.getItem('auth_token') || '' 
         : '';
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
       
       // FIXED: Use correct endpoint /leaves/attachments/:id/download
       const response = await fetch(
@@ -500,7 +500,7 @@ export const leavesApi = {
         : '';
 
       const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
       // Use the correct endpoint
       const endpoint = '/leaves/attachment/upload';

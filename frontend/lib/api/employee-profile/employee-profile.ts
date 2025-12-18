@@ -452,7 +452,7 @@ export const employeeProfileApi = {
         console.error("❌ Server error - check backend logs");
       } else if (!status && !error?.response && !error?.originalError?.response) {
         console.error("❌ Network error - backend may be down or unreachable");
-        console.error("   Check if backend is running on:", process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1");
+        console.error("   Check if backend is running on:", process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1");
       }
       
       // Re-throw with more context for UI

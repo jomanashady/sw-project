@@ -161,7 +161,7 @@ export default function EditPositionPage() {
 
       // Make direct fetch call to bypass our API client
       const token = localStorage.getItem("auth_token");
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
       const response = await fetch(
         `${API_BASE_URL}/organization-structure/positions/${positionId}`,
         {

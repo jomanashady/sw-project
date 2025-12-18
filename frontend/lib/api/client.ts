@@ -6,14 +6,19 @@ import axios, {
 
 // Backend API URL - use environment variable in production, localhost for development
 // Railway will provide the backend URL via NEXT_PUBLIC_API_URL environment variable
+// IMPORTANT: Set NEXT_PUBLIC_API_URL in Netlify environment variables to your Railway backend URL
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:6000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
-// CHANGED - Debug: Log the API base URL on load
+// Debug: Log the API base URL on load
 if (typeof window !== "undefined") {
   console.log("🔧 API_BASE_URL configured as:", API_BASE_URL);
   if (!process.env.NEXT_PUBLIC_API_URL) {
-    console.warn("⚠️ NEXT_PUBLIC_API_URL not set! Using localhost fallback. Set this in Netlify environment variables for production.");
+    console.error("❌ NEXT_PUBLIC_API_URL not set! The app will try to connect to localhost which won't work in production.");
+    console.error("📝 To fix: Go to Netlify → Site settings → Environment variables → Add NEXT_PUBLIC_API_URL");
+    console.error("   Value should be: https://your-railway-backend.up.railway.app/api/v1");
+  } else {
+    console.log("✅ NEXT_PUBLIC_API_URL is set correctly");
   }
 }
 
