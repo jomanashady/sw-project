@@ -29,24 +29,25 @@ async function bootstrap() {
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
         if (!origin) {
-          console.log('✅ CORS: Allowing request with no origin');
           return callback(null, true);
         }
 
         // Ensure the origin is in the allowed list
         if (uniqueOrigins.includes(origin)) {
-          console.log(`✅ CORS: Allowing origin: ${origin}`);
           return callback(null, true);
         }
 
         // Allow all Netlify domains (including preview deployments)
         if (origin.endsWith('.netlify.app')) {
-          console.log(`✅ CORS: Allowing Netlify domain: ${origin}`);
           return callback(null, true);
         }
 
-        // Log blocked origins for debugging
-        console.log(`❌ CORS: Blocking origin: ${origin}`);
+        // Allow localhost for development
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+          return callback(null, true);
+        }
+
+        // Block other origins
         callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
@@ -108,14 +109,15 @@ async function bootstrap() {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit, just log the error
+  console.error('❌ Unhandled Rejection:', reason);
+  // Don't exit - keep the server running
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Don't exit, just log the error
+  console.error('❌ Uncaught Exception:', error.message);
+  console.error('Stack:', error.stack);
+  // Don't exit - keep the server running
 });
 
 // Handle SIGTERM gracefully
