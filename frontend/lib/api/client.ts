@@ -11,7 +11,12 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 // CHANGED - Debug: Log the API base URL on load
-console.log("🔧 API_BASE_URL configured as:", API_BASE_URL);
+if (typeof window !== "undefined") {
+  console.log("🔧 API_BASE_URL configured as:", API_BASE_URL);
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    console.warn("⚠️ NEXT_PUBLIC_API_URL not set! Using localhost fallback. Set this in Netlify environment variables for production.");
+  }
+}
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
