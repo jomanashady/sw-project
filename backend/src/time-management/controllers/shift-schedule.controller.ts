@@ -30,7 +30,7 @@ import {
   PostponeShiftAssignmentDto,
   CreateScheduleRuleDto,
   DefineFlexibleSchedulingRulesDto,
-} from '../DTOs/shift.dtos';
+} from '../dtos/shift.dtos';
 
 @Controller('shift-schedule')
 @UseGuards(JwtAuthGuard, RolesGuard)

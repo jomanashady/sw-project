@@ -17,7 +17,7 @@ import {
   GetPoliciesDto,
   CheckHolidayDto,
   ValidateAttendanceHolidayDto,
-} from '../DTOs/policy-config.dtos';
+} from '../dtos/policy-config.dtos';
 import { LeavesService } from '../../leaves/leaves.service';
 import { Inject, forwardRef } from '@nestjs/common';
 

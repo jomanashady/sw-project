@@ -16,7 +16,7 @@ import {
   RenewShiftAssignmentDto,
   CancelShiftAssignmentDto,
   PostponeShiftAssignmentDto,
-} from '../DTOs/shift.dtos';
+} from '../dtos/shift.dtos';
 
 @Injectable()
 export class ShiftScheduleService {

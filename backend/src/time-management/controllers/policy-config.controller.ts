@@ -27,7 +27,7 @@ import {
   GetPoliciesDto,
   CheckHolidayDto,
   ValidateAttendanceHolidayDto,
-} from '../DTOs/policy-config.dtos';
+} from '../dtos/policy-config.dtos';
 
 @Controller('policy-config')
 @UseGuards(JwtAuthGuard, RolesGuard)

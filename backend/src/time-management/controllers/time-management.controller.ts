@@ -29,7 +29,7 @@ import {
   ApproveCorrectionRequestDto,
   RejectCorrectionRequestDto,
   ImportAttendanceCsvDto,
-} from '../DTOs/attendance.dtos';
+} from '../dtos/attendance.dtos';
 import {
   ApplyAttendanceRoundingDto,
   EnforcePunchPolicyDto,
@@ -37,13 +37,13 @@ import {
   MonitorRepeatedLatenessDto,
   RecordPunchWithMetadataDto,
   TriggerLatenessDisciplinaryDto,
-} from '../DTOs/time-permission.dtos';
+} from '../dtos/time-permission.dtos';
 import {
   GenerateOvertimeReportDto,
   GenerateLatenessReportDto,
   GenerateExceptionReportDto,
   ExportReportDto,
-} from '../DTOs/reporting.dtos';
+} from '../dtos/reporting.dtos';
 
 @Controller('time-management')
 @UseGuards(JwtAuthGuard, RolesGuard)
