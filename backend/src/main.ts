@@ -42,6 +42,11 @@ async function bootstrap() {
           return callback(null, true);
         }
 
+        // Allow all Railway domains (for frontend deployment)
+        if (origin.endsWith('.up.railway.app') || origin.includes('.railway.app')) {
+          return callback(null, true);
+        }
+
         // Allow localhost for development
         if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
           return callback(null, true);
