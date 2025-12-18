@@ -2,6 +2,64 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
+// Suppress excessive logging in production to avoid Railway rate limits
+if (process.env.NODE_ENV === 'production') {
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  let logCount = 0;
+  let lastLogReset = Date.now();
+  const MAX_LOGS_PER_MINUTE = 50; // Limit to 50 logs per minute
+  
+  // Throttle console.log
+  console.log = (...args: any[]) => {
+    const now = Date.now();
+    if (now - lastLogReset > 60000) {
+      logCount = 0;
+      lastLogReset = now;
+    }
+    if (logCount < MAX_LOGS_PER_MINUTE) {
+      originalLog(...args);
+      logCount++;
+    }
+  };
+  
+  // Throttle console.error (keep errors but limit them)
+  let errorCount = 0;
+  let lastErrorReset = Date.now();
+  const MAX_ERRORS_PER_MINUTE = 20;
+  
+  console.error = (...args: any[]) => {
+    const now = Date.now();
+    if (now - lastErrorReset > 60000) {
+      errorCount = 0;
+      lastErrorReset = now;
+    }
+    if (errorCount < MAX_ERRORS_PER_MINUTE) {
+      originalError(...args);
+      errorCount++;
+    }
+  };
+  
+  // Throttle console.warn
+  let warnCount = 0;
+  let lastWarnReset = Date.now();
+  const MAX_WARNS_PER_MINUTE = 20;
+  
+  console.warn = (...args: any[]) => {
+    const now = Date.now();
+    if (now - lastWarnReset > 60000) {
+      warnCount = 0;
+      lastWarnReset = now;
+    }
+    if (warnCount < MAX_WARNS_PER_MINUTE) {
+      originalWarn(...args);
+      warnCount++;
+    }
+  };
+}
+
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
@@ -22,8 +80,11 @@ async function bootstrap() {
     // Remove duplicates and filter out undefined
     const uniqueOrigins = [...new Set(allowedOrigins.filter(Boolean))];
     
-    console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
-    console.log('🌐 Frontend URL from env:', frontendUrl);
+    // Only log in development to avoid Railway rate limits
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
+      console.log('🌐 Frontend URL from env:', frontendUrl);
+    }
     
     app.enableCors({
       origin: (origin, callback) => {
@@ -95,39 +156,58 @@ async function bootstrap() {
     const port = process.env.PORT || 6000;
     await app.listen(port);
 
-    console.log('='.repeat(50));
-    console.log(`🚀 HR System API`);
-    console.log('='.repeat(50));
-    console.log(`📍 Local: http://localhost:${port}/api/v1`);
-    console.log(`🌐 Frontend: ${frontendUrl}`);
-    console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
-    console.log(
-      `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
-    );
-    console.log('='.repeat(50));
+    // Only log startup info in development to avoid Railway rate limits
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('='.repeat(50));
+      console.log(`🚀 HR System API`);
+      console.log('='.repeat(50));
+      console.log(`📍 Local: http://localhost:${port}/api/v1`);
+      console.log(`🌐 Frontend: ${frontendUrl}`);
+      console.log(`⚙️  Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Database: ${process.env.DATABASE_NAME || 'hr_system'}`);
+      console.log(
+        `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
+      );
+      console.log('='.repeat(50));
+    } else {
+      // Minimal production logging
+      console.log(`🚀 HR System API started on port ${port}`);
+    }
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
   }
 }
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections (throttled logging)
+let lastRejectionLog = 0;
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection:', reason);
+  const now = Date.now();
+  // Only log once per 10 seconds to avoid rate limits
+  if (now - lastRejectionLog > 10000) {
+    console.error('❌ Unhandled Rejection:', reason instanceof Error ? reason.message : String(reason));
+    lastRejectionLog = now;
+  }
   // Don't exit - keep the server running
 });
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions (throttled logging)
+let lastExceptionLog = 0;
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error.message);
-  console.error('Stack:', error.stack);
+  const now = Date.now();
+  // Only log once per 10 seconds to avoid rate limits
+  if (now - lastExceptionLog > 10000) {
+    console.error('❌ Uncaught Exception:', error.message);
+    lastExceptionLog = now;
+  }
   // Don't exit - keep the server running
 });
 
 // Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('SIGTERM received, shutting down gracefully...');
+  }
   process.exit(0);
 });
 

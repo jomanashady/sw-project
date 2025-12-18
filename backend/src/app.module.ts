@@ -31,7 +31,10 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
       useFactory: async (configService: ConfigService) => {
         const uri = configService.get<string>('MONGODB_URI');
         if (!uri) {
-          console.error('❌ MONGODB_URI is not set!');
+          // Only log in development to avoid Railway rate limits
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('❌ MONGODB_URI is not set!');
+          }
           throw new Error('MONGODB_URI environment variable is required');
         }
         return {
