@@ -14,9 +14,7 @@ import {
 
 // Custom validator to ensure endDate >= startDate
 @ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
-export class IsEndDateAfterStartDateConstraint
-  implements ValidatorConstraintInterface
-{
+export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInterface {
   validate(endDate: any, args: ValidationArguments) {
     const obj = args.object as any;
     const startDate = obj.startDate;
@@ -33,76 +31,76 @@ export class IsEndDateAfterStartDateConstraint
 export class SendNotificationDto {
   @IsNotEmpty()
   @IsString()
-  to: string;  // The employee ID or the recipient of the notification (required)
+  to: string; // The employee ID or the recipient of the notification (required)
 
   @IsNotEmpty()
   @IsString()
-  type: string;  // The type of the notification (required)
+  type: string; // The type of the notification (required)
 
   @IsNotEmpty()
   @IsString()
-  message: string;  // Message to send along with the notification (required)
+  message: string; // Message to send along with the notification (required)
 }
 
 // DTO for getting notification logs by employee
 export class GetNotificationLogsByEmployeeDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID to fetch notification logs for
+  employeeId: string; // Employee ID to fetch notification logs for
 }
 
 // DTO for synchronizing attendance with payroll
 export class SyncAttendanceWithPayrollDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID for whom attendance is being synchronized
+  employeeId: string; // Employee ID for whom attendance is being synchronized
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;  // Optional: Start date for filtering
+  startDate?: Date; // Optional: Start date for filtering
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate?: Date;  // Optional: End date for filtering
+  endDate?: Date; // Optional: End date for filtering
 }
 
 // DTO for synchronizing leave with payroll
 export class SyncLeaveWithPayrollDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID for whom leave is being synchronized
+  employeeId: string; // Employee ID for whom leave is being synchronized
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;  // Optional: Start date for filtering
+  startDate?: Date; // Optional: Start date for filtering
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate?: Date;  // Optional: End date for filtering
+  endDate?: Date; // Optional: End date for filtering
 }
 
 // DTO for synchronizing attendance and leave with payroll
 export class SynchronizeAttendanceAndPayrollDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID for whom attendance and leave are being synchronized
+  employeeId: string; // Employee ID for whom attendance and leave are being synchronized
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;  // Optional: Start date for filtering
+  startDate?: Date; // Optional: Start date for filtering
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate?: Date;  // Optional: End date for filtering
+  endDate?: Date; // Optional: End date for filtering
 }
 
 export class BlockPayrollForMissedPunchDto {

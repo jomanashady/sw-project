@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNumber,
-  Min,
-  Max,
-  IsOptional,
-  Validate,
-} from 'class-validator';
+import { IsString, IsNumber, Min, Max, IsOptional, Validate } from 'class-validator';
 import { MinLessThanMax } from '../common/validators/min-less-than-max.validator';
 
 export class CreateInsuranceBracketDto {

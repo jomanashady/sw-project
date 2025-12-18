@@ -15,10 +15,7 @@ import {
   EmployeeSystemRole,
   EmployeeSystemRoleSchema,
 } from '../employee-profile/models/employee-system-role.schema';
-import {
-  Candidate,
-  CandidateSchema,
-} from '../employee-profile/models/candidate.schema'; // Add this import
+import { Candidate, CandidateSchema } from '../employee-profile/models/candidate.schema'; // Add this import
 
 @Module({
   imports: [
@@ -27,7 +24,7 @@ import {
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET')!,
+        secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRATION', '24h') as any,
         },

@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsMongoId,
-  IsNotEmpty,
-} from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsMongoId, IsNotEmpty } from 'class-validator';
 
 export class CreateClaimDTO {
   @IsString()

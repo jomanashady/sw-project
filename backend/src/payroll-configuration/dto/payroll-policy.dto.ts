@@ -11,10 +11,7 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  PolicyType,
-  Applicability,
-} from '../enums/payroll-configuration-enums';
+import { PolicyType, Applicability } from '../enums/payroll-configuration-enums';
 
 @ValidatorConstraint({ name: 'isValidISODate', async: false })
 export class IsValidISODateConstraint implements ValidatorConstraintInterface {

@@ -1,10 +1,4 @@
-import {
-  IsMongoId,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsISO8601,
-} from 'class-validator';
+import { IsMongoId, IsEnum, IsOptional, IsString, IsISO8601 } from 'class-validator';
 import { PayRollStatus } from '../enums/payroll-execution-enum';
 
 export class ManagerApprovalReviewDto {

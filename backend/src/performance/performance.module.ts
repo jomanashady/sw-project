@@ -8,30 +8,18 @@ import { PerformanceController } from './performance.controller';
 import { PerformanceService } from './performance.service';
 
 // Mongoose Schemas
-import {
-  AppraisalTemplate,
-  AppraisalTemplateSchema,
-} from './models/appraisal-template.schema';
+import { AppraisalTemplate, AppraisalTemplateSchema } from './models/appraisal-template.schema';
 
-import {
-  AppraisalCycle,
-  AppraisalCycleSchema,
-} from './models/appraisal-cycle.schema';
+import { AppraisalCycle, AppraisalCycleSchema } from './models/appraisal-cycle.schema';
 
 import {
   AppraisalAssignment,
   AppraisalAssignmentSchema,
 } from './models/appraisal-assignment.schema';
 
-import {
-  AppraisalRecord,
-  AppraisalRecordSchema,
-} from './models/appraisal-record.schema';
+import { AppraisalRecord, AppraisalRecordSchema } from './models/appraisal-record.schema';
 
-import {
-  AppraisalDispute,
-  AppraisalDisputeSchema,
-} from './models/appraisal-dispute.schema';
+import { AppraisalDispute, AppraisalDisputeSchema } from './models/appraisal-dispute.schema';
 
 @Module({
   imports: [

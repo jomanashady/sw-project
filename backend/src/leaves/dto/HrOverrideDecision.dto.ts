@@ -11,6 +11,5 @@ export class HrOverrideDecisionDto {
   overrideToApproved: boolean;
 
   @IsString()
-  overrideReason: string;  // Required but no character limit
+  overrideReason: string; // Required but no character limit
 }
-

@@ -45,14 +45,10 @@ async function testToken() {
 
       try {
         const employee = await employeeService.findOne(userId);
-        console.log(
-          `✅ User exists: ${employee.fullName} (${employee.employeeNumber})`,
-        );
+        console.log(`✅ User exists: ${employee.fullName} (${employee.employeeNumber})`);
       } catch (error: any) {
         console.log(`❌ User NOT found in database: ${error.message}`);
-        console.log(
-          "   This is likely the issue! The user ID in the token doesn't exist.",
-        );
+        console.log("   This is likely the issue! The user ID in the token doesn't exist.");
       }
     } catch (error: any) {
       console.log(`❌ Token verification failed: ${error.message}`);

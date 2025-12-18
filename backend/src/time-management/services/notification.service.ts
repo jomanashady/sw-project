@@ -41,15 +41,12 @@ export class NotificationService {
     private leavesService: LeavesService,
     @Inject(forwardRef(() => PayrollExecutionService))
     private payrollExecutionService: PayrollExecutionService,
-    private unifiedNotificationsService: NotificationsService,
+    private unifiedNotificationsService: NotificationsService
   ) {}
 
   // ===== NOTIFICATIONS =====
 
-  async sendNotification(
-    sendNotificationDto: SendNotificationDto,
-    currentUserId: string,
-  ) {
+  async sendNotification(sendNotificationDto: SendNotificationDto, currentUserId: string) {
     // Using basic NotificationLog schema (TA's version)
     // For rich notifications with isRead, data, title, etc., use NotificationsService from notifications module
     const notification = new this.notificationLogModel({
@@ -64,14 +61,14 @@ export class NotificationService {
         to: sendNotificationDto.to,
         type: sendNotificationDto.type,
       },
-      currentUserId,
+      currentUserId
     );
     return notification;
   }
 
   async getNotificationLogsByEmployee(
     getNotificationLogsByEmployeeDto: GetNotificationLogsByEmployeeDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     return this.notificationLogModel
       .find({ to: getNotificationLogsByEmployeeDto.employeeId })
@@ -83,7 +80,7 @@ export class NotificationService {
 
   async syncAttendanceWithPayroll(
     syncAttendanceWithPayrollDto: SyncAttendanceWithPayrollDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, startDate, endDate } = syncAttendanceWithPayrollDto;
     const query: any = { employeeId };
@@ -108,7 +105,7 @@ export class NotificationService {
         startDate,
         endDate,
       },
-      currentUserId,
+      currentUserId
     );
 
     // Return actual data formatted for Payroll consumption
@@ -128,15 +125,10 @@ export class NotificationService {
       })),
       summary: {
         totalRecords: attendance.length,
-        totalWorkMinutes: attendance.reduce(
-          (sum, r) => sum + (r.totalWorkMinutes || 0),
-          0,
-        ),
+        totalWorkMinutes: attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
         totalWorkHours:
           Math.round(
-            (attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) /
-              60) *
-              100,
+            (attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100
           ) / 100,
       },
     };
@@ -144,7 +136,7 @@ export class NotificationService {
 
   async syncLeaveWithPayroll(
     syncLeaveWithPayrollDto: SyncLeaveWithPayrollDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, startDate, endDate } = syncLeaveWithPayrollDto;
 
@@ -157,7 +149,7 @@ export class NotificationService {
         startDate,
         endDate,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -175,10 +167,9 @@ export class NotificationService {
 
   async synchronizeAttendanceAndPayroll(
     synchronizeAttendanceAndPayrollDto: SynchronizeAttendanceAndPayrollDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { employeeId, startDate, endDate } =
-      synchronizeAttendanceAndPayrollDto;
+    const { employeeId, startDate, endDate } = synchronizeAttendanceAndPayrollDto;
     const query: any = { employeeId };
 
     if (startDate && endDate) {
@@ -201,7 +192,7 @@ export class NotificationService {
         startDate,
         endDate,
       },
-      currentUserId,
+      currentUserId
     );
 
     // Return combined data for Payroll consumption
@@ -216,25 +207,16 @@ export class NotificationService {
           date: record.createdAt || record.date,
           punches: record.punches,
           totalWorkMinutes: record.totalWorkMinutes,
-          totalWorkHours:
-            Math.round((record.totalWorkMinutes / 60) * 100) / 100,
+          totalWorkHours: Math.round((record.totalWorkMinutes / 60) * 100) / 100,
           hasMissedPunch: record.hasMissedPunch,
           finalisedForPayroll: record.finalisedForPayroll,
         })),
         summary: {
           totalRecords: attendance.length,
-          totalWorkMinutes: attendance.reduce(
-            (sum, r) => sum + (r.totalWorkMinutes || 0),
-            0,
-          ),
+          totalWorkMinutes: attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
           totalWorkHours:
             Math.round(
-              (attendance.reduce(
-                (sum, r) => sum + (r.totalWorkMinutes || 0),
-                0,
-              ) /
-                60) *
-                100,
+              (attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100
             ) / 100,
         },
       },
@@ -250,7 +232,7 @@ export class NotificationService {
     employeeId: string,
     startDate?: Date,
     endDate?: Date,
-    currentUserId?: string,
+    currentUserId?: string
   ) {
     const query: any = { employeeId };
 
@@ -282,15 +264,10 @@ export class NotificationService {
       })),
       summary: {
         totalRecords: attendance.length,
-        totalWorkMinutes: attendance.reduce(
-          (sum, r) => sum + (r.totalWorkMinutes || 0),
-          0,
-        ),
+        totalWorkMinutes: attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
         totalWorkHours:
           Math.round(
-            (attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) /
-              60) *
-              100,
+            (attendance.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100
           ) / 100,
       },
     };
@@ -300,7 +277,7 @@ export class NotificationService {
     employeeId: string,
     startDate?: Date,
     endDate?: Date,
-    currentUserId?: string,
+    currentUserId?: string
   ) {
     const query: any = {
       employeeId,
@@ -322,7 +299,7 @@ export class NotificationService {
 
     // Calculate overtime hours from attendance records
     const overtimeData = overtimeExceptions.map((exception: any) => {
-      const record = exception.attendanceRecordId as any;
+      const record = exception.attendanceRecordId;
       const standardMinutes = 480; // 8 hours
       const overtimeMinutes =
         record && record.totalWorkMinutes
@@ -332,8 +309,7 @@ export class NotificationService {
       return {
         exceptionId: exception._id,
         employeeId: exception.employeeId?._id || exception.employeeId,
-        attendanceRecordId:
-          exception.attendanceRecordId?._id || exception.attendanceRecordId,
+        attendanceRecordId: exception.attendanceRecordId?._id || exception.attendanceRecordId,
         date: exception.createdAt || record?.createdAt,
         overtimeMinutes,
         overtimeHours: Math.round((overtimeMinutes / 60) * 100) / 100,
@@ -349,15 +325,10 @@ export class NotificationService {
       records: overtimeData,
       summary: {
         totalRecords: overtimeData.length,
-        totalOvertimeMinutes: overtimeData.reduce(
-          (sum, r) => sum + r.overtimeMinutes,
-          0,
-        ),
+        totalOvertimeMinutes: overtimeData.reduce((sum, r) => sum + r.overtimeMinutes, 0),
         totalOvertimeHours:
-          Math.round(
-            (overtimeData.reduce((sum, r) => sum + r.overtimeMinutes, 0) / 60) *
-              100,
-          ) / 100,
+          Math.round((overtimeData.reduce((sum, r) => sum + r.overtimeMinutes, 0) / 60) * 100) /
+          100,
       },
     };
   }
@@ -369,13 +340,10 @@ export class NotificationService {
    * Run daily batch sync for all employees
    * BR-TM-22: Sync all time management data daily
    */
-  async runDailyPayrollSync(
-    syncDate: Date,
-    currentUserId: string,
-  ) {
+  async runDailyPayrollSync(syncDate: Date, currentUserId: string) {
     const startOfDay = this.convertDateToUTCStart(syncDate);
     const endOfDay = this.convertDateToUTCEnd(syncDate);
-    
+
     // Get all attendance records for the day that are not yet finalized
     const unfinalizedRecords = await this.attendanceRecordModel
       .find({
@@ -384,7 +352,7 @@ export class NotificationService {
       })
       .populate('employeeId', 'firstName lastName email employeeNumber')
       .exec();
-    
+
     // Get all approved overtime exceptions for the day
     const overtimeExceptions = await this.timeExceptionModel
       .find({
@@ -395,7 +363,7 @@ export class NotificationService {
       .populate('employeeId', 'firstName lastName email')
       .populate('attendanceRecordId')
       .exec();
-    
+
     // Get all other exceptions (lateness, early leave, etc.)
     const otherExceptions = await this.timeExceptionModel
       .find({
@@ -404,7 +372,7 @@ export class NotificationService {
       })
       .populate('employeeId', 'firstName lastName email')
       .exec();
-    
+
     await this.logTimeManagementChange(
       'DAILY_PAYROLL_SYNC_RUN',
       {
@@ -413,9 +381,9 @@ export class NotificationService {
         overtimeExceptions: overtimeExceptions.length,
         otherExceptions: otherExceptions.length,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return {
       syncDate,
       syncedAt: new Date(),
@@ -424,7 +392,9 @@ export class NotificationService {
         records: unfinalizedRecords.map((r: any) => ({
           recordId: r._id,
           employeeId: r.employeeId?._id || r.employeeId,
-          employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+          employeeName: r.employeeId
+            ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim()
+            : 'Unknown',
           date: r.createdAt,
           totalWorkMinutes: r.totalWorkMinutes,
           totalWorkHours: Math.round((r.totalWorkMinutes / 60) * 100) / 100,
@@ -446,8 +416,14 @@ export class NotificationService {
         byType: this.groupExceptionsByType(otherExceptions),
       },
       summary: {
-        totalAttendanceMinutes: unfinalizedRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
-        totalAttendanceHours: Math.round((unfinalizedRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100) / 100,
+        totalAttendanceMinutes: unfinalizedRecords.reduce(
+          (sum, r) => sum + (r.totalWorkMinutes || 0),
+          0
+        ),
+        totalAttendanceHours:
+          Math.round(
+            (unfinalizedRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100
+          ) / 100,
         employeesWithMissedPunches: unfinalizedRecords.filter((r: any) => r.hasMissedPunch).length,
       },
     };
@@ -476,40 +452,42 @@ export class NotificationService {
    */
   async getPendingPayrollSyncData(
     filters: { startDate?: Date; endDate?: Date; departmentId?: string },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const query: any = {
       finalisedForPayroll: { $ne: true },
     };
-    
+
     if (filters.startDate && filters.endDate) {
       query.createdAt = {
         $gte: this.convertDateToUTCStart(filters.startDate),
         $lte: this.convertDateToUTCEnd(filters.endDate),
       };
     }
-    
+
     const pendingRecords = await this.attendanceRecordModel
       .find(query)
       .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
       .sort({ createdAt: -1 })
       .exec();
-    
+
     // Filter by department if specified
     let filteredRecords = pendingRecords;
     if (filters.departmentId) {
-      filteredRecords = pendingRecords.filter((r: any) => 
-        r.employeeId?.departmentId?.toString() === filters.departmentId
+      filteredRecords = pendingRecords.filter(
+        (r: any) => r.employeeId?.departmentId?.toString() === filters.departmentId
       );
     }
-    
+
     return {
       filters,
       count: filteredRecords.length,
       records: filteredRecords.map((r: any) => ({
         recordId: r._id,
         employeeId: r.employeeId?._id || r.employeeId,
-        employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+        employeeName: r.employeeId
+          ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim()
+          : 'Unknown',
         date: r.createdAt,
         totalWorkMinutes: r.totalWorkMinutes,
         totalWorkHours: Math.round((r.totalWorkMinutes / 60) * 100) / 100,
@@ -518,7 +496,10 @@ export class NotificationService {
       })),
       summary: {
         totalMinutes: filteredRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0),
-        totalHours: Math.round((filteredRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100) / 100,
+        totalHours:
+          Math.round(
+            (filteredRecords.reduce((sum, r) => sum + (r.totalWorkMinutes || 0), 0) / 60) * 100
+          ) / 100,
         recordsWithMissedPunches: filteredRecords.filter((r: any) => r.hasMissedPunch).length,
       },
     };
@@ -528,27 +509,24 @@ export class NotificationService {
    * Mark attendance records as finalized for payroll
    * BR-TM-22: Track which records have been synced
    */
-  async finalizeRecordsForPayroll(
-    recordIds: string[],
-    currentUserId: string,
-  ) {
+  async finalizeRecordsForPayroll(recordIds: string[], currentUserId: string) {
     const updateResult = await this.attendanceRecordModel.updateMany(
       { _id: { $in: recordIds } },
       {
         finalisedForPayroll: true,
         updatedBy: currentUserId,
-      },
+      }
     );
-    
+
     await this.logTimeManagementChange(
       'RECORDS_FINALIZED_FOR_PAYROLL',
       {
         recordIds,
         modifiedCount: updateResult.modifiedCount,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return {
       success: true,
       recordsFinalized: updateResult.modifiedCount,
@@ -563,11 +541,11 @@ export class NotificationService {
    */
   async validateDataForPayrollSync(
     filters: { startDate: Date; endDate: Date },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const startDateUTC = this.convertDateToUTCStart(filters.startDate);
     const endDateUTC = this.convertDateToUTCEnd(filters.endDate);
-    
+
     // Get all records in the date range
     const allRecords = await this.attendanceRecordModel
       .find({
@@ -575,12 +553,16 @@ export class NotificationService {
       })
       .populate('employeeId', 'firstName lastName email')
       .exec();
-    
+
     // Find records with issues
     const recordsWithMissedPunches = allRecords.filter((r: any) => r.hasMissedPunch);
-    const recordsWithZeroMinutes = allRecords.filter((r: any) => !r.totalWorkMinutes || r.totalWorkMinutes === 0);
-    const recordsWithOddPunches = allRecords.filter((r: any) => r.punches && r.punches.length % 2 !== 0);
-    
+    const recordsWithZeroMinutes = allRecords.filter(
+      (r: any) => !r.totalWorkMinutes || r.totalWorkMinutes === 0
+    );
+    const recordsWithOddPunches = allRecords.filter(
+      (r: any) => r.punches && r.punches.length % 2 !== 0
+    );
+
     // Get pending exceptions in the date range
     const pendingExceptions = await this.timeExceptionModel
       .find({
@@ -589,7 +571,7 @@ export class NotificationService {
       })
       .populate('employeeId', 'firstName lastName email')
       .exec();
-    
+
     // Get pending correction requests
     const pendingCorrections = await this.attendanceRecordModel.db
       .collection('attendancecorrectionrequests')
@@ -598,9 +580,9 @@ export class NotificationService {
         status: { $in: ['SUBMITTED', 'IN_REVIEW'] },
       })
       .toArray();
-    
+
     const validationIssues: any[] = [];
-    
+
     if (recordsWithMissedPunches.length > 0) {
       validationIssues.push({
         type: 'MISSED_PUNCHES',
@@ -610,7 +592,7 @@ export class NotificationService {
         recordIds: recordsWithMissedPunches.map((r: any) => r._id),
       });
     }
-    
+
     if (recordsWithZeroMinutes.length > 0) {
       validationIssues.push({
         type: 'ZERO_WORK_MINUTES',
@@ -620,7 +602,7 @@ export class NotificationService {
         recordIds: recordsWithZeroMinutes.map((r: any) => r._id),
       });
     }
-    
+
     if (pendingExceptions.length > 0) {
       validationIssues.push({
         type: 'PENDING_EXCEPTIONS',
@@ -630,7 +612,7 @@ export class NotificationService {
         exceptionIds: pendingExceptions.map((e: any) => e._id),
       });
     }
-    
+
     if (pendingCorrections.length > 0) {
       validationIssues.push({
         type: 'PENDING_CORRECTIONS',
@@ -640,9 +622,9 @@ export class NotificationService {
         correctionIds: pendingCorrections.map((c: any) => c._id),
       });
     }
-    
-    const isValid = validationIssues.filter(i => i.severity === 'ERROR').length === 0;
-    
+
+    const isValid = validationIssues.filter((i) => i.severity === 'ERROR').length === 0;
+
     await this.logTimeManagementChange(
       'PAYROLL_SYNC_VALIDATION',
       {
@@ -651,9 +633,9 @@ export class NotificationService {
         isValid,
         issuesCount: validationIssues.length,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return {
       startDate: filters.startDate,
       endDate: filters.endDate,
@@ -662,8 +644,8 @@ export class NotificationService {
       totalRecords: allRecords.length,
       issues: validationIssues,
       summary: {
-        errorCount: validationIssues.filter(i => i.severity === 'ERROR').length,
-        warningCount: validationIssues.filter(i => i.severity === 'WARNING').length,
+        errorCount: validationIssues.filter((i) => i.severity === 'ERROR').length,
+        warningCount: validationIssues.filter((i) => i.severity === 'WARNING').length,
         canProceedWithSync: isValid,
       },
     };
@@ -675,28 +657,28 @@ export class NotificationService {
    */
   async getExceptionDataForPayrollSync(
     filters: { startDate?: Date; endDate?: Date; employeeId?: string },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const query: any = {};
-    
+
     if (filters.employeeId) {
       query.employeeId = filters.employeeId;
     }
-    
+
     if (filters.startDate && filters.endDate) {
       query.createdAt = {
         $gte: this.convertDateToUTCStart(filters.startDate),
         $lte: this.convertDateToUTCEnd(filters.endDate),
       };
     }
-    
+
     const exceptions = await this.timeExceptionModel
       .find(query)
       .populate('employeeId', 'firstName lastName email employeeNumber')
       .populate('attendanceRecordId')
       .sort({ createdAt: -1 })
       .exec();
-    
+
     // Group by type
     const byType: Record<string, any[]> = {};
     exceptions.forEach((e: any) => {
@@ -705,7 +687,9 @@ export class NotificationService {
       byType[type].push({
         exceptionId: e._id,
         employeeId: e.employeeId?._id || e.employeeId,
-        employeeName: e.employeeId ? `${e.employeeId.firstName || ''} ${e.employeeId.lastName || ''}`.trim() : 'Unknown',
+        employeeName: e.employeeId
+          ? `${e.employeeId.firstName || ''} ${e.employeeId.lastName || ''}`.trim()
+          : 'Unknown',
         type: e.type,
         status: e.status,
         reason: e.reason,
@@ -713,7 +697,7 @@ export class NotificationService {
         attendanceRecordId: e.attendanceRecordId?._id || e.attendanceRecordId,
       });
     });
-    
+
     // Group by status
     const byStatus: Record<string, number> = {
       OPEN: 0,
@@ -729,7 +713,7 @@ export class NotificationService {
         byStatus[status]++;
       }
     });
-    
+
     return {
       filters,
       totalCount: exceptions.length,
@@ -740,7 +724,9 @@ export class NotificationService {
       })),
       byStatus,
       payrollRelevant: {
-        approvedOvertime: (byType['OVERTIME_REQUEST'] || []).filter((e: any) => e.status === 'APPROVED'),
+        approvedOvertime: (byType['OVERTIME_REQUEST'] || []).filter(
+          (e: any) => e.status === 'APPROVED'
+        ),
         latenessRecords: byType['LATE'] || [],
         earlyLeaveRecords: byType['EARLY_LEAVE'] || [],
       },
@@ -753,33 +739,32 @@ export class NotificationService {
    */
   async getPayrollSyncHistory(
     filters: { startDate?: Date; endDate?: Date; limit?: number },
-    currentUserId: string,
+    currentUserId: string
   ) {
     // Get from audit logs (stored in memory for this implementation)
-    const syncLogs = this.auditLogs.filter(log => 
-      log.entity.includes('PAYROLL_SYNC') || 
-      log.entity.includes('RECORDS_FINALIZED') ||
-      log.entity.includes('DAILY_PAYROLL_SYNC')
+    const syncLogs = this.auditLogs.filter(
+      (log) =>
+        log.entity.includes('PAYROLL_SYNC') ||
+        log.entity.includes('RECORDS_FINALIZED') ||
+        log.entity.includes('DAILY_PAYROLL_SYNC')
     );
-    
+
     // Filter by date if provided
     let filteredLogs = syncLogs;
     if (filters.startDate && filters.endDate) {
       const start = this.convertDateToUTCStart(filters.startDate);
       const end = this.convertDateToUTCEnd(filters.endDate);
-      filteredLogs = syncLogs.filter(log => 
-        log.timestamp >= start && log.timestamp <= end
-      );
+      filteredLogs = syncLogs.filter((log) => log.timestamp >= start && log.timestamp <= end);
     }
-    
+
     // Sort by most recent and limit
     const sortedLogs = filteredLogs
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, filters.limit || 50);
-    
+
     return {
       count: sortedLogs.length,
-      syncHistory: sortedLogs.map(log => ({
+      syncHistory: sortedLogs.map((log) => ({
         operation: log.entity,
         details: log.changeSet,
         performedBy: log.actorId,
@@ -794,29 +779,29 @@ export class NotificationService {
    */
   async getComprehensivePayrollData(
     filters: { startDate: Date; endDate: Date; departmentId?: string },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const startDateUTC = this.convertDateToUTCStart(filters.startDate);
     const endDateUTC = this.convertDateToUTCEnd(filters.endDate);
-    
+
     // Get attendance data
     const attendanceQuery: any = {
       createdAt: { $gte: startDateUTC, $lte: endDateUTC },
     };
-    
+
     const attendanceRecords = await this.attendanceRecordModel
       .find(attendanceQuery)
       .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
       .exec();
-    
+
     // Filter by department if specified
     let filteredAttendance = attendanceRecords;
     if (filters.departmentId) {
-      filteredAttendance = attendanceRecords.filter((r: any) => 
-        r.employeeId?.departmentId?.toString() === filters.departmentId
+      filteredAttendance = attendanceRecords.filter(
+        (r: any) => r.employeeId?.departmentId?.toString() === filters.departmentId
       );
     }
-    
+
     // Get overtime data
     const overtimeExceptions = await this.timeExceptionModel
       .find({
@@ -827,7 +812,7 @@ export class NotificationService {
       .populate('employeeId', 'firstName lastName departmentId')
       .populate('attendanceRecordId')
       .exec();
-    
+
     // Get lateness data
     const latenessExceptions = await this.timeExceptionModel
       .find({
@@ -836,16 +821,18 @@ export class NotificationService {
       })
       .populate('employeeId', 'firstName lastName departmentId')
       .exec();
-    
+
     // Calculate summaries per employee
     const employeeSummaries: Record<string, any> = {};
-    
+
     filteredAttendance.forEach((r: any) => {
       const empId = r.employeeId?._id?.toString() || r.employeeId?.toString() || 'unknown';
       if (!employeeSummaries[empId]) {
         employeeSummaries[empId] = {
           employeeId: empId,
-          employeeName: r.employeeId ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim() : 'Unknown',
+          employeeName: r.employeeId
+            ? `${r.employeeId.firstName || ''} ${r.employeeId.lastName || ''}`.trim()
+            : 'Unknown',
           totalWorkMinutes: 0,
           totalWorkHours: 0,
           daysWorked: 0,
@@ -858,17 +845,19 @@ export class NotificationService {
       employeeSummaries[empId].daysWorked++;
       if (r.hasMissedPunch) employeeSummaries[empId].missedPunches++;
     });
-    
+
     // Add overtime data
     overtimeExceptions.forEach((e: any) => {
       const empId = e.employeeId?._id?.toString() || e.employeeId?.toString();
       if (empId && employeeSummaries[empId]) {
-        const record = e.attendanceRecordId as any;
-        const overtimeMinutes = record?.totalWorkMinutes ? Math.max(0, record.totalWorkMinutes - 480) : 0;
+        const record = e.attendanceRecordId;
+        const overtimeMinutes = record?.totalWorkMinutes
+          ? Math.max(0, record.totalWorkMinutes - 480)
+          : 0;
         employeeSummaries[empId].overtimeMinutes += overtimeMinutes;
       }
     });
-    
+
     // Add lateness data
     latenessExceptions.forEach((e: any) => {
       const empId = e.employeeId?._id?.toString() || e.employeeId?.toString();
@@ -876,13 +865,13 @@ export class NotificationService {
         employeeSummaries[empId].latenessCount++;
       }
     });
-    
+
     // Convert minutes to hours
     Object.values(employeeSummaries).forEach((summary: any) => {
       summary.totalWorkHours = Math.round((summary.totalWorkMinutes / 60) * 100) / 100;
       summary.overtimeHours = Math.round((summary.overtimeMinutes / 60) * 100) / 100;
     });
-    
+
     await this.logTimeManagementChange(
       'COMPREHENSIVE_PAYROLL_DATA_RETRIEVED',
       {
@@ -892,9 +881,9 @@ export class NotificationService {
         employeeCount: Object.keys(employeeSummaries).length,
         attendanceRecords: filteredAttendance.length,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return {
       period: {
         startDate: filters.startDate,
@@ -905,12 +894,40 @@ export class NotificationService {
       employeeSummaries: Object.values(employeeSummaries),
       totals: {
         totalEmployees: Object.keys(employeeSummaries).length,
-        totalWorkMinutes: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0),
-        totalWorkHours: Math.round((Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60) * 100) / 100,
-        totalOvertimeMinutes: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0),
-        totalOvertimeHours: Math.round((Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60) * 100) / 100,
-        totalLatenessCount: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.latenessCount, 0),
-        totalMissedPunches: Object.values(employeeSummaries).reduce((sum: number, e: any) => sum + e.missedPunches, 0),
+        totalWorkMinutes: Object.values(employeeSummaries).reduce(
+          (sum: number, e: any) => sum + e.totalWorkMinutes,
+          0
+        ),
+        totalWorkHours:
+          Math.round(
+            (Object.values(employeeSummaries).reduce(
+              (sum: number, e: any) => sum + e.totalWorkMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
+        totalOvertimeMinutes: Object.values(employeeSummaries).reduce(
+          (sum: number, e: any) => sum + e.overtimeMinutes,
+          0
+        ),
+        totalOvertimeHours:
+          Math.round(
+            (Object.values(employeeSummaries).reduce(
+              (sum: number, e: any) => sum + e.overtimeMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
+        totalLatenessCount: Object.values(employeeSummaries).reduce(
+          (sum: number, e: any) => sum + e.latenessCount,
+          0
+        ),
+        totalMissedPunches: Object.values(employeeSummaries).reduce(
+          (sum: number, e: any) => sum + e.missedPunches,
+          0
+        ),
       },
     };
   }
@@ -930,7 +947,7 @@ export class NotificationService {
     employeeId: string,
     endDate: Date,
     daysRemaining: number,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notification = await this.unifiedNotificationsService.sendShiftExpiryNotification(
       recipientId,
@@ -938,9 +955,9 @@ export class NotificationService {
       employeeId,
       endDate,
       daysRemaining,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'SHIFT_EXPIRY_NOTIFICATION_SENT',
       {
@@ -950,9 +967,9 @@ export class NotificationService {
         endDate,
         daysRemaining,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return notification;
   }
 
@@ -971,24 +988,24 @@ export class NotificationService {
       endDate: Date;
       daysRemaining: number;
     }>,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const result = await this.unifiedNotificationsService.sendBulkShiftExpiryNotifications(
       hrAdminIds,
       expiringAssignments,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'SHIFT_EXPIRY_BULK_NOTIFICATIONS_SENT',
       {
         hrAdminCount: hrAdminIds.length,
         expiringCount: expiringAssignments.length,
-        assignmentIds: expiringAssignments.map(a => a.assignmentId),
+        assignmentIds: expiringAssignments.map((a) => a.assignmentId),
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return result;
   }
 
@@ -1009,15 +1026,15 @@ export class NotificationService {
     recipientId: string,
     shiftAssignmentId: string,
     newEndDate: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notification = await this.unifiedNotificationsService.sendShiftRenewalConfirmation(
       recipientId,
       shiftAssignmentId,
       newEndDate,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'SHIFT_RENEWAL_NOTIFICATION_SENT',
       {
@@ -1025,9 +1042,9 @@ export class NotificationService {
         shiftAssignmentId,
         newEndDate,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return notification;
   }
 
@@ -1040,15 +1057,15 @@ export class NotificationService {
     recipientId: string,
     shiftAssignmentId: string,
     employeeId: string,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notification = await this.unifiedNotificationsService.sendShiftArchiveNotification(
       recipientId,
       shiftAssignmentId,
       employeeId,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'SHIFT_ARCHIVE_NOTIFICATION_SENT',
       {
@@ -1056,9 +1073,9 @@ export class NotificationService {
         shiftAssignmentId,
         employeeId,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return notification;
   }
 
@@ -1083,16 +1100,16 @@ export class NotificationService {
     attendanceRecordId: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
     date: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notification = await this.unifiedNotificationsService.sendMissedPunchAlertToEmployee(
       employeeId,
       attendanceRecordId,
       missedPunchType,
       date,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'MISSED_PUNCH_EMPLOYEE_ALERT_SENT',
       {
@@ -1101,9 +1118,9 @@ export class NotificationService {
         missedPunchType,
         date,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return notification;
   }
 
@@ -1119,7 +1136,7 @@ export class NotificationService {
     attendanceRecordId: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
     date: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notification = await this.unifiedNotificationsService.sendMissedPunchAlertToManager(
       managerId,
@@ -1128,9 +1145,9 @@ export class NotificationService {
       attendanceRecordId,
       missedPunchType,
       date,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'MISSED_PUNCH_MANAGER_ALERT_SENT',
       {
@@ -1141,9 +1158,9 @@ export class NotificationService {
         missedPunchType,
         date,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return notification;
   }
 
@@ -1161,22 +1178,22 @@ export class NotificationService {
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     }>,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const result = await this.unifiedNotificationsService.sendBulkMissedPunchAlerts(
       alerts,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'BULK_MISSED_PUNCH_ALERTS_SENT',
       {
         alertCount: alerts.length,
         notificationsSent: result.notificationsSent,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return result;
   }
 
@@ -1205,7 +1222,7 @@ export class NotificationService {
    */
   async getAllMissedPunchNotifications(
     filters: { startDate?: Date; endDate?: Date },
-    currentUserId: string,
+    currentUserId: string
   ) {
     return this.unifiedNotificationsService.getAllMissedPunchNotifications(filters);
   }
@@ -1220,7 +1237,7 @@ export class NotificationService {
     managerId: string,
     employeeName: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
-    currentUserId: string,
+    currentUserId: string
   ) {
     // Update attendance record
     const attendanceRecord = await this.attendanceRecordModel.findByIdAndUpdate(
@@ -1229,13 +1246,13 @@ export class NotificationService {
         hasMissedPunch: true,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
-    
+
     if (!attendanceRecord) {
       throw new Error('Attendance record not found');
     }
-    
+
     // Create time exception
     const timeException = new this.timeExceptionModel({
       employeeId,
@@ -1247,9 +1264,9 @@ export class NotificationService {
       createdBy: currentUserId,
       updatedBy: currentUserId,
     });
-    
+
     await timeException.save();
-    
+
     // Send notifications
     const recordDate = (attendanceRecord as any).createdAt || new Date();
     const employeeNotification = await this.sendMissedPunchAlertToEmployee(
@@ -1257,9 +1274,9 @@ export class NotificationService {
       attendanceRecordId,
       missedPunchType,
       recordDate,
-      currentUserId,
+      currentUserId
     );
-    
+
     const managerNotification = await this.sendMissedPunchAlertToManager(
       managerId,
       employeeId,
@@ -1267,9 +1284,9 @@ export class NotificationService {
       attendanceRecordId,
       missedPunchType,
       recordDate,
-      currentUserId,
+      currentUserId
     );
-    
+
     await this.logTimeManagementChange(
       'MISSED_PUNCH_FLAGGED_WITH_NOTIFICATION',
       {
@@ -1279,9 +1296,9 @@ export class NotificationService {
         missedPunchType,
         timeExceptionId: timeException._id,
       },
-      currentUserId,
+      currentUserId
     );
-    
+
     return {
       attendanceRecord,
       timeException,
@@ -1298,30 +1315,31 @@ export class NotificationService {
    */
   async getMissedPunchStatistics(
     filters: { employeeId?: string; startDate?: Date; endDate?: Date },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const query: any = { hasMissedPunch: true };
-    
+
     if (filters.employeeId) {
       query.employeeId = filters.employeeId;
     }
-    
+
     if (filters.startDate && filters.endDate) {
       query.createdAt = {
         $gte: this.convertDateToUTCStart(filters.startDate),
         $lte: this.convertDateToUTCEnd(filters.endDate),
       };
     }
-    
+
     const missedPunchRecords = await this.attendanceRecordModel
       .find(query)
       .populate('employeeId', 'firstName lastName email')
       .exec();
-    
+
     // Group by employee
     const byEmployee: Record<string, { count: number; records: any[] }> = {};
     missedPunchRecords.forEach((record: any) => {
-      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      const empId =
+        record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
       if (!byEmployee[empId]) {
         byEmployee[empId] = { count: 0, records: [] };
       }
@@ -1332,7 +1350,7 @@ export class NotificationService {
         punchCount: record.punches?.length || 0,
       });
     });
-    
+
     // Get related time exceptions
     const exceptionQuery: any = {
       type: TimeExceptionType.MISSED_PUNCH,
@@ -1343,11 +1361,9 @@ export class NotificationService {
         $lte: this.convertDateToUTCEnd(filters.endDate),
       };
     }
-    
-    const missedPunchExceptions = await this.timeExceptionModel
-      .find(exceptionQuery)
-      .exec();
-    
+
+    const missedPunchExceptions = await this.timeExceptionModel.find(exceptionQuery).exec();
+
     const exceptionsByStatus = {
       open: 0,
       pending: 0,
@@ -1356,14 +1372,14 @@ export class NotificationService {
       escalated: 0,
       resolved: 0,
     };
-    
+
     missedPunchExceptions.forEach((exc: any) => {
       const status = exc.status?.toLowerCase() || 'open';
       if (exceptionsByStatus.hasOwnProperty(status)) {
         exceptionsByStatus[status as keyof typeof exceptionsByStatus]++;
       }
     });
-    
+
     return {
       period: { startDate: filters.startDate, endDate: filters.endDate },
       summary: {
@@ -1390,15 +1406,7 @@ export class NotificationService {
     // Convert string to Date if needed
     const dateObj = date instanceof Date ? date : new Date(date);
     return new Date(
-      Date.UTC(
-        dateObj.getUTCFullYear(),
-        dateObj.getUTCMonth(),
-        dateObj.getUTCDate(),
-        0,
-        0,
-        0,
-        0,
-      ),
+      Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate(), 0, 0, 0, 0)
     );
   }
 
@@ -1418,8 +1426,8 @@ export class NotificationService {
         23,
         59,
         59,
-        999,
-      ),
+        999
+      )
     );
   }
 
@@ -1438,9 +1446,9 @@ export class NotificationService {
       vacationType: string;
       autoReflect?: boolean;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { employeeId, vacationPackageId, startDate, endDate, vacationType, autoReflect = true } = params;
+    const { employeeId, vacationPackageId, startDate, endDate, vacationType, autoReflect } = params;
 
     // Log the vacation-attendance linkage
     await this.logTimeManagementChange(
@@ -1453,7 +1461,7 @@ export class NotificationService {
         vacationType,
         autoReflect,
       },
-      currentUserId,
+      currentUserId
     );
 
     // Get attendance records for the vacation period
@@ -1480,7 +1488,7 @@ export class NotificationService {
       attendanceImpact: {
         affectedAttendanceRecords: affectedDays,
         workingDaysInRange,
-        message: autoReflect 
+        message: autoReflect
           ? 'Vacation will be automatically reflected in attendance records'
           : 'Manual attendance adjustments required',
       },
@@ -1499,7 +1507,7 @@ export class NotificationService {
       startDate: Date;
       endDate: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, startDate, endDate } = params;
 
@@ -1513,7 +1521,8 @@ export class NotificationService {
       .exec();
 
     // Analyze attendance patterns
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalDays =
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const recordedDays = attendanceRecords.length;
     const presentDays = attendanceRecords.filter((r: any) => r.clockIn).length;
     const absentDays = recordedDays - presentDays;
@@ -1529,16 +1538,18 @@ export class NotificationService {
         recordedDays,
         presentDays,
         absentDays,
-        attendanceRate: recordedDays > 0 ? `${Math.round((presentDays / recordedDays) * 100)}%` : 'N/A',
+        attendanceRate:
+          recordedDays > 0 ? `${Math.round((presentDays / recordedDays) * 100)}%` : 'N/A',
       },
       potentialVacationDays: potentialVacationDays.map((r: any) => ({
         date: r.date,
         status: 'ABSENT',
         note: 'May be covered by vacation package',
       })),
-      recommendation: absentDays > 0
-        ? 'Review absent days against vacation entitlements'
-        : 'All days accounted for in attendance',
+      recommendation:
+        absentDays > 0
+          ? 'Review absent days against vacation entitlements'
+          : 'All days accounted for in attendance',
       generatedAt: new Date(),
     };
   }
@@ -1554,7 +1565,7 @@ export class NotificationService {
       vacationEndDate: Date;
       shiftAssignmentId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, vacationStartDate, vacationEndDate } = params;
 
@@ -1580,14 +1591,19 @@ export class NotificationService {
       vacationPeriod: {
         startDate: vacationStartDate,
         endDate: vacationEndDate,
-        totalDays: Math.ceil((vacationEndDate.getTime() - vacationStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        totalDays:
+          Math.ceil(
+            (vacationEndDate.getTime() - vacationStartDate.getTime()) / (1000 * 60 * 60 * 24)
+          ) + 1,
         workingDays,
       },
-      conflicts: hasConflicts ? {
-        count: existingRecords.length,
-        dates: conflictDates,
-        message: 'Employee has attendance records (worked) during requested vacation period',
-      } : null,
+      conflicts: hasConflicts
+        ? {
+            count: existingRecords.length,
+            dates: conflictDates,
+            message: 'Employee has attendance records (worked) during requested vacation period',
+          }
+        : null,
       recommendation: hasConflicts
         ? 'Review attendance records before approving vacation'
         : 'No conflicts found - vacation can be approved',
@@ -1606,9 +1622,9 @@ export class NotificationService {
       endDate: Date;
       leaveType?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { employeeId, startDate, endDate, leaveType = 'ANNUAL' } = params;
+    const { employeeId, startDate, endDate, leaveType } = params;
 
     // Get absence records (days without clock-in)
     const attendanceRecords = await this.attendanceRecordModel
@@ -1621,7 +1637,7 @@ export class NotificationService {
     // Calculate absences
     const absentDays = attendanceRecords.filter((r: any) => !r.clockIn);
     const workingDaysInPeriod = this.calculateWorkingDays(startDate, endDate);
-    
+
     // Calculate deduction
     const deductionDays = absentDays.length;
     const halfDays = attendanceRecords.filter((r: any) => {
@@ -1639,7 +1655,7 @@ export class NotificationService {
         halfDays,
         leaveType,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -1649,7 +1665,7 @@ export class NotificationService {
       deduction: {
         fullDays: deductionDays,
         halfDays,
-        totalDeduction: deductionDays + (halfDays * 0.5),
+        totalDeduction: deductionDays + halfDays * 0.5,
         unit: 'days',
       },
       breakdown: {
@@ -1677,7 +1693,7 @@ export class NotificationService {
       startDate: Date;
       endDate: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { startDate, endDate } = params;
 
@@ -1690,16 +1706,19 @@ export class NotificationService {
       .exec();
 
     // Group by employee
-    const employeeStats: Record<string, {
-      employee: any;
-      presentDays: number;
-      absentDays: number;
-      totalWorkMinutes: number;
-    }> = {};
+    const employeeStats: Record<
+      string,
+      {
+        employee: any;
+        presentDays: number;
+        absentDays: number;
+        totalWorkMinutes: number;
+      }
+    > = {};
 
     attendanceRecords.forEach((record: any) => {
       const empId = record.employeeId?._id?.toString() || 'unknown';
-      
+
       if (!employeeStats[empId]) {
         employeeStats[empId] = {
           employee: record.employeeId,
@@ -1720,7 +1739,7 @@ export class NotificationService {
     // Calculate summary
     const employeeSummaries = Object.entries(employeeStats).map(([empId, stats]) => ({
       employeeId: empId,
-      employeeName: stats.employee 
+      employeeName: stats.employee
         ? `${stats.employee.firstName} ${stats.employee.lastName}`
         : 'Unknown',
       employeeNumber: stats.employee?.employeeNumber || 'N/A',
@@ -1740,9 +1759,14 @@ export class NotificationService {
         totalEmployees: employeeSummaries.length,
         totalPresentDays: employeeSummaries.reduce((sum, e) => sum + e.presentDays, 0),
         totalAbsentDays: employeeSummaries.reduce((sum, e) => sum + e.absentDays, 0),
-        avgAbsentDaysPerEmployee: employeeSummaries.length > 0
-          ? Math.round((employeeSummaries.reduce((sum, e) => sum + e.absentDays, 0) / employeeSummaries.length) * 100) / 100
-          : 0,
+        avgAbsentDaysPerEmployee:
+          employeeSummaries.length > 0
+            ? Math.round(
+                (employeeSummaries.reduce((sum, e) => sum + e.absentDays, 0) /
+                  employeeSummaries.length) *
+                  100
+              ) / 100
+            : 0,
       },
       employees: employeeSummaries,
       note: 'Absent days may be covered by vacation packages - cross-reference with Leaves module',
@@ -1782,7 +1806,12 @@ export class NotificationService {
       currentMonth: {
         cutoffDate: this.getNextPayrollCutoffDate(25),
         daysUntilCutoff: this.getDaysUntilCutoff(25),
-        status: this.getDaysUntilCutoff(25) <= 3 ? 'CRITICAL' : this.getDaysUntilCutoff(25) <= 5 ? 'WARNING' : 'NORMAL',
+        status:
+          this.getDaysUntilCutoff(25) <= 3
+            ? 'CRITICAL'
+            : this.getDaysUntilCutoff(25) <= 5
+              ? 'WARNING'
+              : 'NORMAL',
       },
     };
   }
@@ -1796,16 +1825,19 @@ export class NotificationService {
       payrollCutoffDate?: Date;
       departmentId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
     const now = new Date();
-    const daysUntilCutoff = Math.ceil((cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilCutoff = Math.ceil(
+      (cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     // Validate and normalize departmentId - treat empty strings as undefined
-    const departmentId = params.departmentId && params.departmentId.trim() !== '' 
-      ? params.departmentId.trim() 
-      : undefined;
+    const departmentId =
+      params.departmentId && params.departmentId.trim() !== ''
+        ? params.departmentId.trim()
+        : undefined;
 
     // Get pending time exceptions - filter out any with invalid employeeId references
     // First, get all pending exceptions
@@ -1814,14 +1846,14 @@ export class NotificationService {
         status: { $in: ['OPEN', 'PENDING'] },
       })
       .exec();
-    
+
     // Filter out exceptions with invalid employeeId (empty strings, null, or invalid ObjectIds)
     const exceptionsWithValidEmployeeId = allPendingExceptions.filter((exc: any) => {
       if (!exc.employeeId) return false;
       const employeeIdStr = exc.employeeId.toString();
       return employeeIdStr && employeeIdStr.trim() !== '' && Types.ObjectId.isValid(employeeIdStr);
     });
-    
+
     // Extract valid employeeIds for populate
     const validEmployeeIds = exceptionsWithValidEmployeeId
       .map((exc: any) => {
@@ -1832,7 +1864,7 @@ export class NotificationService {
         }
       })
       .filter((id): id is Types.ObjectId => id !== null);
-    
+
     // Now query with valid employeeIds and populate
     const pendingExceptions = await this.timeExceptionModel
       .find({
@@ -1842,42 +1874,46 @@ export class NotificationService {
       .populate('employeeId', 'firstName lastName email employeeNumber departmentId')
       .populate('assignedTo', 'firstName lastName email')
       .exec();
-    
+
     // Filter out any exceptions where populate failed (employeeId is null after populate)
     const validExceptions = pendingExceptions.filter((exc: any) => exc.employeeId != null);
 
     // Filter by department if specified
     let filteredExceptions = validExceptions;
     if (departmentId) {
-      filteredExceptions = validExceptions.filter((exc: any) => 
-        exc.employeeId?.departmentId?.toString() === departmentId
+      filteredExceptions = validExceptions.filter(
+        (exc: any) => exc.employeeId?.departmentId?.toString() === departmentId
       );
     }
 
     // Categorize by urgency
     const categorized = {
       critical: [] as any[], // Need immediate action
-      high: [] as any[],     // Should be reviewed within 1-2 days
-      medium: [] as any[],   // Can wait but should be done before cutoff
+      high: [] as any[], // Should be reviewed within 1-2 days
+      medium: [] as any[], // Can wait but should be done before cutoff
     };
 
     filteredExceptions.forEach((exc: any) => {
       const createdAt = new Date(exc.createdAt);
       const ageInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       const item = {
         id: exc._id,
         type: exc.type,
         status: exc.status,
-        employee: exc.employeeId ? {
-          id: exc.employeeId._id,
-          name: `${exc.employeeId.firstName} ${exc.employeeId.lastName}`,
-          employeeNumber: exc.employeeId.employeeNumber,
-        } : null,
-        assignedTo: exc.assignedTo ? {
-          id: exc.assignedTo._id,
-          name: `${exc.assignedTo.firstName} ${exc.assignedTo.lastName}`,
-        } : null,
+        employee: exc.employeeId
+          ? {
+              id: exc.employeeId._id,
+              name: `${exc.employeeId.firstName} ${exc.employeeId.lastName}`,
+              employeeNumber: exc.employeeId.employeeNumber,
+            }
+          : null,
+        assignedTo: exc.assignedTo
+          ? {
+              id: exc.assignedTo._id,
+              name: `${exc.assignedTo.firstName} ${exc.assignedTo.lastName}`,
+            }
+          : null,
         ageInDays,
         createdAt: exc.createdAt,
       };
@@ -1900,7 +1936,7 @@ export class NotificationService {
         critical: categorized.critical.length,
         departmentId,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -1916,11 +1952,12 @@ export class NotificationService {
         medium: categorized.medium.length,
       },
       pendingByUrgency: categorized,
-      recommendation: categorized.critical.length > 0
-        ? 'IMMEDIATE ACTION REQUIRED: Critical items must be reviewed before payroll cutoff'
-        : categorized.high.length > 0
-          ? 'HIGH PRIORITY: Review high-priority items within 1-2 days'
-          : 'ON TRACK: All pending items can be processed before cutoff',
+      recommendation:
+        categorized.critical.length > 0
+          ? 'IMMEDIATE ACTION REQUIRED: Critical items must be reviewed before payroll cutoff'
+          : categorized.high.length > 0
+            ? 'HIGH PRIORITY: Review high-priority items within 1-2 days'
+            : 'ON TRACK: All pending items can be processed before cutoff',
       generatedAt: new Date(),
     };
   }
@@ -1935,16 +1972,14 @@ export class NotificationService {
       escalationDaysBefore?: number;
       notifyManagers?: boolean;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { 
-      payrollCutoffDate = this.getNextPayrollCutoffDate(25),
-      escalationDaysBefore = 3,
-      notifyManagers = true,
-    } = params;
+    const { payrollCutoffDate, escalationDaysBefore, notifyManagers } = params;
 
     const now = new Date();
-    const daysUntilCutoff = Math.ceil((payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilCutoff = Math.ceil(
+      (payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     // Only escalate if within the escalation window
     if (daysUntilCutoff > escalationDaysBefore) {
@@ -1971,14 +2006,11 @@ export class NotificationService {
     // Escalate each pending item
     for (const exception of pendingExceptions) {
       try {
-        await this.timeExceptionModel.findByIdAndUpdate(
-          exception._id,
-          {
-            status: 'ESCALATED',
-            reason: `${exception.reason || ''}\n\n[AUTO-ESCALATED - PAYROLL CUTOFF]\nEscalated on: ${now.toISOString()}\nPayroll cutoff: ${payrollCutoffDate.toISOString()}\nDays until cutoff: ${daysUntilCutoff}`,
-            updatedBy: currentUserId,
-          },
-        );
+        await this.timeExceptionModel.findByIdAndUpdate(exception._id, {
+          status: 'ESCALATED',
+          reason: `${exception.reason || ''}\n\n[AUTO-ESCALATED - PAYROLL CUTOFF]\nEscalated on: ${now.toISOString()}\nPayroll cutoff: ${payrollCutoffDate.toISOString()}\nDays until cutoff: ${daysUntilCutoff}`,
+          updatedBy: currentUserId,
+        });
         escalatedItems.push({
           id: exception._id,
           type: exception.type,
@@ -1997,7 +2029,7 @@ export class NotificationService {
           type: 'PAYROLL_ESCALATION_ALERT',
           message: `${escalatedItems.length} time management requests have been auto-escalated due to approaching payroll cutoff (${payrollCutoffDate.toDateString()}). Immediate review required.`,
         },
-        currentUserId,
+        currentUserId
       );
     }
 
@@ -2009,7 +2041,7 @@ export class NotificationService {
         escalatedCount: escalatedItems.length,
         failedCount: failedItems.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2039,11 +2071,13 @@ export class NotificationService {
       payrollCutoffDate?: Date;
       departmentId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
     const now = new Date();
-    const daysUntilCutoff = Math.ceil((cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilCutoff = Math.ceil(
+      (cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     // Count pending items by type
     const pendingExceptionsCount = await this.timeExceptionModel.countDocuments({
@@ -2088,7 +2122,7 @@ export class NotificationService {
         isReady,
         hasBlockers,
         hasWarnings,
-        message: isReady 
+        message: isReady
           ? 'All time management requests have been processed. Payroll can proceed.'
           : hasBlockers
             ? `${pendingExceptionsCount} pending request(s) must be reviewed before payroll.`
@@ -2103,7 +2137,7 @@ export class NotificationService {
       recommendations: this.getPayrollReadinessRecommendations(
         pendingExceptionsCount,
         escalatedCount,
-        daysUntilCutoff,
+        daysUntilCutoff
       ),
       checkedAt: new Date(),
     };
@@ -2119,9 +2153,9 @@ export class NotificationService {
       endDate?: Date;
       type?: 'PAYROLL' | 'THRESHOLD' | 'MANUAL' | 'ALL';
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { startDate, endDate, type = 'ALL' } = params;
+    const { startDate, endDate, type } = params;
 
     // Get escalated items
     const query: any = {
@@ -2151,8 +2185,12 @@ export class NotificationService {
       const entry = {
         id: item._id,
         type: item.type,
-        employee: item.employeeId ? `${item.employeeId.firstName} ${item.employeeId.lastName}` : 'Unknown',
-        assignedTo: item.assignedTo ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}` : 'Unassigned',
+        employee: item.employeeId
+          ? `${item.employeeId.firstName} ${item.employeeId.lastName}`
+          : 'Unknown',
+        assignedTo: item.assignedTo
+          ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}`
+          : 'Unassigned',
         escalatedAt: item.updatedAt,
         reason: item.reason,
       };
@@ -2166,13 +2204,14 @@ export class NotificationService {
       }
     });
 
-    const filteredItems = type === 'ALL' 
-      ? escalatedItems 
-      : type === 'PAYROLL'
-        ? categorized.payroll
-        : type === 'THRESHOLD'
-          ? categorized.threshold
-          : categorized.manual;
+    const filteredItems =
+      type === 'ALL'
+        ? escalatedItems
+        : type === 'PAYROLL'
+          ? categorized.payroll
+          : type === 'THRESHOLD'
+            ? categorized.threshold
+            : categorized.manual;
 
     return {
       period: {
@@ -2200,15 +2239,14 @@ export class NotificationService {
       payrollCutoffDate?: Date;
       reminderDaysBefore?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { 
-      payrollCutoffDate = this.getNextPayrollCutoffDate(25),
-      reminderDaysBefore = 5,
-    } = params;
+    const { payrollCutoffDate, reminderDaysBefore } = params;
 
     const now = new Date();
-    const daysUntilCutoff = Math.ceil((payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilCutoff = Math.ceil(
+      (payrollCutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     if (daysUntilCutoff > reminderDaysBefore) {
       return {
@@ -2250,7 +2288,7 @@ export class NotificationService {
             type: 'PAYROLL_CUTOFF_REMINDER',
             message: `Reminder: You have ${data.items.length} pending time management request(s) that need review before payroll cutoff on ${payrollCutoffDate.toDateString()}. Only ${daysUntilCutoff} day(s) remaining.`,
           },
-          currentUserId,
+          currentUserId
         );
         remindersSent.push({
           assigneeId,
@@ -2268,7 +2306,7 @@ export class NotificationService {
         daysUntilCutoff,
         reminderCount: remindersSent.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2291,15 +2329,16 @@ export class NotificationService {
   private calculateWorkingDays(startDate: Date, endDate: Date): number {
     let count = 0;
     const current = new Date(startDate);
-    
+
     while (current <= endDate) {
       const dayOfWeek = current.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Not Sunday or Saturday
         count++;
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     return count;
   }
 
@@ -2309,12 +2348,12 @@ export class NotificationService {
   private getNextPayrollCutoffDate(dayOfMonth: number): Date {
     const now = new Date();
     const cutoff = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-    
+
     // If we've passed this month's cutoff, get next month's
     if (now > cutoff) {
       cutoff.setMonth(cutoff.getMonth() + 1);
     }
-    
+
     return cutoff;
   }
 
@@ -2333,7 +2372,7 @@ export class NotificationService {
   private getPayrollReadinessRecommendations(
     pendingCount: number,
     escalatedCount: number,
-    daysUntilCutoff: number,
+    daysUntilCutoff: number
   ): string[] {
     const recommendations: string[] = [];
 
@@ -2347,7 +2386,9 @@ export class NotificationService {
         recommendations.push(`URGENT: ${pendingCount} pending items require immediate review`);
         recommendations.push('Consider auto-escalation to expedite processing');
       } else if (daysUntilCutoff <= 3) {
-        recommendations.push(`Review ${pendingCount} pending items within the next ${daysUntilCutoff - 1} days`);
+        recommendations.push(
+          `Review ${pendingCount} pending items within the next ${daysUntilCutoff - 1} days`
+        );
         recommendations.push('Send reminders to assigned reviewers');
       } else {
         recommendations.push(`${pendingCount} pending items should be processed before cutoff`);
@@ -2375,7 +2416,7 @@ export class NotificationService {
       startDate?: Date;
       endDate?: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const now = new Date();
     const startDate = params.startDate || new Date(now.getFullYear(), now.getMonth(), 1);
@@ -2401,29 +2442,30 @@ export class NotificationService {
       })
       .exec();
 
-    const approvedExceptions = allExceptions.filter(e => e.status === 'APPROVED').length;
-    const pendingExceptions = allExceptions.filter(e => 
-      e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING
+    const approvedExceptions = allExceptions.filter((e) => e.status === 'APPROVED').length;
+    const pendingExceptions = allExceptions.filter(
+      (e) => e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING
     ).length;
 
     // Get sync history
     const recentSyncs = this.auditLogs
-      .filter(log => 
-        log.entity.includes('SYNC') && 
-        log.timestamp >= startDateUTC && 
-        log.timestamp <= endDateUTC
+      .filter(
+        (log) =>
+          log.entity.includes('SYNC') &&
+          log.timestamp >= startDateUTC &&
+          log.timestamp <= endDateUTC
       )
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, 10);
 
     // Calculate sync health
     const syncHealth = {
-      attendanceSyncRate: allAttendance.length > 0 
-        ? Math.round((finalizedCount / allAttendance.length) * 100) 
-        : 100,
-      exceptionProcessingRate: allExceptions.length > 0 
-        ? Math.round((approvedExceptions / allExceptions.length) * 100) 
-        : 100,
+      attendanceSyncRate:
+        allAttendance.length > 0 ? Math.round((finalizedCount / allAttendance.length) * 100) : 100,
+      exceptionProcessingRate:
+        allExceptions.length > 0
+          ? Math.round((approvedExceptions / allExceptions.length) * 100)
+          : 100,
       overallHealth: 'GOOD' as 'GOOD' | 'WARNING' | 'CRITICAL',
     };
 
@@ -2442,7 +2484,7 @@ export class NotificationService {
         exceptionCount: allExceptions.length,
         overallHealth: syncHealth.overallHealth,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2479,7 +2521,7 @@ export class NotificationService {
         processingRate: `${syncHealth.exceptionProcessingRate}%`,
       },
       health: syncHealth,
-      recentSyncOperations: recentSyncs.map(s => ({
+      recentSyncOperations: recentSyncs.map((s) => ({
         operation: s.entity,
         timestamp: s.timestamp,
         performedBy: s.actorId,
@@ -2498,7 +2540,7 @@ export class NotificationService {
       startDate: Date;
       endDate: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, startDate, endDate } = params;
     const startDateUTC = this.convertDateToUTCStart(startDate);
@@ -2520,15 +2562,15 @@ export class NotificationService {
 
     // Identify potential leave-related absences (days with no attendance)
     const attendanceDates = new Set(
-      attendanceRecords.map((r: any) => 
-        new Date(r.createdAt || r.date).toISOString().split('T')[0]
-      )
+      attendanceRecords.map((r: any) => new Date(r.createdAt || r.date).toISOString().split('T')[0])
     );
 
     // Get unique employees
-    const uniqueEmployees = [...new Set(
-      attendanceRecords.map((r: any) => r.employeeId?._id?.toString() || r.employeeId?.toString())
-    )];
+    const uniqueEmployees = [
+      ...new Set(
+        attendanceRecords.map((r: any) => r.employeeId?._id?.toString() || r.employeeId?.toString())
+      ),
+    ];
 
     // Build leave context data
     const leaveContextData = {
@@ -2536,12 +2578,13 @@ export class NotificationService {
     };
 
     attendanceRecords.forEach((record: any) => {
-      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      const empId =
+        record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
       if (!leaveContextData.attendanceByEmployee[empId]) {
         leaveContextData.attendanceByEmployee[empId] = {
           employeeId: empId,
-          employeeName: record.employeeId 
-            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim() 
+          employeeName: record.employeeId
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
             : 'Unknown',
           daysPresent: 0,
           totalWorkHours: 0,
@@ -2549,8 +2592,8 @@ export class NotificationService {
         };
       }
       leaveContextData.attendanceByEmployee[empId].daysPresent++;
-      leaveContextData.attendanceByEmployee[empId].totalWorkHours += 
-        Math.round((record.totalWorkMinutes || 0) / 60 * 100) / 100;
+      leaveContextData.attendanceByEmployee[empId].totalWorkHours +=
+        Math.round(((record.totalWorkMinutes || 0) / 60) * 100) / 100;
       leaveContextData.attendanceByEmployee[empId].attendanceDates.push(
         new Date(record.createdAt || record.date).toISOString().split('T')[0]
       );
@@ -2565,7 +2608,7 @@ export class NotificationService {
         recordCount: attendanceRecords.length,
         employeeCount: uniqueEmployees.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2600,7 +2643,7 @@ export class NotificationService {
       startDate: Date;
       endDate: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, startDate, endDate } = params;
     const startDateUTC = this.convertDateToUTCStart(startDate);
@@ -2641,12 +2684,13 @@ export class NotificationService {
     const benefitsData: Record<string, any> = {};
 
     attendanceRecords.forEach((record: any) => {
-      const empId = record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
+      const empId =
+        record.employeeId?._id?.toString() || record.employeeId?.toString() || 'unknown';
       if (!benefitsData[empId]) {
         benefitsData[empId] = {
           employeeId: empId,
-          employeeName: record.employeeId 
-            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim() 
+          employeeName: record.employeeId
+            ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
             : 'Unknown',
           totalWorkMinutes: 0,
           totalWorkHours: 0,
@@ -2663,9 +2707,9 @@ export class NotificationService {
     overtimeRecords.forEach((ot: any) => {
       const empId = ot.employeeId?._id?.toString() || ot.employeeId?.toString();
       if (empId && benefitsData[empId]) {
-        const attendance = ot.attendanceRecordId as any;
-        const overtimeMinutes = attendance?.totalWorkMinutes 
-          ? Math.max(0, attendance.totalWorkMinutes - 480) 
+        const attendance = ot.attendanceRecordId;
+        const overtimeMinutes = attendance?.totalWorkMinutes
+          ? Math.max(0, attendance.totalWorkMinutes - 480)
           : 0;
         benefitsData[empId].overtimeMinutes += overtimeMinutes;
       }
@@ -2686,7 +2730,7 @@ export class NotificationService {
         attendanceCount: attendanceRecords.length,
         overtimeCount: overtimeRecords.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2702,12 +2746,24 @@ export class NotificationService {
         employees: Object.values(benefitsData),
       },
       calculations: {
-        totalWorkHoursAllEmployees: Math.round(
-          Object.values(benefitsData).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60 * 100
-        ) / 100,
-        totalOvertimeHoursAllEmployees: Math.round(
-          Object.values(benefitsData).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60 * 100
-        ) / 100,
+        totalWorkHoursAllEmployees:
+          Math.round(
+            (Object.values(benefitsData).reduce(
+              (sum: number, e: any) => sum + e.totalWorkMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
+        totalOvertimeHoursAllEmployees:
+          Math.round(
+            (Object.values(benefitsData).reduce(
+              (sum: number, e: any) => sum + e.overtimeMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
       },
       integrationNotes: [
         'Use totalWorkHours for attendance-based benefits eligibility',
@@ -2728,7 +2784,7 @@ export class NotificationService {
       syncDate: Date;
       modules: ('payroll' | 'leaves' | 'benefits')[];
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { syncDate, modules } = params;
     const syncResults: Record<string, any> = {};
@@ -2756,7 +2812,7 @@ export class NotificationService {
       try {
         const leavesSync = await this.syncWithLeavesModule(
           { startDate: startOfDay, endDate: endOfDay },
-          currentUserId,
+          currentUserId
         );
         syncResults.leaves = {
           status: 'SUCCESS',
@@ -2775,7 +2831,7 @@ export class NotificationService {
       try {
         const benefitsSync = await this.syncWithBenefitsModule(
           { startDate: startOfDay, endDate: endOfDay },
-          currentUserId,
+          currentUserId
         );
         syncResults.benefits = {
           status: 'SUCCESS',
@@ -2794,11 +2850,12 @@ export class NotificationService {
       .filter(([, result]) => result.status === 'FAILED')
       .map(([module]) => module);
 
-    const overallStatus = failedModules.length === 0 
-      ? 'SUCCESS' 
-      : failedModules.length === modules.length 
-        ? 'FAILED' 
-        : 'PARTIAL';
+    const overallStatus =
+      failedModules.length === 0
+        ? 'SUCCESS'
+        : failedModules.length === modules.length
+          ? 'FAILED'
+          : 'PARTIAL';
 
     await this.logTimeManagementChange(
       'FULL_CROSS_MODULE_SYNC',
@@ -2808,7 +2865,7 @@ export class NotificationService {
         overallStatus,
         failedModules,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2832,7 +2889,7 @@ export class NotificationService {
       endDate: Date;
       employeeId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { startDate, endDate, employeeId } = params;
     const startDateUTC = this.convertDateToUTCStart(startDate);
@@ -2854,8 +2911,8 @@ export class NotificationService {
     const inconsistencies: any[] = [];
 
     // Check 1: Attendance records with no clock-in but marked as present
-    const noClockInPresent = attendanceRecords.filter((r: any) => 
-      !r.clockIn && r.totalWorkMinutes > 0
+    const noClockInPresent = attendanceRecords.filter(
+      (r: any) => !r.clockIn && r.totalWorkMinutes > 0
     );
     if (noClockInPresent.length > 0) {
       inconsistencies.push({
@@ -2868,7 +2925,9 @@ export class NotificationService {
     }
 
     // Check 2: Overtime exceptions without corresponding attendance
-    const overtimeExceptions = timeExceptions.filter(e => e.type === TimeExceptionType.OVERTIME_REQUEST);
+    const overtimeExceptions = timeExceptions.filter(
+      (e) => e.type === TimeExceptionType.OVERTIME_REQUEST
+    );
     const orphanOvertime = overtimeExceptions.filter((e: any) => !e.attendanceRecordId);
     if (orphanOvertime.length > 0) {
       inconsistencies.push({
@@ -2884,10 +2943,11 @@ export class NotificationService {
     const finalizedRecordIds = attendanceRecords
       .filter((r: any) => r.finalisedForPayroll)
       .map((r: any) => r._id.toString());
-    
-    const exceptionsForFinalized = timeExceptions.filter((e: any) => 
-      finalizedRecordIds.includes(e.attendanceRecordId?.toString()) &&
-      (e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING)
+
+    const exceptionsForFinalized = timeExceptions.filter(
+      (e: any) =>
+        finalizedRecordIds.includes(e.attendanceRecordId?.toString()) &&
+        (e.status === TimeExceptionStatus.OPEN || e.status === TimeExceptionStatus.PENDING)
     );
     if (exceptionsForFinalized.length > 0) {
       inconsistencies.push({
@@ -2906,9 +2966,8 @@ export class NotificationService {
       if (!employeeDateMap[key]) employeeDateMap[key] = [];
       employeeDateMap[key].push(r);
     });
-    
-    const duplicates = Object.entries(employeeDateMap)
-      .filter(([, records]) => records.length > 1);
+
+    const duplicates = Object.entries(employeeDateMap).filter(([, records]) => records.length > 1);
     if (duplicates.length > 0) {
       inconsistencies.push({
         type: 'DUPLICATE_ATTENDANCE_RECORDS',
@@ -2923,7 +2982,7 @@ export class NotificationService {
       });
     }
 
-    const isConsistent = inconsistencies.filter(i => i.severity === 'ERROR').length === 0;
+    const isConsistent = inconsistencies.filter((i) => i.severity === 'ERROR').length === 0;
 
     await this.logTimeManagementChange(
       'CROSS_MODULE_CONSISTENCY_CHECK',
@@ -2934,7 +2993,7 @@ export class NotificationService {
         isConsistent,
         inconsistencyCount: inconsistencies.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -2944,12 +3003,12 @@ export class NotificationService {
       summary: {
         attendanceRecordsChecked: attendanceRecords.length,
         exceptionsChecked: timeExceptions.length,
-        errorCount: inconsistencies.filter(i => i.severity === 'ERROR').length,
-        warningCount: inconsistencies.filter(i => i.severity === 'WARNING').length,
+        errorCount: inconsistencies.filter((i) => i.severity === 'ERROR').length,
+        warningCount: inconsistencies.filter((i) => i.severity === 'WARNING').length,
       },
       inconsistencies,
-      recommendations: isConsistent 
-        ? ['Data is consistent across modules'] 
+      recommendations: isConsistent
+        ? ['Data is consistent across modules']
         : this.getConsistencyRecommendations(inconsistencies),
       checkedAt: new Date(),
       checkedBy: currentUserId,
@@ -2967,7 +3026,7 @@ export class NotificationService {
       departmentId?: string;
       modules: ('payroll' | 'leaves' | 'benefits')[];
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { startDate, endDate, departmentId, modules } = params;
     const startDateUTC = this.convertDateToUTCStart(startDate);
@@ -2985,8 +3044,9 @@ export class NotificationService {
 
     // Filter by department
     const filteredAttendance = departmentId
-      ? attendanceRecords.filter((r: any) => 
-          r.employeeId?.departmentId?.toString() === departmentId)
+      ? attendanceRecords.filter(
+          (r: any) => r.employeeId?.departmentId?.toString() === departmentId
+        )
       : attendanceRecords;
 
     // Get exceptions
@@ -2998,8 +3058,7 @@ export class NotificationService {
       .exec();
 
     const filteredExceptions = departmentId
-      ? exceptions.filter((e: any) => 
-          e.employeeId?.departmentId?.toString() === departmentId)
+      ? exceptions.filter((e: any) => e.employeeId?.departmentId?.toString() === departmentId)
       : exceptions;
 
     // Build module-specific data packages
@@ -3027,7 +3086,7 @@ export class NotificationService {
         attendanceCount: filteredAttendance.length,
         exceptionCount: filteredExceptions.length,
       },
-      currentUserId,
+      currentUserId
     );
 
     return {
@@ -3037,9 +3096,9 @@ export class NotificationService {
       baseDataSummary: {
         attendanceRecords: filteredAttendance.length,
         exceptions: filteredExceptions.length,
-        uniqueEmployees: [...new Set(
-          filteredAttendance.map((r: any) => r.employeeId?._id?.toString())
-        )].length,
+        uniqueEmployees: [
+          ...new Set(filteredAttendance.map((r: any) => r.employeeId?._id?.toString())),
+        ].length,
       },
       dataPackages,
       generatedAt: new Date(),
@@ -3058,7 +3117,7 @@ export class NotificationService {
         employeeData[empId] = {
           employeeId: empId,
           employeeNumber: record.employeeId?.employeeNumber || 'N/A',
-          employeeName: record.employeeId 
+          employeeName: record.employeeId
             ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
             : 'Unknown',
           totalWorkMinutes: 0,
@@ -3091,12 +3150,24 @@ export class NotificationService {
       employees: Object.values(employeeData),
       totals: {
         totalEmployees: Object.keys(employeeData).length,
-        totalWorkHours: Math.round(
-          Object.values(employeeData).reduce((sum: number, e: any) => sum + e.totalWorkMinutes, 0) / 60 * 100
-        ) / 100,
-        totalOvertimeHours: Math.round(
-          Object.values(employeeData).reduce((sum: number, e: any) => sum + e.overtimeMinutes, 0) / 60 * 100
-        ) / 100,
+        totalWorkHours:
+          Math.round(
+            (Object.values(employeeData).reduce(
+              (sum: number, e: any) => sum + e.totalWorkMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
+        totalOvertimeHours:
+          Math.round(
+            (Object.values(employeeData).reduce(
+              (sum: number, e: any) => sum + e.overtimeMinutes,
+              0
+            ) /
+              60) *
+              100
+          ) / 100,
       },
     };
   }
@@ -3109,7 +3180,7 @@ export class NotificationService {
       if (!employeeData[empId]) {
         employeeData[empId] = {
           employeeId: empId,
-          employeeName: record.employeeId 
+          employeeName: record.employeeId
             ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
             : 'Unknown',
           presentDates: [] as string[],
@@ -3139,7 +3210,7 @@ export class NotificationService {
       if (!employeeData[empId]) {
         employeeData[empId] = {
           employeeId: empId,
-          employeeName: record.employeeId 
+          employeeName: record.employeeId
             ? `${record.employeeId.firstName || ''} ${record.employeeId.lastName || ''}`.trim()
             : 'Unknown',
           totalWorkHours: 0,
@@ -3151,7 +3222,8 @@ export class NotificationService {
 
       const workMinutes = record.totalWorkMinutes || 0;
       employeeData[empId].totalWorkHours += Math.round((workMinutes / 60) * 100) / 100;
-      employeeData[empId].overtimeHours += Math.round((Math.max(0, workMinutes - 480) / 60) * 100) / 100;
+      employeeData[empId].overtimeHours +=
+        Math.round((Math.max(0, workMinutes - 480) / 60) * 100) / 100;
       employeeData[empId].daysWorked++;
       if (!record.isLate && !record.earlyLeave && !record.hasMissedPunch) {
         employeeData[empId].perfectAttendanceDays++;
@@ -3163,8 +3235,8 @@ export class NotificationService {
       employees: Object.values(employeeData),
       eligibilityCriteria: {
         overtimeBonusEligible: Object.values(employeeData).filter((e: any) => e.overtimeHours > 0),
-        perfectAttendanceBonus: Object.values(employeeData).filter((e: any) => 
-          e.daysWorked > 0 && e.perfectAttendanceDays === e.daysWorked
+        perfectAttendanceBonus: Object.values(employeeData).filter(
+          (e: any) => e.daysWorked > 0 && e.perfectAttendanceDays === e.daysWorked
         ),
       },
     };
@@ -3173,7 +3245,7 @@ export class NotificationService {
   private getConsistencyRecommendations(inconsistencies: any[]): string[] {
     const recommendations: string[] = [];
 
-    inconsistencies.forEach(inc => {
+    inconsistencies.forEach((inc) => {
       switch (inc.type) {
         case 'NO_CLOCKIN_BUT_HAS_WORK_MINUTES':
           recommendations.push('Review attendance records with work minutes but no clock-in time');
@@ -3182,10 +3254,14 @@ export class NotificationService {
           recommendations.push('Link overtime exceptions to corresponding attendance records');
           break;
         case 'FINALIZED_WITH_PENDING_EXCEPTIONS':
-          recommendations.push('Resolve pending exceptions before keeping records finalized, or un-finalize records');
+          recommendations.push(
+            'Resolve pending exceptions before keeping records finalized, or un-finalize records'
+          );
           break;
         case 'DUPLICATE_ATTENDANCE_RECORDS':
-          recommendations.push('Merge or remove duplicate attendance records for same employee/date');
+          recommendations.push(
+            'Merge or remove duplicate attendance records for same employee/date'
+          );
           break;
       }
     });
@@ -3196,7 +3272,7 @@ export class NotificationService {
   private async logTimeManagementChange(
     entity: string,
     changeSet: Record<string, unknown>,
-    actorId?: string,
+    actorId?: string
   ) {
     this.auditLogs.push({
       entity,

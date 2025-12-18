@@ -1,11 +1,4 @@
-import {
-  IsMongoId,
-  IsOptional,
-  IsEnum,
-  IsISO8601,
-  IsNumber,
-  Min,
-} from 'class-validator';
+import { IsMongoId, IsOptional, IsEnum, IsISO8601, IsNumber, Min } from 'class-validator';
 import { BonusStatus } from '../enums/payroll-execution-enum';
 
 export class SigningBonusEditDto {

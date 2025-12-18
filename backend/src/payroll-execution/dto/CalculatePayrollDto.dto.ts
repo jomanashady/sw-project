@@ -1,9 +1,4 @@
-import {
-  IsMongoId,
-  IsNumber,
-  IsOptional,
-  Min,
-} from 'class-validator';
+import { IsMongoId, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class CalculatePayrollDto {
   @IsMongoId()
@@ -17,4 +12,3 @@ export class CalculatePayrollDto {
   @Min(0)
   baseSalary?: number; // Optional - if not provided, will be fetched from employee's PayGrade configuration
 }
-

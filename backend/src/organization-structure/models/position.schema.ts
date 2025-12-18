@@ -30,7 +30,7 @@ export const PositionSchema = SchemaFactory.createForClass(Position);
 async function resolveDepartmentHead(
   departmentModel: Model<DepartmentDocument>,
   departmentId?: Types.ObjectId | string,
-  positionId?: Types.ObjectId,
+  positionId?: Types.ObjectId
 ) {
   if (!departmentId) {
     return undefined;
@@ -54,9 +54,7 @@ async function resolveDepartmentHead(
 }
 
 function isPositionUpdate(update: unknown): update is UpdateQuery<Position> {
-  return (
-    Boolean(update) && typeof update === 'object' && !Array.isArray(update)
-  );
+  return Boolean(update) && typeof update === 'object' && !Array.isArray(update);
 }
 
 function isObjectIdLike(value: unknown): value is Types.ObjectId | string {
@@ -82,7 +80,8 @@ PositionSchema.pre('findOneAndUpdate', async function (next) {
   try {
     const rawUpdate = this.getUpdate();
     if (!isPositionUpdate(rawUpdate)) {
-      return next();
+      next();
+      return;
     }
 
     const update = rawUpdate;
@@ -105,22 +104,19 @@ PositionSchema.pre('findOneAndUpdate', async function (next) {
     }
 
     if (!departmentId) {
-      return next();
+      next();
+      return;
     }
 
-    const DepartmentModel = this.model.db.model<DepartmentDocument>(
-      Department.name,
-    );
+    const DepartmentModel = this.model.db.model<DepartmentDocument>(Department.name);
 
     const normalizedDepartmentId =
-      typeof departmentId === 'string'
-        ? new Types.ObjectId(departmentId)
-        : departmentId;
+      typeof departmentId === 'string' ? new Types.ObjectId(departmentId) : departmentId;
 
     const headId = await resolveDepartmentHead(
       DepartmentModel,
       normalizedDepartmentId,
-      (this.getQuery()._id as Types.ObjectId) || undefined,
+      (this.getQuery()._id as Types.ObjectId) || undefined
     );
 
     if (update.$set) {

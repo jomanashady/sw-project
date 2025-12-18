@@ -1,9 +1,9 @@
 /**
  * NotificationType Enum
- * 
+ *
  * Defines all notification types used across the HR system.
  * Each type corresponds to a specific event that triggers a notification.
- * 
+ *
  * Notifications are stored in the NotificationLog collection and displayed
  * in the user's notification bell/center in the frontend.
  */
@@ -12,14 +12,13 @@ export enum NotificationType {
   // LEAVE MODULE NOTIFICATIONS
   // =============================================================================
   // Sent to employees and managers regarding leave requests
-  
-  LEAVE_APPROVED = 'leave_approved',           // Employee: Your leave was approved
-  LEAVE_REJECTED = 'leave_rejected',           // Employee: Your leave was rejected
-  LEAVE_CREATED = 'leave_created',             // Manager: New leave request to review
-  LEAVE_MODIFIED = 'leave_modified',           // Employee: Your leave was modified
-  LEAVE_FINALIZED = 'leave_finalized',         // All parties: Leave request finalized
-  LEAVE_RETURNED_FOR_CORRECTION = 'leave_returned_for_correction', // Employee: Fix and resubmit
 
+  LEAVE_APPROVED = 'leave_approved', // Employee: Your leave was approved
+  LEAVE_REJECTED = 'leave_rejected', // Employee: Your leave was rejected
+  LEAVE_CREATED = 'leave_created', // Manager: New leave request to review
+  LEAVE_MODIFIED = 'leave_modified', // Employee: Your leave was modified
+  LEAVE_FINALIZED = 'leave_finalized', // All parties: Leave request finalized
+  LEAVE_RETURNED_FOR_CORRECTION = 'leave_returned_for_correction', // Employee: Fix and resubmit
 
   // ===== RECRUITMENT SUBSYSTEM =====
   // Interview, hiring, and application notifications
@@ -89,8 +88,6 @@ export enum NotificationType {
   PROFILE_CHANGE_APPROVED = 'profile_change_approved',
   PROFILE_CHANGE_REJECTED = 'profile_change_rejected',
   PROFILE_UPDATED = 'profile_updated',
-
-
 
   // Payroll Tracking Module Notifications
   DISPUTE_APPROVED_FOR_FINANCE = 'dispute_approved_for_finance',

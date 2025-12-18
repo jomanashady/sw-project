@@ -1,10 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { EmployeeProfile as Employee } from '../../employee-profile/models/employee-profile.schema';
-import {
-  PayRollPaymentStatus,
-  PayRollStatus,
-} from '../enums/payroll-execution-enum';
+import { PayRollPaymentStatus, PayRollStatus } from '../enums/payroll-execution-enum';
 
 export type payrollRunsDocument = HydratedDocument<payrollRuns>;
 

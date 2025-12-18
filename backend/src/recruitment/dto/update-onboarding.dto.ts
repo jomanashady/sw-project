@@ -1,10 +1,4 @@
-import {
-  IsOptional,
-  IsArray,
-  ValidateNested,
-  IsBoolean,
-  IsDate,
-} from 'class-validator';
+import { IsOptional, IsArray, ValidateNested, IsBoolean, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OnboardingTaskDto } from './create-onboarding.dto';
 

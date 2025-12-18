@@ -38,9 +38,7 @@ import { ProcessRefundDTO } from './dto/ProcessRefundDTO.dto';
 @Controller('payroll-tracking')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PayrollTrackingController {
-  constructor(
-    private readonly payrollTrackingService: PayrollTrackingService,
-  ) {}
+  constructor(private readonly payrollTrackingService: PayrollTrackingService) {}
 
   // ==================== CLAIMS ENDPOINTS ====================
 
@@ -48,10 +46,7 @@ export class PayrollTrackingController {
   @Post('claims')
   @HttpCode(HttpStatus.CREATED)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
-  async createClaim(
-    @Body() createClaimDTO: CreateClaimDTO,
-    @CurrentUser() user: any,
-  ) {
+  async createClaim(@Body() createClaimDTO: CreateClaimDTO, @CurrentUser() user: any) {
     // Security: Employees can only create claims for themselves
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
@@ -78,7 +73,12 @@ export class PayrollTrackingController {
   // Get all claims (for payroll staff to view all claims regardless of status)
   // IMPORTANT: This route must come BEFORE 'claims/:claimId' to avoid route conflicts
   @Get('claims/all')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getAllClaims(@CurrentUser() user: any) {
     return await this.payrollTrackingService.getAllClaims();
   }
@@ -92,22 +92,28 @@ export class PayrollTrackingController {
 
   // REQ-PY-18: Employees track every claim they have submitted.
   @Get('claims/employee/:employeeId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getClaimsByEmployeeId(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getClaimsByEmployeeId(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     return await this.payrollTrackingService.getClaimsByEmployeeId(employeeId);
   }
 
   // REQ-PY-18: Drill into the detailed status of a specific claim.
   // IMPORTANT: This route must come AFTER all specific routes like 'claims/all', 'claims/pending', etc.
   @Get('claims/:claimId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getClaimById(
-    @Param('claimId') claimId: string,
-    @CurrentUser() user: any,
-  ) {
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getClaimById(@Param('claimId') claimId: string, @CurrentUser() user: any) {
     return await this.payrollTrackingService.getClaimById(claimId);
   }
 
@@ -117,13 +123,9 @@ export class PayrollTrackingController {
   async updateClaim(
     @Param('claimId') claimId: string,
     @Body() updateClaimDTO: UpdateClaimDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return await this.payrollTrackingService.updateClaim(
-      claimId,
-      updateClaimDTO,
-      user.userId,
-    );
+    return await this.payrollTrackingService.updateClaim(claimId, updateClaimDTO, user.userId);
   }
 
   // ==================== APPROVAL ENDPOINTS ====================
@@ -135,12 +137,12 @@ export class PayrollTrackingController {
   async approveClaimBySpecialist(
     @Param('claimId') claimId: string,
     @Body() approveClaimBySpecialistDTO: ApproveClaimBySpecialistDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.approveClaimBySpecialist(
       claimId,
       approveClaimBySpecialistDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -151,12 +153,12 @@ export class PayrollTrackingController {
   async rejectClaimBySpecialist(
     @Param('claimId') claimId: string,
     @Body() rejectClaimBySpecialistDTO: RejectClaimBySpecialistDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.rejectClaimBySpecialist(
       claimId,
       rejectClaimBySpecialistDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -167,12 +169,12 @@ export class PayrollTrackingController {
   async confirmClaimApproval(
     @Param('claimId') claimId: string,
     @Body() confirmClaimApprovalDTO: ConfirmClaimApprovalDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.confirmClaimApproval(
       claimId,
       confirmClaimApprovalDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -182,10 +184,7 @@ export class PayrollTrackingController {
   @Post('disputes')
   @HttpCode(HttpStatus.CREATED)
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
-  async createDispute(
-    @Body() createDisputeDTO: CreateDisputeDTO,
-    @CurrentUser() user: any,
-  ) {
+  async createDispute(@Body() createDisputeDTO: CreateDisputeDTO, @CurrentUser() user: any) {
     // Security: Employees can only create disputes for their own payslips
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
@@ -212,7 +211,12 @@ export class PayrollTrackingController {
   // Get all disputes (for payroll staff to view all disputes regardless of status)
   // IMPORTANT: This route must come BEFORE 'disputes/:disputeId' to avoid route conflicts
   @Get('disputes/all')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getAllDisputes(@CurrentUser() user: any) {
     return await this.payrollTrackingService.getAllDisputes();
   }
@@ -226,24 +230,28 @@ export class PayrollTrackingController {
 
   // REQ-PY-18: Employees track every dispute they opened.
   @Get('disputes/employee/:employeeId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getDisputesByEmployeeId(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
-    return await this.payrollTrackingService.getDisputesByEmployeeId(
-      employeeId,
-    );
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getDisputesByEmployeeId(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
+    return await this.payrollTrackingService.getDisputesByEmployeeId(employeeId);
   }
 
   // REQ-PY-18: Drill into the workflow state of a single dispute.
   // IMPORTANT: This route must come AFTER all specific routes like 'disputes/all', 'disputes/pending', etc.
   @Get('disputes/:disputeId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getDisputeById(
-    @Param('disputeId') disputeId: string,
-    @CurrentUser() user: any,
-  ) {
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getDisputeById(@Param('disputeId') disputeId: string, @CurrentUser() user: any) {
     return await this.payrollTrackingService.getDisputeById(disputeId);
   }
 
@@ -253,12 +261,12 @@ export class PayrollTrackingController {
   async updateDispute(
     @Param('disputeId') disputeId: string,
     @Body() updateDisputeDTO: UpdateDisputeDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.updateDispute(
       disputeId,
       updateDisputeDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -269,12 +277,12 @@ export class PayrollTrackingController {
   async approveDisputeBySpecialist(
     @Param('disputeId') disputeId: string,
     @Body() approveDisputeBySpecialistDTO: ApproveDisputeBySpecialistDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.approveDisputeBySpecialist(
       disputeId,
       approveDisputeBySpecialistDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -285,12 +293,12 @@ export class PayrollTrackingController {
   async rejectDisputeBySpecialist(
     @Param('disputeId') disputeId: string,
     @Body() rejectDisputeBySpecialistDTO: RejectDisputeBySpecialistDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.rejectDisputeBySpecialist(
       disputeId,
       rejectDisputeBySpecialistDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -301,12 +309,12 @@ export class PayrollTrackingController {
   async confirmDisputeApproval(
     @Param('disputeId') disputeId: string,
     @Body() confirmDisputeApprovalDTO: ConfirmDisputeApprovalDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.confirmDisputeApproval(
       disputeId,
       confirmDisputeApprovalDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -316,10 +324,7 @@ export class PayrollTrackingController {
   @Post('refunds')
   @HttpCode(HttpStatus.CREATED)
   @Roles(SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async createRefund(
-    @Body() createRefundDTO: CreateRefundDTO,
-    @CurrentUser() user: any,
-  ) {
+  async createRefund(@Body() createRefundDTO: CreateRefundDTO, @CurrentUser() user: any) {
     return await this.payrollTrackingService.createRefund(createRefundDTO, user.userId);
   }
 
@@ -327,10 +332,7 @@ export class PayrollTrackingController {
   // IMPORTANT: This route must come BEFORE 'refunds/:refundId' to avoid route conflicts
   @Get('refunds/employee/:employeeId')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getRefundsByEmployeeId(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  async getRefundsByEmployeeId(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     return await this.payrollTrackingService.getRefundsByEmployeeId(employeeId);
   }
 
@@ -354,10 +356,7 @@ export class PayrollTrackingController {
   // IMPORTANT: This parameterized route must come AFTER all specific routes
   @Get('refunds/:refundId')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getRefundById(
-    @Param('refundId') refundId: string,
-    @CurrentUser() user: any,
-  ) {
+  async getRefundById(@Param('refundId') refundId: string, @CurrentUser() user: any) {
     return await this.payrollTrackingService.getRefundById(refundId);
   }
 
@@ -367,13 +366,9 @@ export class PayrollTrackingController {
   async updateRefund(
     @Param('refundId') refundId: string,
     @Body() updateRefundDTO: UpdateRefundDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return await this.payrollTrackingService.updateRefund(
-      refundId,
-      updateRefundDTO,
-      user.userId,
-    );
+    return await this.payrollTrackingService.updateRefund(refundId, updateRefundDTO, user.userId);
   }
 
   // REQ-PY-46: Mark refunds as paid when included in the payroll run.
@@ -383,13 +378,9 @@ export class PayrollTrackingController {
   async processRefund(
     @Param('refundId') refundId: string,
     @Body() processRefundDTO: ProcessRefundDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return await this.payrollTrackingService.processRefund(
-      refundId,
-      processRefundDTO,
-      user.userId,
-    );
+    return await this.payrollTrackingService.processRefund(refundId, processRefundDTO, user.userId);
   }
 
   // REQ-PY-45: Create refunds for disputes once approvals finish.
@@ -399,12 +390,12 @@ export class PayrollTrackingController {
   async generateRefundForDispute(
     @Param('disputeId') disputeId: string,
     @Body() generateRefundForDisputeDTO: GenerateRefundForDisputeDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.generateRefundForDispute(
       disputeId,
       generateRefundForDisputeDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -415,12 +406,12 @@ export class PayrollTrackingController {
   async generateRefundForClaim(
     @Param('claimId') claimId: string,
     @Body() generateRefundForClaimDTO: GenerateRefundForClaimDTO,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return await this.payrollTrackingService.generateRefundForClaim(
       claimId,
       generateRefundForClaimDTO,
-      user.userId,
+      user.userId
     );
   }
 
@@ -435,19 +426,17 @@ export class PayrollTrackingController {
     SystemRole.FINANCE_STAFF,
     SystemRole.SYSTEM_ADMIN
   )
-  async getPayslipsByEmployeeId(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  async getPayslipsByEmployeeId(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     // Security: Employees can only view their own payslips
     // Payroll Specialists, Managers, Finance Staff, and System Admins can view any employee's payslips
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.some((role: string) => 
-      role === SystemRole.PAYROLL_SPECIALIST ||
-      role === SystemRole.PAYROLL_MANAGER ||
-      role === SystemRole.FINANCE_STAFF ||
-      role === SystemRole.SYSTEM_ADMIN
+    const isAdmin = userRoles.some(
+      (role: string) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
     );
 
     if (isEmployee && !isAdmin) {
@@ -467,7 +456,7 @@ export class PayrollTrackingController {
   async getPayslipById(
     @Param('employeeId') employeeId: string,
     @Param('payslipId') payslipId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Security: Employees can only view their own payslips
     const userRoles = user?.roles || [];
@@ -492,7 +481,7 @@ export class PayrollTrackingController {
     @Param('employeeId') employeeId: string,
     @Param('payslipId') payslipId: string,
     @CurrentUser() user: any,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     // Security: Employees can only download their own payslips
     const userRoles = user?.roles || [];
@@ -507,26 +496,17 @@ export class PayrollTrackingController {
       }
     }
 
-    const pdfBuffer = await this.payrollTrackingService.downloadPayslipAsPDF(
-      payslipId,
-      employeeId,
-    );
-    
+    const pdfBuffer = await this.payrollTrackingService.downloadPayslipAsPDF(payslipId, employeeId);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=payslip-${payslipId}.pdf`,
-    );
+    res.setHeader('Content-Disposition', `attachment; filename=payslip-${payslipId}.pdf`);
     res.send(pdfBuffer);
   }
 
   // REQ-PY-3: Employees view base salary according to employment contract
   @Get('employee/:employeeId/base-salary')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
-  async getEmployeeBaseSalary(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  async getEmployeeBaseSalary(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     // Security: Employees can only view their own base salary
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
@@ -549,7 +529,7 @@ export class PayrollTrackingController {
   async getLeaveEncashmentByEmployeeId(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payrollRunId') payrollRunId?: string,
+    @Query('payrollRunId') payrollRunId?: string
   ) {
     // Security: Employees can only view their own leave encashment
     const userRoles = user?.roles || [];
@@ -566,7 +546,7 @@ export class PayrollTrackingController {
 
     return await this.payrollTrackingService.getLeaveEncashmentByEmployeeId(
       employeeId,
-      payrollRunId,
+      payrollRunId
     );
   }
 
@@ -576,7 +556,7 @@ export class PayrollTrackingController {
   async getTransportationAllowance(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own transportation allowance
     const userRoles = user?.roles || [];
@@ -591,10 +571,7 @@ export class PayrollTrackingController {
       }
     }
 
-    return await this.payrollTrackingService.getTransportationAllowance(
-      employeeId,
-      payslipId,
-    );
+    return await this.payrollTrackingService.getTransportationAllowance(employeeId, payslipId);
   }
 
   // REQ-PY-8: Employees view detailed tax deductions with law/rule applied
@@ -603,7 +580,7 @@ export class PayrollTrackingController {
   async getTaxDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own tax deductions
     const userRoles = user?.roles || [];
@@ -627,7 +604,7 @@ export class PayrollTrackingController {
   async getInsuranceDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own insurance deductions
     const userRoles = user?.roles || [];
@@ -642,10 +619,7 @@ export class PayrollTrackingController {
       }
     }
 
-    return await this.payrollTrackingService.getInsuranceDeductions(
-      employeeId,
-      payslipId,
-    );
+    return await this.payrollTrackingService.getInsuranceDeductions(employeeId, payslipId);
   }
 
   // REQ-PY-10: Employees view salary deductions due to misconduct/absenteeism
@@ -654,7 +628,7 @@ export class PayrollTrackingController {
   async getMisconductDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own misconduct deductions
     const userRoles = user?.roles || [];
@@ -669,10 +643,7 @@ export class PayrollTrackingController {
       }
     }
 
-    return await this.payrollTrackingService.getMisconductDeductions(
-      employeeId,
-      payslipId,
-    );
+    return await this.payrollTrackingService.getMisconductDeductions(employeeId, payslipId);
   }
 
   // REQ-PY-11: Employees view deductions for unpaid leave days
@@ -681,7 +652,7 @@ export class PayrollTrackingController {
   async getUnpaidLeaveDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own unpaid leave deductions
     const userRoles = user?.roles || [];
@@ -696,10 +667,7 @@ export class PayrollTrackingController {
       }
     }
 
-    return await this.payrollTrackingService.getUnpaidLeaveDeductions(
-      employeeId,
-      payslipId,
-    );
+    return await this.payrollTrackingService.getUnpaidLeaveDeductions(employeeId, payslipId);
   }
 
   // REQ-PY-13: Employees access salary history
@@ -708,7 +676,7 @@ export class PayrollTrackingController {
   async getSalaryHistory(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('limit') limit?: string,
+    @Query('limit') limit?: string
   ) {
     // Security: Employees can only view their own salary history
     const userRoles = user?.roles || [];
@@ -725,7 +693,7 @@ export class PayrollTrackingController {
 
     return await this.payrollTrackingService.getSalaryHistory(
       employeeId,
-      limit ? parseInt(limit, 10) : 12,
+      limit ? parseInt(limit, 10) : 12
     );
   }
 
@@ -735,7 +703,7 @@ export class PayrollTrackingController {
   async getEmployerContributions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('payslipId') payslipId?: string,
+    @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own employer contributions
     const userRoles = user?.roles || [];
@@ -750,19 +718,22 @@ export class PayrollTrackingController {
       }
     }
 
-    return await this.payrollTrackingService.getEmployerContributions(
-      employeeId,
-      payslipId,
-    );
+    return await this.payrollTrackingService.getEmployerContributions(employeeId, payslipId);
   }
 
   // REQ-PY-15: Employees download tax documents (annual tax statement)
   @Get('employee/:employeeId/tax-documents')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getTaxDocuments(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
-    @Query('year') year?: string,
+    @Query('year') year?: string
   ) {
     // Security: Employees can only view their own tax documents
     // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's tax documents
@@ -786,7 +757,7 @@ export class PayrollTrackingController {
 
     return await this.payrollTrackingService.getTaxDocuments(
       employeeId,
-      year ? parseInt(year, 10) : undefined,
+      year ? parseInt(year, 10) : undefined
     );
   }
 
@@ -798,11 +769,11 @@ export class PayrollTrackingController {
   async getPayrollReportByDepartment(
     @Param('departmentId') departmentId: string,
     @CurrentUser() user: any,
-    @Query('payrollRunId') payrollRunId?: string,
+    @Query('payrollRunId') payrollRunId?: string
   ) {
     return await this.payrollTrackingService.getPayrollReportByDepartment(
       departmentId,
-      payrollRunId,
+      payrollRunId
     );
   }
 
@@ -813,12 +784,12 @@ export class PayrollTrackingController {
     @Query('period') period: 'month' | 'year',
     @CurrentUser() user: any,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     return await this.payrollTrackingService.getPayrollSummary(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
   }
 
@@ -830,14 +801,14 @@ export class PayrollTrackingController {
     @CurrentUser() user: any,
     @Res() res: Response,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     const csvData = await this.payrollTrackingService.exportPayrollSummaryAsCSV(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
-    
+
     const filename = `payroll-summary-${period}-${date || new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -852,14 +823,14 @@ export class PayrollTrackingController {
     @CurrentUser() user: any,
     @Res() res: Response,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     const pdfBuffer = await this.payrollTrackingService.exportPayrollSummaryAsPDF(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
-    
+
     const filename = `payroll-summary-${period}-${date || new Date().toISOString().split('T')[0]}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -873,12 +844,12 @@ export class PayrollTrackingController {
     @Query('period') period: 'month' | 'year',
     @CurrentUser() user: any,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     return await this.payrollTrackingService.getTaxInsuranceBenefitsReport(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
   }
 
@@ -890,14 +861,14 @@ export class PayrollTrackingController {
     @CurrentUser() user: any,
     @Res() res: Response,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     const csvData = await this.payrollTrackingService.exportTaxInsuranceBenefitsReportAsCSV(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
-    
+
     const filename = `tax-insurance-benefits-report-${period}-${date || new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -912,14 +883,14 @@ export class PayrollTrackingController {
     @CurrentUser() user: any,
     @Res() res: Response,
     @Query('date') date?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     const pdfBuffer = await this.payrollTrackingService.exportTaxInsuranceBenefitsReportAsPDF(
       period,
       date ? new Date(date) : undefined,
-      departmentId,
+      departmentId
     );
-    
+
     const filename = `tax-insurance-benefits-report-${period}-${date || new Date().toISOString().split('T')[0]}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -941,11 +912,11 @@ export class PayrollTrackingController {
   async getPayrollSummaryByAllDepartments(
     @Query('period') period: 'month' | 'year',
     @CurrentUser() user: any,
-    @Query('date') date?: string,
+    @Query('date') date?: string
   ) {
     return await this.payrollTrackingService.getPayrollSummaryByAllDepartments(
       period,
-      date ? new Date(date) : undefined,
+      date ? new Date(date) : undefined
     );
   }
 }

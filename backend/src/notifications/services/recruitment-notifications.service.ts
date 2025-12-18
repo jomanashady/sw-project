@@ -5,7 +5,7 @@ import { NotificationType } from '../enums/notification-type.enum';
 
 /**
  * Recruitment Notifications Service
- * 
+ *
  * This service handles all recruitment-related notifications including:
  * - Interview notifications (scheduled, cancelled, rescheduled, completed)
  * - Application notifications (new applications, acceptance, rejection)
@@ -13,14 +13,14 @@ import { NotificationType } from '../enums/notification-type.enum';
  * - Offer notifications (offer received, accepted, rejected)
  * - Onboarding notifications (welcome, task reminders, document uploads, access provisioning, equipment reservation, completion)
  * - Payroll integration notifications (new hire ready, signing bonus)
- * 
+ *
  * This service is part of the recruitment subsystem and is called by the main NotificationsService.
  */
 @Injectable()
 export class RecruitmentNotificationsService {
   constructor(
     @InjectModel('ExtendedNotification')
-    private notificationLogModel: Model<any>,
+    private notificationLogModel: Model<any>
   ) {}
 
   // ===== RECRUITMENT SUBSYSTEM =====
@@ -37,7 +37,7 @@ export class RecruitmentNotificationsService {
       method: string;
       videoLink?: string;
       stage: string;
-    },
+    }
   ) {
     if (!panelMemberIds || panelMemberIds.length === 0) {
       console.log('[INTERVIEW_NOTIFICATION] No panel members to notify');
@@ -55,13 +55,14 @@ export class RecruitmentNotificationsService {
     });
 
     const methodText = interviewDetails.method || 'TBD';
-    const videoLinkText = interviewDetails.videoLink 
-      ? `\nVideo Link: ${interviewDetails.videoLink}` 
+    const videoLinkText = interviewDetails.videoLink
+      ? `\nVideo Link: ${interviewDetails.videoLink}`
       : '';
 
     for (const panelMemberId of panelMemberIds) {
       try {
-        const message = `You have been assigned as an interview panel member.\n\n` +
+        const message =
+          `You have been assigned as an interview panel member.\n\n` +
           `📋 Interview Details:\n` +
           `• Candidate: ${interviewDetails.candidateName}\n` +
           `• Position: ${interviewDetails.positionTitle}\n` +
@@ -89,12 +90,17 @@ export class RecruitmentNotificationsService {
         notifications.push(notification);
         console.log(`[INTERVIEW_NOTIFICATION] Sent notification to panel member: ${panelMemberId}`);
       } catch (error) {
-        console.error(`[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId}:`, error);
+        console.error(
+          `[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId}:`,
+          error
+        );
       }
     }
 
-    console.log(`[INTERVIEW_NOTIFICATION] Successfully created ${notifications.length} notifications for panel members`);
-    
+    console.log(
+      `[INTERVIEW_NOTIFICATION] Successfully created ${notifications.length} notifications for panel members`
+    );
+
     return {
       success: true,
       notificationsCreated: notifications.length,
@@ -111,7 +117,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       requisitionId: string;
       isReferral?: boolean;
-    },
+    }
   ) {
     if (!hrRecipientIds || hrRecipientIds.length === 0) {
       console.log('[APPLICATION_NOTIFICATION] No HR recipients to notify');
@@ -120,7 +126,9 @@ export class RecruitmentNotificationsService {
 
     const notifications: any[] = [];
     const referralBadge = applicationDetails.isReferral ? '⭐ REFERRAL - ' : '';
-    const internalBadge = (applicationDetails as any).isInternalCandidate ? '👤 INTERNAL CANDIDATE - ' : '';
+    const internalBadge = (applicationDetails as any).isInternalCandidate
+      ? '👤 INTERNAL CANDIDATE - '
+      : '';
     const appliedAt = new Date().toLocaleString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -130,15 +138,17 @@ export class RecruitmentNotificationsService {
       minute: '2-digit',
     });
 
-    const screeningInfo = (applicationDetails as any).screeningScore !== undefined
-      ? `\n📊 Electronic Screening:\n` +
-        `• Score: ${(applicationDetails as any).screeningScore}/100\n` +
-        `• Status: ${(applicationDetails as any).screeningPassed ? '✓ Passed' : '⚠ Needs Review'}\n`
-      : '';
+    const screeningInfo =
+      (applicationDetails as any).screeningScore !== undefined
+        ? `\n📊 Electronic Screening:\n` +
+          `• Score: ${(applicationDetails as any).screeningScore}/100\n` +
+          `• Status: ${(applicationDetails as any).screeningPassed ? '✓ Passed' : '⚠ Needs Review'}\n`
+        : '';
 
     for (const recipientId of hrRecipientIds) {
       try {
-        const message = `${internalBadge}${referralBadge}New job application received!\n\n` +
+        const message =
+          `${internalBadge}${referralBadge}New job application received!\n\n` +
           `📋 Application Details:\n` +
           `• Candidate: ${applicationDetails.candidateName}\n` +
           `• Position: ${applicationDetails.positionTitle}\n` +
@@ -166,8 +176,10 @@ export class RecruitmentNotificationsService {
       }
     }
 
-    console.log(`[APPLICATION_NOTIFICATION] Successfully created ${notifications.length} notifications for HR staff`);
-    
+    console.log(
+      `[APPLICATION_NOTIFICATION] Successfully created ${notifications.length} notifications for HR staff`
+    );
+
     return {
       success: true,
       notificationsCreated: notifications.length,
@@ -182,7 +194,7 @@ export class RecruitmentNotificationsService {
       candidateName: string;
       positionTitle: string;
       originalDate: Date;
-    },
+    }
   ) {
     if (!panelMemberIds || panelMemberIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -200,7 +212,8 @@ export class RecruitmentNotificationsService {
 
     for (const panelMemberId of panelMemberIds) {
       try {
-        const message = `An interview you were assigned to has been cancelled.\n\n` +
+        const message =
+          `An interview you were assigned to has been cancelled.\n\n` +
           `• Candidate: ${interviewDetails.candidateName}\n` +
           `• Position: ${interviewDetails.positionTitle}\n` +
           `• Originally Scheduled: ${formattedDate}`;
@@ -214,7 +227,10 @@ export class RecruitmentNotificationsService {
 
         notifications.push(notification);
       } catch (error) {
-        console.error(`[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId} about cancellation:`, error);
+        console.error(
+          `[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId} about cancellation:`,
+          error
+        );
       }
     }
 
@@ -235,7 +251,7 @@ export class RecruitmentNotificationsService {
       newDate: Date;
       method: string;
       videoLink?: string;
-    },
+    }
   ) {
     if (!panelMemberIds || panelMemberIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -261,7 +277,8 @@ export class RecruitmentNotificationsService {
 
     for (const panelMemberId of panelMemberIds) {
       try {
-        const message = `An interview you are assigned to has been rescheduled.\n\n` +
+        const message =
+          `An interview you are assigned to has been rescheduled.\n\n` +
           `• Candidate: ${interviewDetails.candidateName}\n` +
           `• Position: ${interviewDetails.positionTitle}\n` +
           `• Previous Date: ${oldFormattedDate}\n` +
@@ -287,7 +304,10 @@ export class RecruitmentNotificationsService {
 
         notifications.push(notification);
       } catch (error) {
-        console.error(`[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId} about reschedule:`, error);
+        console.error(
+          `[INTERVIEW_NOTIFICATION] Failed to notify panel member ${panelMemberId} about reschedule:`,
+          error
+        );
       }
     }
 
@@ -330,7 +350,7 @@ export class RecruitmentNotificationsService {
       method: string;
       videoLink?: string;
       stage: string;
-    },
+    }
   ) {
     if (!candidateId) {
       console.log('[INTERVIEW_NOTIFICATION] No candidate ID provided');
@@ -348,11 +368,12 @@ export class RecruitmentNotificationsService {
       });
 
       const methodText = interviewDetails.method || 'TBD';
-      const videoLinkText = interviewDetails.videoLink 
-        ? `\n• Video Link: ${interviewDetails.videoLink}` 
+      const videoLinkText = interviewDetails.videoLink
+        ? `\n• Video Link: ${interviewDetails.videoLink}`
         : '';
 
-      const message = `🎉 Great news! Your interview has been scheduled.\n\n` +
+      const message =
+        `🎉 Great news! Your interview has been scheduled.\n\n` +
         `📋 Interview Details:\n` +
         `• Position: ${interviewDetails.positionTitle}\n` +
         `• Stage: ${interviewDetails.stage}\n` +
@@ -375,8 +396,10 @@ export class RecruitmentNotificationsService {
         isRead: false,
       });
 
-      console.log(`[INTERVIEW_NOTIFICATION] Sent interview scheduled notification to candidate: ${candidateId}`);
-      
+      console.log(
+        `[INTERVIEW_NOTIFICATION] Sent interview scheduled notification to candidate: ${candidateId}`
+      );
+
       return {
         success: true,
         notification,
@@ -396,7 +419,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       applicationId: string;
       offerId?: string;
-    },
+    }
   ) {
     if (!hrEmployeeIds || hrEmployeeIds.length === 0) {
       console.log('[HIRING_NOTIFICATION] No HR Employees to notify about hiring');
@@ -407,7 +430,8 @@ export class RecruitmentNotificationsService {
 
     for (const hrEmployeeId of hrEmployeeIds) {
       try {
-        const message = `🎉 A candidate has been HIRED!\n\n` +
+        const message =
+          `🎉 A candidate has been HIRED!\n\n` +
           `📋 Hiring Details:\n` +
           `• Candidate: ${hiringDetails.candidateName}\n` +
           `• Position: ${hiringDetails.positionTitle}\n\n` +
@@ -432,7 +456,9 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[HIRING_NOTIFICATION] Sent HIRED notification to HR Employee: ${hrEmployeeId}`);
+        console.log(
+          `[HIRING_NOTIFICATION] Sent HIRED notification to HR Employee: ${hrEmployeeId}`
+        );
       } catch (error) {
         console.error(`[HIRING_NOTIFICATION] Failed to notify HR Employee ${hrEmployeeId}:`, error);
       }
@@ -453,7 +479,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       applicationId: string;
       rejectionReason?: string;
-    },
+    }
   ) {
     if (!hrEmployeeIds || hrEmployeeIds.length === 0) {
       console.log('[HIRING_NOTIFICATION] No HR Employees to notify about rejection');
@@ -464,11 +490,14 @@ export class RecruitmentNotificationsService {
 
     for (const hrEmployeeId of hrEmployeeIds) {
       try {
-        const message = `❌ A candidate has been REJECTED.\n\n` +
+        const message =
+          `❌ A candidate has been REJECTED.\n\n` +
           `📋 Details:\n` +
           `• Candidate: ${rejectionDetails.candidateName}\n` +
           `• Position: ${rejectionDetails.positionTitle}\n` +
-          (rejectionDetails.rejectionReason ? `• Reason: ${rejectionDetails.rejectionReason}\n` : '') +
+          (rejectionDetails.rejectionReason
+            ? `• Reason: ${rejectionDetails.rejectionReason}\n`
+            : '') +
           `\nThe rejection notification has been sent to the candidate.`;
 
         const notification = await this.notificationLogModel.create({
@@ -487,7 +516,9 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[HIRING_NOTIFICATION] Sent REJECTED notification to HR Employee: ${hrEmployeeId}`);
+        console.log(
+          `[HIRING_NOTIFICATION] Sent REJECTED notification to HR Employee: ${hrEmployeeId}`
+        );
       } catch (error) {
         console.error(`[HIRING_NOTIFICATION] Failed to notify HR Employee ${hrEmployeeId}:`, error);
       }
@@ -505,14 +536,15 @@ export class RecruitmentNotificationsService {
     acceptanceDetails: {
       positionTitle: string;
       applicationId: string;
-    },
+    }
   ) {
     if (!candidateId) {
       return { success: false, message: 'No candidate ID provided' };
     }
 
     try {
-      const message = `🎉 Congratulations! You have been HIRED!\n\n` +
+      const message =
+        `🎉 Congratulations! You have been HIRED!\n\n` +
         `We are delighted to inform you that your application for ${acceptanceDetails.positionTitle} has been successful.\n\n` +
         `You will receive your official acceptance letter and onboarding details shortly.\n\n` +
         `Welcome to the team!`;
@@ -530,7 +562,7 @@ export class RecruitmentNotificationsService {
       });
 
       console.log(`[HIRING_NOTIFICATION] Sent ACCEPTED notification to candidate: ${candidateId}`);
-      
+
       return {
         success: true,
         notification,
@@ -548,20 +580,21 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       applicationId: string;
       rejectionReason?: string;
-    },
+    }
   ) {
     if (!candidateId) {
       return { success: false, message: 'No candidate ID provided' };
     }
 
     try {
-      let message = `Thank you for your interest in the ${rejectionDetails.positionTitle} position.\n\n` +
+      let message =
+        `Thank you for your interest in the ${rejectionDetails.positionTitle} position.\n\n` +
         `After careful consideration, we regret to inform you that we will not be moving forward with your application at this time.\n\n`;
-      
+
       if (rejectionDetails.rejectionReason) {
         message += `Feedback: ${rejectionDetails.rejectionReason}\n\n`;
       }
-      
+
       message += `We appreciate the time you invested in the application process and wish you the best in your job search.`;
 
       const notification = await this.notificationLogModel.create({
@@ -578,7 +611,7 @@ export class RecruitmentNotificationsService {
       });
 
       console.log(`[HIRING_NOTIFICATION] Sent REJECTED notification to candidate: ${candidateId}`);
-      
+
       return {
         success: true,
         notification,
@@ -596,14 +629,15 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       applicationId: string;
       interviewId: string;
-    },
+    }
   ) {
     if (!candidateId) {
       return { success: false, message: 'No candidate ID provided' };
     }
 
     try {
-      const message = `✅ Your interview has been completed.\n\n` +
+      const message =
+        `✅ Your interview has been completed.\n\n` +
         `We have received all feedback from the interview panel for the ${interviewDetails.positionTitle} position.\n\n` +
         `Our team is now reviewing the feedback and will notify you of our decision soon.\n\n` +
         `Thank you for your patience!`;
@@ -621,8 +655,10 @@ export class RecruitmentNotificationsService {
         isRead: false,
       });
 
-      console.log(`[INTERVIEW_NOTIFICATION] Sent INTERVIEW_COMPLETED notification to candidate: ${candidateId}`);
-      
+      console.log(
+        `[INTERVIEW_NOTIFICATION] Sent INTERVIEW_COMPLETED notification to candidate: ${candidateId}`
+      );
+
       return {
         success: true,
         notification,
@@ -641,7 +677,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       applicationId: string;
       interviewId: string;
-    },
+    }
   ) {
     if (!hrManagerIds || hrManagerIds.length === 0) {
       console.log('[FEEDBACK_NOTIFICATION] No HR Managers to notify about ready feedback');
@@ -652,7 +688,8 @@ export class RecruitmentNotificationsService {
 
     for (const hrManagerId of hrManagerIds) {
       try {
-        const message = `📋 An application is ready for review.\n\n` +
+        const message =
+          `📋 An application is ready for review.\n\n` +
           `All interview feedback has been submitted for:\n` +
           `• Candidate: ${reviewDetails.candidateName}\n` +
           `• Position: ${reviewDetails.positionTitle}\n\n` +
@@ -674,7 +711,9 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[FEEDBACK_NOTIFICATION] Sent FEEDBACK_READY notification to HR Manager: ${hrManagerId}`);
+        console.log(
+          `[FEEDBACK_NOTIFICATION] Sent FEEDBACK_READY notification to HR Manager: ${hrManagerId}`
+        );
       } catch (error) {
         console.error(`[FEEDBACK_NOTIFICATION] Failed to notify HR Manager ${hrManagerId}:`, error);
       }
@@ -694,7 +733,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       grossSalary: number;
       deadline: Date;
-    },
+    }
   ) {
     if (!candidateId) {
       console.log('[OFFER_NOTIFICATION] No candidate ID provided');
@@ -715,7 +754,8 @@ export class RecruitmentNotificationsService {
         maximumFractionDigits: 0,
       });
 
-      const message = `🎉 Great news! You have received a job offer!\n\n` +
+      const message =
+        `🎉 Great news! You have received a job offer!\n\n` +
         `📋 Offer Details:\n` +
         `• Position: ${offerDetails.positionTitle}\n` +
         `• Salary: ${formattedSalary}\n` +
@@ -737,8 +777,10 @@ export class RecruitmentNotificationsService {
         isRead: false,
       });
 
-      console.log(`[OFFER_NOTIFICATION] Sent OFFER_RECEIVED notification to candidate: ${candidateId}`);
-      
+      console.log(
+        `[OFFER_NOTIFICATION] Sent OFFER_RECEIVED notification to candidate: ${candidateId}`
+      );
+
       return {
         success: true,
         notification,
@@ -759,7 +801,7 @@ export class RecruitmentNotificationsService {
       offerId: string;
       applicationId: string;
       response: 'accepted' | 'rejected';
-    },
+    }
   ) {
     if (!hrUserIds || hrUserIds.length === 0) {
       console.log('[OFFER_NOTIFICATION] No HR users to notify about offer response');
@@ -768,16 +810,17 @@ export class RecruitmentNotificationsService {
 
     const notifications: any[] = [];
     const isAccepted = responseDetails.response === 'accepted';
-    const notificationType = isAccepted 
-      ? NotificationType.OFFER_RESPONSE_ACCEPTED 
+    const notificationType = isAccepted
+      ? NotificationType.OFFER_RESPONSE_ACCEPTED
       : NotificationType.OFFER_RESPONSE_REJECTED;
 
     for (const hrUserId of hrUserIds) {
       try {
         let message: string;
-        
+
         if (isAccepted) {
-          message = `✅ ${responseDetails.candidateName} has ACCEPTED the job offer!\n\n` +
+          message =
+            `✅ ${responseDetails.candidateName} has ACCEPTED the job offer!\n\n` +
             `📋 Details:\n` +
             `• Position: ${responseDetails.positionTitle}\n\n` +
             `Next Steps:\n` +
@@ -785,7 +828,8 @@ export class RecruitmentNotificationsService {
             `• Once finalized, the candidate will be marked as HIRED\n` +
             `• Prepare onboarding documentation`;
         } else {
-          message = `❌ ${responseDetails.candidateName} has REJECTED the job offer.\n\n` +
+          message =
+            `❌ ${responseDetails.candidateName} has REJECTED the job offer.\n\n` +
             `📋 Details:\n` +
             `• Position: ${responseDetails.positionTitle}\n\n` +
             `The application status will be updated accordingly.\n` +
@@ -809,7 +853,9 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[OFFER_NOTIFICATION] Sent ${responseDetails.response.toUpperCase()} notification to HR: ${hrUserId}`);
+        console.log(
+          `[OFFER_NOTIFICATION] Sent ${responseDetails.response.toUpperCase()} notification to HR: ${hrUserId}`
+        );
       } catch (error) {
         console.error(`[OFFER_NOTIFICATION] Failed to notify HR user ${hrUserId}:`, error);
       }
@@ -834,7 +880,7 @@ export class RecruitmentNotificationsService {
       grossSalary: number;
       contractStartDate: Date;
       signingBonus?: number;
-    },
+    }
   ) {
     if (!payrollTeamIds || payrollTeamIds.length === 0) {
       console.log('[PAYROLL_NOTIFICATION] No payroll team members to notify');
@@ -857,13 +903,18 @@ export class RecruitmentNotificationsService {
 
     for (const payrollUserId of payrollTeamIds) {
       try {
-        let message = `📋 New Hire Ready for Payroll (ONB-018)\n\n` +
+        let message =
+          `📋 New Hire Ready for Payroll (ONB-018)\n\n` +
           `A new employee has been onboarded and is ready for payroll inclusion.\n\n` +
           `👤 Employee Details:\n` +
           `• Name: ${newHireDetails.employeeName}\n` +
-          (newHireDetails.employeeNumber ? `• Employee #: ${newHireDetails.employeeNumber}\n` : '') +
+          (newHireDetails.employeeNumber
+            ? `• Employee #: ${newHireDetails.employeeNumber}\n`
+            : '') +
           `• Position: ${newHireDetails.positionTitle}\n` +
-          (newHireDetails.departmentName ? `• Department: ${newHireDetails.departmentName}\n` : '') +
+          (newHireDetails.departmentName
+            ? `• Department: ${newHireDetails.departmentName}\n`
+            : '') +
           `• Start Date: ${formattedStartDate}\n` +
           `• Gross Salary: ${formattedSalary}\n`;
 
@@ -876,7 +927,8 @@ export class RecruitmentNotificationsService {
           message += `• Signing Bonus: ${formattedBonus} (pending review)\n`;
         }
 
-        message += `\n📌 Action Required:\n` +
+        message +=
+          `\n📌 Action Required:\n` +
           `• Employee will be automatically included in the next payroll run\n` +
           `• Verify salary and benefits configuration\n` +
           `• Review any pending signing bonuses`;
@@ -902,11 +954,16 @@ export class RecruitmentNotificationsService {
         notifications.push(notification);
         console.log(`[PAYROLL_NOTIFICATION] Sent NEW_HIRE_PAYROLL_READY to: ${payrollUserId}`);
       } catch (error) {
-        console.error(`[PAYROLL_NOTIFICATION] Failed to notify payroll user ${payrollUserId}:`, error);
+        console.error(
+          `[PAYROLL_NOTIFICATION] Failed to notify payroll user ${payrollUserId}:`,
+          error
+        );
       }
     }
 
-    console.log(`[PAYROLL_NOTIFICATION] Created ${notifications.length} notifications for payroll team (ONB-018)`);
+    console.log(
+      `[PAYROLL_NOTIFICATION] Created ${notifications.length} notifications for payroll team (ONB-018)`
+    );
 
     return {
       success: true,
@@ -926,7 +983,7 @@ export class RecruitmentNotificationsService {
       signingBonusAmount: number;
       signingBonusId?: string;
       paymentDate: Date;
-    },
+    }
   ) {
     if (!payrollTeamIds || payrollTeamIds.length === 0) {
       console.log('[PAYROLL_NOTIFICATION] No payroll team members to notify about signing bonus');
@@ -949,7 +1006,8 @@ export class RecruitmentNotificationsService {
 
     for (const payrollUserId of payrollTeamIds) {
       try {
-        const message = `🎁 Signing Bonus Pending Review (ONB-019)\n\n` +
+        const message =
+          `🎁 Signing Bonus Pending Review (ONB-019)\n\n` +
           `A signing bonus has been created for a new hire and requires your review.\n\n` +
           `👤 Employee Details:\n` +
           `• Name: ${bonusDetails.employeeName}\n` +
@@ -958,7 +1016,9 @@ export class RecruitmentNotificationsService {
           `💰 Bonus Details:\n` +
           `• Amount: ${formattedBonus}\n` +
           `• Payment Date: ${formattedPaymentDate}\n` +
-          (bonusDetails.signingBonusId ? `• Bonus ID: ${bonusDetails.signingBonusId.slice(-8)}\n` : '') +
+          (bonusDetails.signingBonusId
+            ? `• Bonus ID: ${bonusDetails.signingBonusId.slice(-8)}\n`
+            : '') +
           `\n📌 Action Required:\n` +
           `• Review the signing bonus in Payroll → Review Signing Bonuses\n` +
           `• Approve or reject before payroll initiation\n` +
@@ -982,13 +1042,20 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[PAYROLL_NOTIFICATION] Sent SIGNING_BONUS_PENDING_REVIEW to: ${payrollUserId}`);
+        console.log(
+          `[PAYROLL_NOTIFICATION] Sent SIGNING_BONUS_PENDING_REVIEW to: ${payrollUserId}`
+        );
       } catch (error) {
-        console.error(`[PAYROLL_NOTIFICATION] Failed to notify payroll user ${payrollUserId} about signing bonus:`, error);
+        console.error(
+          `[PAYROLL_NOTIFICATION] Failed to notify payroll user ${payrollUserId} about signing bonus:`,
+          error
+        );
       }
     }
 
-    console.log(`[PAYROLL_NOTIFICATION] Created ${notifications.length} notifications for signing bonus (ONB-019)`);
+    console.log(
+      `[PAYROLL_NOTIFICATION] Created ${notifications.length} notifications for signing bonus (ONB-019)`
+    );
 
     return {
       success: true,
@@ -1005,7 +1072,7 @@ export class RecruitmentNotificationsService {
       employeeName: string;
       positionTitle: string;
       grossSalary: number;
-    },
+    }
   ) {
     if (!hrUserIds || hrUserIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1020,7 +1087,8 @@ export class RecruitmentNotificationsService {
 
     for (const hrUserId of hrUserIds) {
       try {
-        const message = `✅ Payroll Task Completed (ONB-018)\n\n` +
+        const message =
+          `✅ Payroll Task Completed (ONB-018)\n\n` +
           `Payroll initiation has been completed for a new hire.\n\n` +
           `👤 Employee: ${completionDetails.employeeName}\n` +
           `📋 Position: ${completionDetails.positionTitle}\n` +
@@ -1065,7 +1133,7 @@ export class RecruitmentNotificationsService {
       startDate: Date;
       totalTasks: number;
       onboardingId: string;
-    },
+    }
   ) {
     if (!newHireId) {
       return { success: false, message: 'No new hire ID provided' };
@@ -1079,7 +1147,8 @@ export class RecruitmentNotificationsService {
         day: 'numeric',
       });
 
-      const message = `🎉 Welcome to the Team, ${welcomeDetails.employeeName}!\n\n` +
+      const message =
+        `🎉 Welcome to the Team, ${welcomeDetails.employeeName}!\n\n` +
         `We're excited to have you join us as ${welcomeDetails.positionTitle}.\n\n` +
         `🔐 Your Login Credentials:\n` +
         `• Employee Number: ${welcomeDetails.employeeNumber}\n` +
@@ -1110,7 +1179,9 @@ export class RecruitmentNotificationsService {
         isRead: false,
       });
 
-      console.log(`[ONBOARDING_NOTIFICATION] Sent WELCOME notification to new hire: ${newHireId} (Employee Number: ${welcomeDetails.employeeNumber})`);
+      console.log(
+        `[ONBOARDING_NOTIFICATION] Sent WELCOME notification to new hire: ${newHireId} (Employee Number: ${welcomeDetails.employeeNumber})`
+      );
 
       return {
         success: true,
@@ -1132,7 +1203,7 @@ export class RecruitmentNotificationsService {
       deadline: Date;
       isOverdue: boolean;
       daysRemaining?: number;
-    },
+    }
   ) {
     if (!recipientId) {
       return { success: false, message: 'No recipient ID provided' };
@@ -1147,11 +1218,12 @@ export class RecruitmentNotificationsService {
       });
 
       const urgencyEmoji = reminderDetails.isOverdue ? '🚨' : '⏰';
-      const urgencyText = reminderDetails.isOverdue 
-        ? 'OVERDUE' 
+      const urgencyText = reminderDetails.isOverdue
+        ? 'OVERDUE'
         : `Due in ${reminderDetails.daysRemaining} day(s)`;
 
-      const message = `${urgencyEmoji} Onboarding Task Reminder\n\n` +
+      const message =
+        `${urgencyEmoji} Onboarding Task Reminder\n\n` +
         `👤 Employee: ${reminderDetails.employeeName}\n` +
         `📋 Task: ${reminderDetails.taskName}\n` +
         `🏢 Department: ${reminderDetails.taskDepartment}\n` +
@@ -1196,7 +1268,7 @@ export class RecruitmentNotificationsService {
       documentName: string;
       taskName: string;
       onboardingId: string;
-    },
+    }
   ) {
     if (!hrUserIds || hrUserIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1206,7 +1278,8 @@ export class RecruitmentNotificationsService {
 
     for (const hrUserId of hrUserIds) {
       try {
-        const message = `📄 Document Uploaded (ONB-007)\n\n` +
+        const message =
+          `📄 Document Uploaded (ONB-007)\n\n` +
           `A new hire has uploaded a compliance document.\n\n` +
           `👤 Employee: ${documentDetails.employeeName}\n` +
           `📋 Task: ${documentDetails.taskName}\n` +
@@ -1254,7 +1327,7 @@ export class RecruitmentNotificationsService {
       accessType: string;
       systemName: string;
       provisionedBy: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1264,7 +1337,8 @@ export class RecruitmentNotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `🔐 Access Provisioned (ONB-009)\n\n` +
+        const message =
+          `🔐 Access Provisioned (ONB-009)\n\n` +
           `System access has been provisioned.\n\n` +
           `👤 Employee: ${accessDetails.employeeName}\n` +
           `🔑 Access Type: ${accessDetails.accessType}\n` +
@@ -1289,7 +1363,10 @@ export class RecruitmentNotificationsService {
 
         notifications.push(notification);
       } catch (error) {
-        console.error(`[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about access:`, error);
+        console.error(
+          `[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about access:`,
+          error
+        );
       }
     }
 
@@ -1309,7 +1386,7 @@ export class RecruitmentNotificationsService {
       workspaceDetails?: string;
       reservedBy: string;
       readyDate: Date;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1325,16 +1402,20 @@ export class RecruitmentNotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const equipmentListText = reservationDetails.equipmentList.length > 0
-          ? reservationDetails.equipmentList.map(item => `  • ${item}`).join('\n')
-          : '  • No equipment specified';
+        const equipmentListText =
+          reservationDetails.equipmentList.length > 0
+            ? reservationDetails.equipmentList.map((item) => `  • ${item}`).join('\n')
+            : '  • No equipment specified';
 
-        const message = `🏢 Equipment & Workspace Reserved (ONB-012)\n\n` +
+        const message =
+          `🏢 Equipment & Workspace Reserved (ONB-012)\n\n` +
           `Resources have been reserved for the new hire.\n\n` +
           `👤 Employee: ${reservationDetails.employeeName}\n` +
           `📅 Ready Date: ${formattedReadyDate}\n\n` +
           `📦 Equipment:\n${equipmentListText}\n` +
-          (reservationDetails.workspaceDetails ? `\n🪑 Workspace: ${reservationDetails.workspaceDetails}\n` : '') +
+          (reservationDetails.workspaceDetails
+            ? `\n🪑 Workspace: ${reservationDetails.workspaceDetails}\n`
+            : '') +
           `\n👤 Reserved By: ${reservationDetails.reservedBy}\n\n` +
           `All resources will be ready on Day 1.`;
 
@@ -1356,7 +1437,10 @@ export class RecruitmentNotificationsService {
 
         notifications.push(notification);
       } catch (error) {
-        console.error(`[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about equipment:`, error);
+        console.error(
+          `[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about equipment:`,
+          error
+        );
       }
     }
 
@@ -1376,7 +1460,7 @@ export class RecruitmentNotificationsService {
       tasks: string[];
       deadline: Date;
       onboardingId: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1391,19 +1475,24 @@ export class RecruitmentNotificationsService {
     });
 
     const deptConfig: Record<string, { emoji: string; title: string }> = {
-      'IT': { emoji: '💻', title: 'IT Department' },
-      'Admin': { emoji: '🏢', title: 'Admin/Facilities' },
-      'HR': { emoji: '👥', title: 'HR Department' },
+      IT: { emoji: '💻', title: 'IT Department' },
+      Admin: { emoji: '🏢', title: 'Admin/Facilities' },
+      HR: { emoji: '👥', title: 'HR Department' },
     };
-    const config = deptConfig[taskDetails.department] || { emoji: '📋', title: taskDetails.department };
+    const config = deptConfig[taskDetails.department] || {
+      emoji: '📋',
+      title: taskDetails.department,
+    };
 
     for (const recipientId of recipientIds) {
       try {
-        const taskListText = taskDetails.tasks.length > 0
-          ? taskDetails.tasks.map(task => `  • ${task}`).join('\n')
-          : '  • No tasks specified';
+        const taskListText =
+          taskDetails.tasks.length > 0
+            ? taskDetails.tasks.map((task) => `  • ${task}`).join('\n')
+            : '  • No tasks specified';
 
-        const message = `${config.emoji} Onboarding Tasks Assigned - ${config.title}\n\n` +
+        const message =
+          `${config.emoji} Onboarding Tasks Assigned - ${config.title}\n\n` +
           `You have been assigned onboarding tasks for a new hire.\n\n` +
           `👤 New Hire: ${taskDetails.employeeName}\n` +
           `📅 Deadline: ${formattedDeadline}\n\n` +
@@ -1427,14 +1516,21 @@ export class RecruitmentNotificationsService {
         });
 
         notifications.push(notification);
-        console.log(`[ONBOARDING_NOTIFICATION] Task assignment sent to ${recipientId} for ${taskDetails.department}`);
+        console.log(
+          `[ONBOARDING_NOTIFICATION] Task assignment sent to ${recipientId} for ${taskDetails.department}`
+        );
       } catch (error) {
-        console.error(`[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about tasks:`, error);
+        console.error(
+          `[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about tasks:`,
+          error
+        );
       }
     }
 
-    console.log(`[ONBOARDING_NOTIFICATION] Sent ${notifications.length} task assignment notifications for ${taskDetails.department}`);
-    
+    console.log(
+      `[ONBOARDING_NOTIFICATION] Sent ${notifications.length} task assignment notifications for ${taskDetails.department}`
+    );
+
     return {
       success: true,
       notificationsCreated: notifications.length,
@@ -1450,7 +1546,7 @@ export class RecruitmentNotificationsService {
       positionTitle: string;
       completedDate: Date;
       totalTasks: number;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1466,7 +1562,8 @@ export class RecruitmentNotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `🎉 Onboarding Completed!\n\n` +
+        const message =
+          `🎉 Onboarding Completed!\n\n` +
           `All onboarding tasks have been successfully completed.\n\n` +
           `👤 Employee: ${completionDetails.employeeName}\n` +
           `📋 Position: ${completionDetails.positionTitle}\n` +
@@ -1491,7 +1588,10 @@ export class RecruitmentNotificationsService {
 
         notifications.push(notification);
       } catch (error) {
-        console.error(`[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about completion:`, error);
+        console.error(
+          `[ONBOARDING_NOTIFICATION] Failed to notify ${recipientId} about completion:`,
+          error
+        );
       }
     }
 
@@ -1545,10 +1645,10 @@ export class RecruitmentNotificationsService {
       .exec();
 
     const newHireNotifications = notifications.filter(
-      n => n.type === NotificationType.NEW_HIRE_PAYROLL_READY
+      (n) => n.type === NotificationType.NEW_HIRE_PAYROLL_READY
     );
     const signingBonusNotifications = notifications.filter(
-      n => n.type === NotificationType.SIGNING_BONUS_PENDING_REVIEW
+      (n) => n.type === NotificationType.SIGNING_BONUS_PENDING_REVIEW
     );
 
     return {
@@ -1565,4 +1665,3 @@ export class RecruitmentNotificationsService {
     };
   }
 }
-

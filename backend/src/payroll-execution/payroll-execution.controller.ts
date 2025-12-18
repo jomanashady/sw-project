@@ -39,7 +39,10 @@ import { CalculatePayrollDto } from './dto/CalculatePayrollDto.dto';
 import { CalculateProratedSalaryDto } from './dto/CalculateProratedSalaryDto.dto';
 import { ApplyStatutoryRulesDto } from './dto/ApplyStatutoryRulesDto.dto';
 import { GenerateDraftPayrollRunDto } from './dto/GenerateDraftPayrollRunDto.dto';
-import { GenerateAndDistributePayslipsDto, PayslipDistributionMethod } from './dto/GenerateAndDistributePayslipsDto.dto';
+import {
+  GenerateAndDistributePayslipsDto,
+  PayslipDistributionMethod,
+} from './dto/GenerateAndDistributePayslipsDto.dto';
 import { SendForApprovalDto } from './dto/SendForApprovalDto.dto';
 import { ResolveIrregularityDto } from './dto/ResolveIrregularityDto.dto';
 import { BonusStatus, BenefitStatus } from './enums/payroll-execution-enum';
@@ -55,12 +58,9 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can create payroll runs
   async createPayrollRun(
     @Body() createPayrollRunDto: CreatePayrollRunDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.createPayrollRun(
-      createPayrollRunDto,
-      user.userId,
-    );
+    return this.payrollService.createPayrollRun(createPayrollRunDto, user.userId);
   }
 
   // REQ-PY-24: Allow PAYROLL_MANAGER to review payroll runs
@@ -70,13 +70,9 @@ export class PayrollExecutionController {
   async reviewPayroll(
     @Param('id') id: string,
     @Body() publishRunForApprovalDto: PublishRunForApprovalDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.reviewPayroll(
-      id,
-      publishRunForApprovalDto,
-      user.userId,
-    );
+    return this.payrollService.reviewPayroll(id, publishRunForApprovalDto, user.userId);
   }
 
   // REQ-PY-5: Allow PAYROLL_SPECIALIST to generate payroll details
@@ -85,11 +81,11 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can generate payroll details
   async generateEmployeePayrollDetails(
     @Body() employeePayrollDetailsDto: EmployeePayrollDetailsUpsertDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.generateEmployeePayrollDetails(
       employeePayrollDetailsDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -99,13 +95,13 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can flag payroll exceptions
   async flagPayrollException(
     @Body() flagPayrollExceptionDto: FlagPayrollExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.flagPayrollException(
       flagPayrollExceptionDto.payrollRunId,
       flagPayrollExceptionDto.code,
       flagPayrollExceptionDto.message,
-      user.userId,
+      user.userId
     );
   }
 
@@ -114,7 +110,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async detectIrregularities(
     @Param('payrollRunId') payrollRunId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.detectIrregularities(payrollRunId, user.userId);
   }
@@ -134,13 +130,9 @@ export class PayrollExecutionController {
   async unlockPayroll(
     @Param('id') id: string,
     @Body() unlockPayrollDto: UnlockPayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.unlockPayroll(
-      id,
-      unlockPayrollDto.unlockReason,
-      user.userId,
-    );
+    return this.payrollService.unlockPayroll(id, unlockPayrollDto.unlockReason, user.userId);
   }
 
   // REQ-PY-7: Freeze finalized payroll (alternative terminology - functionally same as lock)
@@ -159,23 +151,19 @@ export class PayrollExecutionController {
   async unfreezePayroll(
     @Param('id') id: string,
     @Body() unlockPayrollDto: UnlockPayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Unfreeze uses the same DTO as unlock (both require a reason)
-    return this.payrollService.unfreezePayroll(
-      id,
-      unlockPayrollDto.unlockReason,
-      user.userId,
-    );
+    return this.payrollService.unfreezePayroll(id, unlockPayrollDto.unlockReason, user.userId);
   }
 
   // REQ-PY-23: Allow PAYROLL_SPECIALIST to process payroll initiation
   @Post('process-initiation')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can process payroll initiation
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can process payroll initiation
   async processPayrollInitiation(
     @Body() processPayrollInitiationDto: ProcessPayrollInitiationDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
     return this.payrollService.processPayrollInitiation(
@@ -184,7 +172,7 @@ export class PayrollExecutionController {
       processPayrollInitiationDto.payrollSpecialistId,
       processPayrollInitiationDto.currency,
       user.userId,
-      processPayrollInitiationDto.payrollManagerId,
+      processPayrollInitiationDto.payrollManagerId
     );
   }
 
@@ -197,14 +185,14 @@ export class PayrollExecutionController {
   async reviewPayrollInitiation(
     @Param('runId') runId: string,
     @Body() reviewPayrollInitiationDto: ReviewPayrollInitiationDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.reviewPayrollInitiation(
       runId,
       reviewPayrollInitiationDto.approved,
       reviewPayrollInitiationDto.reviewerId,
       reviewPayrollInitiationDto.rejectionReason,
-      user.userId,
+      user.userId
     );
   }
 
@@ -215,13 +203,9 @@ export class PayrollExecutionController {
   async editPayrollInitiation(
     @Param('runId') runId: string,
     @Body() updates: Partial<CreatePayrollRunDto>,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.editPayrollInitiation(
-      runId,
-      updates,
-      user.userId,
-    );
+    return this.payrollService.editPayrollInitiation(runId, updates, user.userId);
   }
 
   // REQ-PY-25: Review Payroll period (Approve or Reject)
@@ -229,14 +213,8 @@ export class PayrollExecutionController {
   @Post('review-payroll-period')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async reviewPayrollPeriod(
-    @Body() reviewDto: ReviewPayrollPeriodDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.payrollService.reviewPayrollPeriod(
-      reviewDto,
-      user.userId,
-    );
+  async reviewPayrollPeriod(@Body() reviewDto: ReviewPayrollPeriodDto, @CurrentUser() user: any) {
+    return this.payrollService.reviewPayrollPeriod(reviewDto, user.userId);
   }
 
   // REQ-PY-26: Edit payroll initiation (period) if rejected
@@ -244,14 +222,8 @@ export class PayrollExecutionController {
   @Put('edit-payroll-period')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async editPayrollPeriod(
-    @Body() editDto: EditPayrollPeriodDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.payrollService.editPayrollPeriod(
-      editDto,
-      user.userId,
-    );
+  async editPayrollPeriod(@Body() editDto: EditPayrollPeriodDto, @CurrentUser() user: any) {
+    return this.payrollService.editPayrollPeriod(editDto, user.userId);
   }
 
   // REQ-PY-27: Allow PAYROLL_SPECIALIST to process signing bonuses
@@ -265,8 +237,11 @@ export class PayrollExecutionController {
   // Create employee signing bonus manually
   @Post('create-signing-bonus')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can create signing bonuses
-  async createEmployeeSigningBonus(@Body() createDto: CreateEmployeeSigningBonusDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can create signing bonuses
+  async createEmployeeSigningBonus(
+    @Body() createDto: CreateEmployeeSigningBonusDto,
+    @CurrentUser() user: any
+  ) {
     return this.payrollService.createEmployeeSigningBonus(createDto, user.userId);
   }
 
@@ -274,10 +249,7 @@ export class PayrollExecutionController {
   @Post('review-signing-bonus')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-28: "As a Payroll Specialist, I want to review and approve processed signing bonuses"
-  async reviewSigningBonus(
-    @Body() reviewDto: SigningBonusReviewDto,
-    @CurrentUser() user: any,
-  ) {
+  async reviewSigningBonus(@Body() reviewDto: SigningBonusReviewDto, @CurrentUser() user: any) {
     return this.payrollService.reviewSigningBonus(reviewDto, user.userId);
   }
 
@@ -285,10 +257,7 @@ export class PayrollExecutionController {
   @Put('edit-signing-bonus')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can edit signing bonus
-  async editSigningBonus(
-    @Body() editDto: SigningBonusEditDto,
-    @CurrentUser() user: any,
-  ) {
+  async editSigningBonus(@Body() editDto: SigningBonusEditDto, @CurrentUser() user: any) {
     return this.payrollService.editSigningBonus(editDto, user.userId);
   }
 
@@ -303,8 +272,11 @@ export class PayrollExecutionController {
   // Create employee termination benefit manually
   @Post('create-termination-benefit')
   @UsePipes(ValidationPipe)
-  @Roles(SystemRole.PAYROLL_SPECIALIST)  // Only PAYROLL_SPECIALIST can create termination benefits
-  async createEmployeeTerminationBenefit(@Body() createDto: CreateEmployeeTerminationBenefitDto, @CurrentUser() user: any) {
+  @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can create termination benefits
+  async createEmployeeTerminationBenefit(
+    @Body() createDto: CreateEmployeeTerminationBenefitDto,
+    @CurrentUser() user: any
+  ) {
     return this.payrollService.createEmployeeTerminationBenefit(createDto, user.userId);
   }
 
@@ -314,7 +286,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST) // As per REQ-PY-31: "As a Payroll Specialist, I want to review and approve processed benefits upon resignation"
   async reviewTerminationBenefit(
     @Body() reviewDto: TerminationBenefitReviewDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.reviewTerminationBenefit(reviewDto, user.userId);
   }
@@ -324,7 +296,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST) // Only PAYROLL_SPECIALIST can edit termination benefits
   async editTerminationBenefit(
     @Body() editDto: TerminationBenefitEditDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.editTerminationBenefit(editDto, user.userId);
   }
@@ -336,13 +308,13 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async calculatePayroll(
     @Body() calculatePayrollDto: CalculatePayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.calculatePayroll(
       calculatePayrollDto.employeeId,
       calculatePayrollDto.payrollRunId,
       calculatePayrollDto.baseSalary,
-      user.userId,
+      user.userId
     );
   }
 
@@ -352,7 +324,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async calculateProratedSalary(
     @Body() calculateProratedSalaryDto: CalculateProratedSalaryDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.calculateProratedSalary(
       calculateProratedSalaryDto.employeeId,
@@ -360,7 +332,7 @@ export class PayrollExecutionController {
       new Date(calculateProratedSalaryDto.startDate),
       new Date(calculateProratedSalaryDto.endDate),
       new Date(calculateProratedSalaryDto.payrollPeriodEnd),
-      user.userId,
+      user.userId
     );
   }
 
@@ -371,12 +343,12 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async applyStatutoryRules(
     @Body() applyStatutoryRulesDto: ApplyStatutoryRulesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Return breakdown for better frontend display
     return this.payrollService.applyStatutoryRulesWithBreakdown(
       applyStatutoryRulesDto.baseSalary,
-      applyStatutoryRulesDto.employeeId,
+      applyStatutoryRulesDto.employeeId
     );
   }
 
@@ -389,7 +361,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async generateDraftPayrollRun(
     @Body() generateDraftPayrollRunDto: GenerateDraftPayrollRunDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
     return this.payrollService.generateDraftPayrollRun(
@@ -398,7 +370,7 @@ export class PayrollExecutionController {
       generateDraftPayrollRunDto.payrollSpecialistId,
       generateDraftPayrollRunDto.currency,
       user.userId,
-      generateDraftPayrollRunDto.payrollManagerId,
+      generateDraftPayrollRunDto.payrollManagerId
     );
   }
 
@@ -409,13 +381,9 @@ export class PayrollExecutionController {
   async getPayrollPreview(
     @Param('payrollRunId') payrollRunId: string,
     @CurrentUser() user: any,
-    @Query('currency') currency?: string, // Optional query parameter for currency conversion
+    @Query('currency') currency?: string // Optional query parameter for currency conversion
   ) {
-    return this.payrollService.getPayrollPreview(
-      payrollRunId,
-      currency,
-      user.userId,
-    );
+    return this.payrollService.getPayrollPreview(payrollRunId, currency, user.userId);
   }
 
   // Requirement 0: Get pre-initiation validation status
@@ -434,24 +402,21 @@ export class PayrollExecutionController {
     @Query('status') status?: BonusStatus,
     @Query('employeeId') employeeId?: string,
     @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('limit') limit?: number
   ) {
     return this.payrollService.getSigningBonuses(
       status,
       employeeId,
       page || 1,
       limit || 10,
-      user.userId,
+      user.userId
     );
   }
 
   // Get signing bonus by ID
   @Get('signing-bonuses/:id')
   @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER)
-  async getSigningBonusById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getSigningBonusById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.payrollService.getSigningBonusById(id, user.userId);
   }
 
@@ -464,7 +429,7 @@ export class PayrollExecutionController {
     @Query('employeeId') employeeId?: string,
     @Query('type') type?: 'TERMINATION' | 'RESIGNATION',
     @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('limit') limit?: number
   ) {
     return this.payrollService.getTerminationBenefits(
       status,
@@ -472,17 +437,14 @@ export class PayrollExecutionController {
       type,
       page || 1,
       limit || 10,
-      user.userId,
+      user.userId
     );
   }
 
   // Get termination benefit by ID
   @Get('termination-benefits/:id')
   @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER)
-  async getTerminationBenefitById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getTerminationBenefitById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.payrollService.getTerminationBenefitById(id, user.userId);
   }
 
@@ -492,15 +454,15 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async generateAndDistributePayslips(
     @Body() generateAndDistributePayslipsDto: GenerateAndDistributePayslipsDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     try {
       const result = await this.payrollService.generateAndDistributePayslips(
         generateAndDistributePayslipsDto.payrollRunId,
         generateAndDistributePayslipsDto.distributionMethod || PayslipDistributionMethod.PORTAL,
-        user.userId,
+        user.userId
       );
-      
+
       // Log the result for debugging
       console.log(`[Controller] Payslip generation result:`, {
         successful: result.successful,
@@ -509,14 +471,15 @@ export class PayrollExecutionController {
         actualDatabaseCount: result.actualDatabaseCount,
         totalEmployees: result.totalEmployees,
       });
-      
+
       // Return success even if some payslips failed, as long as at least one succeeded
       if (result.successful > 0) {
         return result;
       } else {
         // Only throw error if no payslips were generated at all
         throw new Error(
-          result.warnings?.join('; ') || 'Failed to generate any payslips. Check the logs for validation errors.'
+          result.warnings?.join('; ') ||
+            'Failed to generate any payslips. Check the logs for validation errors.'
         );
       }
     } catch (error: any) {
@@ -526,10 +489,11 @@ export class PayrollExecutionController {
         stack: error?.stack,
         payrollRunId: generateAndDistributePayslipsDto.payrollRunId,
       });
-      
+
       // Re-throw with proper error message for better frontend handling
       throw new Error(
-        error?.message || 'Failed to generate and distribute payslips. Please check that the payroll run is locked and payment status is PAID.'
+        error?.message ||
+          'Failed to generate and distribute payslips. Please check that the payroll run is locked and payment status is PAID.'
       );
     }
   }
@@ -538,15 +502,12 @@ export class PayrollExecutionController {
   @Post('send-for-approval')
   @UsePipes(ValidationPipe)
   @Roles(SystemRole.PAYROLL_SPECIALIST)
-  async sendForApproval(
-    @Body() sendForApprovalDto: SendForApprovalDto,
-    @CurrentUser() user: any,
-  ) {
+  async sendForApproval(@Body() sendForApprovalDto: SendForApprovalDto, @CurrentUser() user: any) {
     return this.payrollService.sendForApproval(
       sendForApprovalDto.payrollRunId,
       sendForApprovalDto.managerId,
       sendForApprovalDto.financeStaffId,
-      user.userId,
+      user.userId
     );
   }
 
@@ -556,44 +517,53 @@ export class PayrollExecutionController {
   @Roles(SystemRole.FINANCE_STAFF)
   async approvePayrollDisbursement(
     @Body() financeDecisionDto: FinanceDecisionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.approvePayrollDisbursement(
-      financeDecisionDto,
-      user.userId,
-    );
+    return this.payrollService.approvePayrollDisbursement(financeDecisionDto, user.userId);
   }
 
   // Get all payslips for a payroll run (for Payroll Specialists to view)
   @Get('payslips/payroll-run/:payrollRunId')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getPayslipsByPayrollRun(
     @Param('payrollRunId') payrollRunId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.getPayslipsByPayrollRun(payrollRunId, user.userId);
   }
 
   // Get a specific payslip by ID (for Payroll Specialists to view)
   @Get('payslips/:payslipId')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getPayslipById(
-    @Param('payslipId') payslipId: string,
-    @CurrentUser() user: any,
-  ) {
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getPayslipById(@Param('payslipId') payslipId: string, @CurrentUser() user: any) {
     return this.payrollService.getPayslipById(payslipId, user.userId);
   }
 
   // Get all payslips with filters (for Payroll Specialists to view all payslips)
   @Get('payslips')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getAllPayslips(
     @Query('payrollRunId') payrollRunId?: string,
     @Query('employeeId') employeeId?: string,
     @Query('paymentStatus') paymentStatus?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.payrollService.getAllPayslips(user.userId, {
       payrollRunId,
@@ -611,7 +581,7 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_MANAGER)
   async resolveIrregularity(
     @Body() resolveIrregularityDto: ResolveIrregularityDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.payrollService.resolveIrregularity(
       resolveIrregularityDto.payrollRunId,
@@ -619,7 +589,7 @@ export class PayrollExecutionController {
       resolveIrregularityDto.exceptionCode,
       resolveIrregularityDto.resolution,
       resolveIrregularityDto.managerId,
-      user.userId,
+      user.userId
     );
   }
 
@@ -629,13 +599,9 @@ export class PayrollExecutionController {
   async getEmployeeExceptions(
     @Param('employeeId') employeeId: string,
     @Param('payrollRunId') payrollRunId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.getEmployeeExceptions(
-      employeeId,
-      payrollRunId,
-      user.userId,
-    );
+    return this.payrollService.getEmployeeExceptions(employeeId, payrollRunId, user.userId);
   }
 
   // BR 9: Get all exceptions for a payroll run
@@ -643,12 +609,9 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER)
   async getAllPayrollExceptions(
     @Param('payrollRunId') payrollRunId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.getAllPayrollExceptions(
-      payrollRunId,
-      user.userId,
-    );
+    return this.payrollService.getAllPayrollExceptions(payrollRunId, user.userId);
   }
 
   // REQ-PY-22: Payroll Manager approve payroll runs
@@ -657,38 +620,37 @@ export class PayrollExecutionController {
   @Roles(SystemRole.PAYROLL_MANAGER)
   async approvePayrollRun(
     @Body() managerApprovalDto: ManagerApprovalReviewDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.payrollService.approvePayrollRun(
-      managerApprovalDto,
-      user.userId,
-    );
+    return this.payrollService.approvePayrollRun(managerApprovalDto, user.userId);
   }
 
   // Get all payroll runs with optional filtering
   @Get('runs')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getAllPayrollRuns(
     @CurrentUser() user: any,
     @Query('status') status?: string,
     @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('limit') limit?: number
   ) {
-    return this.payrollService.getAllPayrollRuns(
-      status,
-      page || 1,
-      limit || 100,
-      user.userId,
-    );
+    return this.payrollService.getAllPayrollRuns(status, page || 1, limit || 100, user.userId);
   }
 
   // Get payroll run by ID
   @Get('runs/:runId')
-  @Roles(SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER, SystemRole.FINANCE_STAFF, SystemRole.SYSTEM_ADMIN)
-  async getPayrollRunById(
-    @Param('runId') runId: string,
-    @CurrentUser() user: any,
-  ) {
+  @Roles(
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getPayrollRunById(@Param('runId') runId: string, @CurrentUser() user: any) {
     return this.payrollService.getPayrollRunByRunId(runId, user.userId);
   }
 }

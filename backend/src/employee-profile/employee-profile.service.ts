@@ -11,10 +11,7 @@ import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
-import {
-  EmployeeProfile,
-  EmployeeProfileDocument,
-} from './models/employee-profile.schema';
+import { EmployeeProfile, EmployeeProfileDocument } from './models/employee-profile.schema';
 import { EmployeeProfileChangeRequest } from './models/ep-change-request.schema';
 import { Candidate, CandidateDocument } from './models/candidate.schema';
 import { EmployeeSystemRole } from './models/employee-system-role.schema';
@@ -52,7 +49,7 @@ export class EmployeeProfileService {
     @InjectModel(EmployeeSystemRole.name)
     private systemRoleModel: Model<EmployeeSystemRole>,
     @InjectModel(EmployeeQualification.name)
-    private qualificationModel: Model<EmployeeQualification>,
+    private qualificationModel: Model<EmployeeQualification>
   ) {
     // Configure Cloudinary (add to your service constructor)
     cloudinary.config({
@@ -74,9 +71,7 @@ export class EmployeeProfileService {
         .exec();
 
       if (existingEmployee) {
-        throw new ConflictException(
-          'Employee with this National ID already exists',
-        );
+        throw new ConflictException('Employee with this National ID already exists');
       }
     }
 
@@ -94,21 +89,15 @@ export class EmployeeProfileService {
 
     if (createEmployeeDto.candidateId) {
       // 1. Find the candidate
-      candidateToUpdate = await this.candidateModel.findById(
-        createEmployeeDto.candidateId,
-      );
+      candidateToUpdate = await this.candidateModel.findById(createEmployeeDto.candidateId);
 
       if (!candidateToUpdate) {
-        throw new NotFoundException(
-          `Candidate with ID ${createEmployeeDto.candidateId} not found`,
-        );
+        throw new NotFoundException(`Candidate with ID ${createEmployeeDto.candidateId} not found`);
       }
 
       // 2. Validate candidate national ID matches employee national ID
       if (candidateToUpdate.nationalId !== createEmployeeDto.nationalId) {
-        throw new BadRequestException(
-          'Candidate national ID does not match employee national ID',
-        );
+        throw new BadRequestException('Candidate national ID does not match employee national ID');
       }
 
       // 3. Use candidate's password if exists
@@ -132,7 +121,7 @@ export class EmployeeProfileService {
         .exec();
       if (existingWithNumber) {
         throw new ConflictException(
-          `Employee number ${createEmployeeDto.employeeNumber} already exists. Please use a different employee number.`,
+          `Employee number ${createEmployeeDto.employeeNumber} already exists. Please use a different employee number.`
         );
       }
       employeeNumber = createEmployeeDto.employeeNumber;
@@ -152,8 +141,9 @@ export class EmployeeProfileService {
     // This allows transferring already-hashed passwords from candidate → employee
     // Only process if hashedPassword wasn't already set from candidate logic above
     if (!hashedPassword && createEmployeeDto.password) {
-      const isAlreadyHashed = createEmployeeDto.password.startsWith('$2a$') || 
-                               createEmployeeDto.password.startsWith('$2b$');
+      const isAlreadyHashed =
+        createEmployeeDto.password.startsWith('$2a$') ||
+        createEmployeeDto.password.startsWith('$2b$');
       if (isAlreadyHashed) {
         // Password is already hashed (e.g., transferred from candidate)
         hashedPassword = createEmployeeDto.password;
@@ -208,16 +198,7 @@ export class EmployeeProfileService {
   }
 
   async findAll(query: QueryEmployeeDto, currentUserId?: string) {
-    const {
-      search,
-      departmentId,
-      positionId,
-      status,
-      page = 1,
-      limit = 10,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = query;
+    const { search, departmentId, positionId, status, page, limit, sortBy, sortOrder } = query;
 
     const filter: any = {};
 
@@ -269,7 +250,7 @@ export class EmployeeProfileService {
       // Handle both ObjectId and string formats
       return emp._id instanceof Types.ObjectId ? emp._id : new Types.ObjectId(emp._id);
     });
-    
+
     const systemRoles = await this.systemRoleModel
       .find({
         employeeProfileId: { $in: employeeIds },
@@ -279,12 +260,15 @@ export class EmployeeProfileService {
       .exec();
 
     // Create a map of employeeId -> system roles for quick lookup
-    const rolesMap = new Map<string, { roles: SystemRole[]; permissions: string[]; isActive: boolean }>();
+    const rolesMap = new Map<
+      string,
+      { roles: SystemRole[]; permissions: string[]; isActive: boolean }
+    >();
     systemRoles.forEach((role: any) => {
-      const empId = role.employeeProfileId 
-        ? (role.employeeProfileId instanceof Types.ObjectId 
-            ? role.employeeProfileId.toString() 
-            : String(role.employeeProfileId))
+      const empId = role.employeeProfileId
+        ? role.employeeProfileId instanceof Types.ObjectId
+          ? role.employeeProfileId.toString()
+          : String(role.employeeProfileId)
         : null;
       if (empId) {
         rolesMap.set(empId, {
@@ -297,15 +281,11 @@ export class EmployeeProfileService {
 
     // Attach system roles to each employee
     const employeesWithRoles = employees.map((emp: any) => {
-      const empId = emp._id instanceof Types.ObjectId 
-        ? emp._id.toString() 
-        : String(emp._id);
+      const empId = emp._id instanceof Types.ObjectId ? emp._id.toString() : String(emp._id);
       const systemRole = rolesMap.get(empId);
       return {
         ...emp,
-        systemRoles: systemRole
-          ? systemRole.roles.map((role: SystemRole) => ({ role }))
-          : [],
+        systemRoles: systemRole ? systemRole.roles.map((role: SystemRole) => ({ role })) : [],
         roles: systemRole ? systemRole.roles : [],
       };
     });
@@ -351,41 +331,27 @@ export class EmployeeProfileService {
       .exec();
 
     if (!employee) {
-      throw new NotFoundException(
-        `Employee with number ${employeeNumber} not found`,
-      );
+      throw new NotFoundException(`Employee with number ${employeeNumber} not found`);
     }
 
     return employee;
   }
 
   async findByNationalId(nationalId: string): Promise<EmployeeProfile> {
-    const employee = await this.employeeModel
-      .findOne({ nationalId })
-      .select('-password')
-      .exec();
+    const employee = await this.employeeModel.findOne({ nationalId }).select('-password').exec();
 
     if (!employee) {
-      throw new NotFoundException(
-        `Employee with national ID ${nationalId} not found`,
-      );
+      throw new NotFoundException(`Employee with national ID ${nationalId} not found`);
     }
 
     return employee;
   }
 
-  async update(
-    id: string,
-    updateEmployeeDto: UpdateEmployeeDto,
-  ): Promise<EmployeeProfile> {
+  async update(id: string, updateEmployeeDto: UpdateEmployeeDto): Promise<EmployeeProfile> {
     const employee = await this.findOne(id);
 
     // Update full name if name fields changed
-    if (
-      updateEmployeeDto.firstName ||
-      updateEmployeeDto.middleName ||
-      updateEmployeeDto.lastName
-    ) {
+    if (updateEmployeeDto.firstName || updateEmployeeDto.middleName || updateEmployeeDto.lastName) {
       const fullName = [
         updateEmployeeDto.firstName || employee.firstName,
         updateEmployeeDto.middleName || employee.middleName,
@@ -397,10 +363,7 @@ export class EmployeeProfileService {
     }
 
     // Update status effective date if status changed
-    if (
-      updateEmployeeDto.status &&
-      updateEmployeeDto.status !== employee.status
-    ) {
+    if (updateEmployeeDto.status && updateEmployeeDto.status !== employee.status) {
       updateEmployeeDto['statusEffectiveFrom'] = new Date();
     }
 
@@ -414,7 +377,7 @@ export class EmployeeProfileService {
 
   async updateSelfService(
     id: string,
-    updateDto: UpdateEmployeeSelfServiceDto,
+    updateDto: UpdateEmployeeSelfServiceDto
   ): Promise<EmployeeProfile> {
     await this.findOne(id);
 
@@ -428,7 +391,7 @@ export class EmployeeProfileService {
 
   async updateBankingInfo(
     id: string,
-    bankingData: { bankName?: string; bankAccountNumber?: string },
+    bankingData: { bankName?: string; bankAccountNumber?: string }
   ): Promise<EmployeeProfile> {
     await this.findOne(id);
 
@@ -440,10 +403,7 @@ export class EmployeeProfileService {
     return updatedEmployee;
   }
 
-  async updateBiography(
-    id: string,
-    biography: string,
-  ): Promise<EmployeeProfile> {
+  async updateBiography(id: string, biography: string): Promise<EmployeeProfile> {
     await this.findOne(id);
 
     const updatedEmployee = await this.employeeModel
@@ -454,10 +414,7 @@ export class EmployeeProfileService {
     return updatedEmployee;
   }
 
-  async uploadProfilePhoto(
-    id: string,
-    photo: Express.Multer.File,
-  ): Promise<string> {
+  async uploadProfilePhoto(id: string, photo: Express.Multer.File): Promise<string> {
     await this.findOne(id);
 
     try {
@@ -468,15 +425,12 @@ export class EmployeeProfileService {
             folder: 'employee-profiles',
             public_id: id,
             overwrite: true,
-            transformation: [
-              { width: 400, height: 400, crop: 'fill' },
-              { quality: 'auto' },
-            ],
+            transformation: [{ width: 400, height: 400, crop: 'fill' }, { quality: 'auto' }],
           },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
-          },
+          }
         );
 
         uploadStream.end(photo.buffer);
@@ -490,8 +444,7 @@ export class EmployeeProfileService {
 
       return profilePictureUrl;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException('Failed to upload photo: ' + errorMessage);
     }
   }
@@ -509,7 +462,7 @@ export class EmployeeProfileService {
             statusEffectiveFrom: new Date(),
           },
         },
-        { new: true },
+        { new: true }
       )
       .exec();
   }
@@ -519,7 +472,7 @@ export class EmployeeProfileService {
   async assignSystemRoles(
     employeeId: string,
     roles: SystemRole[],
-    permissions: string[] = [],
+    permissions: string[] = []
   ): Promise<EmployeeSystemRole> {
     await this.findOne(employeeId);
 
@@ -551,7 +504,7 @@ export class EmployeeProfileService {
   async updateSystemRoles(
     employeeId: string,
     roles?: SystemRole[],
-    permissions?: string[],
+    permissions?: string[]
   ): Promise<EmployeeSystemRole> {
     await this.findOne(employeeId);
 
@@ -571,7 +524,7 @@ export class EmployeeProfileService {
       .findOneAndUpdate(
         { employeeProfileId: new Types.ObjectId(employeeId) },
         { $set: updateData },
-        { new: true },
+        { new: true }
       )
       .exec();
 
@@ -588,7 +541,7 @@ export class EmployeeProfileService {
     const result = await this.systemRoleModel
       .updateOne(
         { employeeProfileId: new Types.ObjectId(employeeId) },
-        { $set: { isActive: false } },
+        { $set: { isActive: false } }
       )
       .exec();
 
@@ -599,18 +552,14 @@ export class EmployeeProfileService {
 
   // ==================== CANDIDATE MANAGEMENT ====================
 
-  async createCandidate(
-    createCandidateDto: CreateCandidateDto,
-  ): Promise<Candidate> {
+  async createCandidate(createCandidateDto: CreateCandidateDto): Promise<Candidate> {
     // Check for duplicate national ID
     const existingCandidate = await this.candidateModel
       .findOne({ nationalId: createCandidateDto.nationalId })
       .exec();
 
     if (existingCandidate) {
-      throw new ConflictException(
-        'Candidate with this National ID already exists',
-      );
+      throw new ConflictException('Candidate with this National ID already exists');
     }
 
     // Generate candidate number
@@ -701,10 +650,7 @@ export class EmployeeProfileService {
       .exec();
   }
 
-  async updateCandidate(
-    id: string,
-    updateCandidateDto: UpdateCandidateDto,
-  ): Promise<Candidate> {
+  async updateCandidate(id: string, updateCandidateDto: UpdateCandidateDto): Promise<Candidate> {
     const candidate = await this.findCandidateById(id);
 
     // Update full name if name fields changed
@@ -730,10 +676,7 @@ export class EmployeeProfileService {
     return updatedCandidate;
   }
 
-  async updateCandidateStatus(
-    id: string,
-    status: CandidateStatus,
-  ): Promise<Candidate> {
+  async updateCandidateStatus(id: string, status: CandidateStatus): Promise<Candidate> {
     const candidate = await this.findCandidateById(id);
 
     const updatedCandidate = await this.candidateModel
@@ -758,7 +701,7 @@ export class EmployeeProfileService {
       password?: string;
       primaryDepartmentId?: string;
       primaryPositionId?: string;
-    },
+    }
   ): Promise<EmployeeProfile> {
     if (!employeeData?.workEmail) {
       throw new BadRequestException('workEmail is required in request body');
@@ -792,10 +735,8 @@ export class EmployeeProfileService {
       contractType: employeeData.contractType as any,
       workType: employeeData.workType as any,
       status: EmployeeStatus.PROBATION,
-      primaryDepartmentId:
-        employeeData.primaryDepartmentId || candidate.departmentId?.toString(),
-      primaryPositionId:
-        employeeData.primaryPositionId || candidate.positionId?.toString(),
+      primaryDepartmentId: employeeData.primaryDepartmentId || candidate.departmentId?.toString(),
+      primaryPositionId: employeeData.primaryPositionId || candidate.positionId?.toString(),
       password: employeeData.password,
     };
 
@@ -816,7 +757,7 @@ export class EmployeeProfileService {
 
   async createProfileChangeRequest(
     employeeId: string,
-    createRequestDto: CreateProfileChangeRequestDto,
+    createRequestDto: CreateProfileChangeRequestDto
   ): Promise<EmployeeProfileChangeRequest> {
     await this.findOne(employeeId);
 
@@ -835,7 +776,7 @@ export class EmployeeProfileService {
   }
 
   async getProfileChangeRequestsByEmployee(
-    employeeId: string,
+    employeeId: string
   ): Promise<EmployeeProfileChangeRequest[]> {
     return this.changeRequestModel
       .find({ employeeProfileId: new Types.ObjectId(employeeId) })
@@ -843,9 +784,7 @@ export class EmployeeProfileService {
       .exec();
   }
 
-  async getAllProfileChangeRequests(
-    status?: string,
-  ): Promise<EmployeeProfileChangeRequest[]> {
+  async getAllProfileChangeRequests(status?: string): Promise<EmployeeProfileChangeRequest[]> {
     const filter: any = {};
     if (status) {
       filter.status = status;
@@ -859,7 +798,7 @@ export class EmployeeProfileService {
   }
 
   async getAllProfileChangeRequestsWithFilters(
-    query: any,
+    query: any
   ): Promise<EmployeeProfileChangeRequest[]> {
     const filter: any = {};
 
@@ -871,11 +810,7 @@ export class EmployeeProfileService {
     const employeeId = query.employeeId;
 
     // Check if employeeId exists and is a non-empty string
-    if (
-      employeeId &&
-      typeof employeeId === 'string' &&
-      employeeId.trim() !== ''
-    ) {
+    if (employeeId && typeof employeeId === 'string' && employeeId.trim() !== '') {
       const trimmedId = employeeId.trim();
 
       // Only add to filter if it's a valid MongoDB ObjectId
@@ -884,9 +819,7 @@ export class EmployeeProfileService {
       } else {
         // If it's not a valid ObjectId, DO NOT add to filter
         // This allows HR Admin to see all requests
-        console.log(
-          `⚠️ Invalid employeeId format: "${trimmedId}", skipping employee filter`,
-        );
+        console.log(`⚠️ Invalid employeeId format: "${trimmedId}", skipping employee filter`);
       }
     }
     // If employeeId is undefined, null, empty string, or invalid - don't filter by employee
@@ -911,9 +844,7 @@ export class EmployeeProfileService {
       .exec();
   }
 
-  async getProfileChangeRequestById(
-    id: string,
-  ): Promise<EmployeeProfileChangeRequest> {
+  async getProfileChangeRequestById(id: string): Promise<EmployeeProfileChangeRequest> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid change request ID');
     }
@@ -932,14 +863,12 @@ export class EmployeeProfileService {
 
   async processProfileChangeRequest(
     id: string,
-    processDto: ProcessProfileChangeRequestDto,
+    processDto: ProcessProfileChangeRequestDto
   ): Promise<EmployeeProfileChangeRequest> {
     const request = await this.getProfileChangeRequestById(id);
 
     if (request.status !== ProfileChangeStatus.PENDING) {
-      throw new BadRequestException(
-        'Only pending change requests can be processed',
-      );
+      throw new BadRequestException('Only pending change requests can be processed');
     }
 
     const updatedRequest = await this.changeRequestModel
@@ -952,7 +881,7 @@ export class EmployeeProfileService {
             processedAt: new Date(),
           },
         },
-        { new: true },
+        { new: true }
       )
       .populate('employeeProfileId', 'firstName lastName employeeNumber')
       .exec();
@@ -999,9 +928,7 @@ export class EmployeeProfileService {
           for (const key of Object.keys(payload.changes)) {
             if (allowedFields.includes(key)) {
               changes[key] = payload.changes[key];
-              console.log(
-                `✅ Adding allowed field "${key}": ${payload.changes[key]}`,
-              );
+              console.log(`✅ Adding allowed field "${key}": ${payload.changes[key]}`);
             } else {
               console.log(`⚠️ Skipping non-allowed field "${key}"`);
             }
@@ -1021,42 +948,29 @@ export class EmployeeProfileService {
               if (typeof changes.nationalId === 'string') {
                 const validNat = /^[0-9]{14}$/.test(changes.nationalId);
                 if (!validNat) {
-                  console.log(
-                    `❌ Invalid national ID format: ${changes.nationalId}`,
-                  );
+                  console.log(`❌ Invalid national ID format: ${changes.nationalId}`);
                   delete changes.nationalId;
                 }
               }
 
               if (typeof changes.maritalStatus === 'string') {
-                const allowedStatuses = [
-                  'SINGLE',
-                  'MARRIED',
-                  'DIVORCED',
-                  'WIDOWED',
-                ];
+                const allowedStatuses = ['SINGLE', 'MARRIED', 'DIVORCED', 'WIDOWED'];
                 if (!allowedStatuses.includes(changes.maritalStatus)) {
-                  console.log(
-                    `❌ Invalid marital status: ${changes.maritalStatus}`,
-                  );
+                  console.log(`❌ Invalid marital status: ${changes.maritalStatus}`);
                   delete changes.maritalStatus;
                 }
               }
 
               if (typeof changes.primaryPositionId === 'string') {
                 if (!Types.ObjectId.isValid(changes.primaryPositionId)) {
-                  console.log(
-                    `❌ Invalid position ID: ${changes.primaryPositionId}`,
-                  );
+                  console.log(`❌ Invalid position ID: ${changes.primaryPositionId}`);
                   delete changes.primaryPositionId;
                 }
               }
 
               if (typeof changes.primaryDepartmentId === 'string') {
                 if (!Types.ObjectId.isValid(changes.primaryDepartmentId)) {
-                  console.log(
-                    `❌ Invalid department ID: ${changes.primaryDepartmentId}`,
-                  );
+                  console.log(`❌ Invalid department ID: ${changes.primaryDepartmentId}`);
                   delete changes.primaryDepartmentId;
                 }
               }
@@ -1077,12 +991,8 @@ export class EmployeeProfileService {
                 console.log('📄 Current name:', current);
 
                 const fullName = [
-                  (changes.firstName ?? current?.firstName) as
-                    | string
-                    | undefined,
-                  (changes.middleName ?? current?.middleName) as
-                    | string
-                    | undefined,
+                  (changes.firstName ?? current?.firstName) as string | undefined,
+                  (changes.middleName ?? current?.middleName) as string | undefined,
                   (changes.lastName ?? current?.lastName) as string | undefined,
                 ]
                   .filter(Boolean)
@@ -1128,9 +1038,7 @@ export class EmployeeProfileService {
         console.error('❌ Error message:', error.message);
         console.error('❌ Error stack:', error.stack);
         // Re-throw or handle as needed
-        throw new BadRequestException(
-          `Failed to apply changes: ${error.message}`,
-        );
+        throw new BadRequestException(`Failed to apply changes: ${error.message}`);
       }
     }
 
@@ -1139,21 +1047,17 @@ export class EmployeeProfileService {
 
   async cancelProfileChangeRequest(
     id: string,
-    employeeId: string,
+    employeeId: string
   ): Promise<EmployeeProfileChangeRequest> {
     const request = await this.getProfileChangeRequestById(id);
 
     // Check if the request belongs to the employee
     if (request.employeeProfileId.toString() !== employeeId.toString()) {
-      throw new ForbiddenException(
-        'You are not authorized to cancel this change request',
-      );
+      throw new ForbiddenException('You are not authorized to cancel this change request');
     }
 
     if (request.status !== ProfileChangeStatus.PENDING) {
-      throw new BadRequestException(
-        'Only pending change requests can be cancelled',
-      );
+      throw new BadRequestException('Only pending change requests can be cancelled');
     }
 
     const updatedRequest = await this.changeRequestModel
@@ -1165,7 +1069,7 @@ export class EmployeeProfileService {
             processedAt: new Date(),
           },
         },
-        { new: true },
+        { new: true }
       )
       .exec();
 
@@ -1183,7 +1087,7 @@ export class EmployeeProfileService {
     qualificationData: {
       establishmentName: string;
       graduationType: string;
-    },
+    }
   ): Promise<EmployeeQualification> {
     await this.findOne(employeeId);
 
@@ -1196,9 +1100,7 @@ export class EmployeeProfileService {
     return qualification.save();
   }
 
-  async getQualificationsByEmployee(
-    employeeId: string,
-  ): Promise<EmployeeQualification[]> {
+  async getQualificationsByEmployee(employeeId: string): Promise<EmployeeQualification[]> {
     return this.qualificationModel
       .find({ employeeProfileId: new Types.ObjectId(employeeId) })
       .exec();
@@ -1210,30 +1112,21 @@ export class EmployeeProfileService {
     qualificationData: {
       establishmentName?: string;
       graduationType?: string;
-    },
+    }
   ): Promise<EmployeeQualification> {
-    const qualification =
-      await this.qualificationModel.findById(qualificationId);
+    const qualification = await this.qualificationModel.findById(qualificationId);
 
     if (!qualification) {
-      throw new NotFoundException(
-        `Qualification with ID ${qualificationId} not found`,
-      );
+      throw new NotFoundException(`Qualification with ID ${qualificationId} not found`);
     }
 
     // Check if the qualification belongs to the employee
     if (qualification.employeeProfileId.toString() !== employeeId.toString()) {
-      throw new ForbiddenException(
-        'You are not authorized to update this qualification',
-      );
+      throw new ForbiddenException('You are not authorized to update this qualification');
     }
 
     const updatedQualification = await this.qualificationModel
-      .findByIdAndUpdate(
-        qualificationId,
-        { $set: qualificationData },
-        { new: true },
-      )
+      .findByIdAndUpdate(qualificationId, { $set: qualificationData }, { new: true })
       .exec();
 
     if (!updatedQualification) {
@@ -1243,23 +1136,15 @@ export class EmployeeProfileService {
     return updatedQualification;
   }
 
-  async removeQualification(
-    qualificationId: string,
-    employeeId: string,
-  ): Promise<void> {
-    const qualification =
-      await this.qualificationModel.findById(qualificationId);
+  async removeQualification(qualificationId: string, employeeId: string): Promise<void> {
+    const qualification = await this.qualificationModel.findById(qualificationId);
 
     if (!qualification) {
-      throw new NotFoundException(
-        `Qualification with ID ${qualificationId} not found`,
-      );
+      throw new NotFoundException(`Qualification with ID ${qualificationId} not found`);
     }
 
     if (qualification.employeeProfileId.toString() !== employeeId.toString()) {
-      throw new ForbiddenException(
-        'You are not authorized to delete this qualification',
-      );
+      throw new ForbiddenException('You are not authorized to delete this qualification');
     }
 
     await this.qualificationModel.findByIdAndDelete(qualificationId).exec();
@@ -1403,7 +1288,9 @@ export class EmployeeProfileService {
       const chunks: Buffer[] = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
       doc.on('error', reject);
 
       // Add content to PDF
@@ -1416,18 +1303,12 @@ export class EmployeeProfileService {
       doc.text(`Status: ${employee.status}`);
       doc.text(`Date of Hire: ${employee.dateOfHire.toLocaleDateString()}`);
 
-      if (
-        employee.primaryDepartmentId &&
-        typeof employee.primaryDepartmentId !== 'string'
-      ) {
+      if (employee.primaryDepartmentId && typeof employee.primaryDepartmentId !== 'string') {
         const department = employee.primaryDepartmentId as any;
         doc.text(`Department: ${department.name || 'N/A'}`);
       }
 
-      if (
-        employee.primaryPositionId &&
-        typeof employee.primaryPositionId !== 'string'
-      ) {
+      if (employee.primaryPositionId && typeof employee.primaryPositionId !== 'string') {
         const position = employee.primaryPositionId as any;
         doc.text(`Position: ${position.title || 'N/A'}`);
       }
@@ -1441,7 +1322,7 @@ export class EmployeeProfileService {
         doc.text(
           `Address: ${employee.address.streetAddress || ''}, ${
             employee.address.city || ''
-          }, ${employee.address.country || ''}`,
+          }, ${employee.address.country || ''}`
         );
       }
 
@@ -1459,10 +1340,7 @@ export class EmployeeProfileService {
     const manager = await this.employeeModel.findById(managerId).exec();
     console.log('Manager found:', manager?.fullName);
     console.log('Manager primaryPositionId:', manager?.primaryPositionId);
-    console.log(
-      'Type of primaryPositionId:',
-      typeof manager?.primaryPositionId,
-    );
+    console.log('Type of primaryPositionId:', typeof manager?.primaryPositionId);
 
     if (!manager?.primaryPositionId) {
       console.log('❌ Manager has no primaryPositionId');
@@ -1490,10 +1368,7 @@ export class EmployeeProfileService {
     console.log('Query as string:', JSON.stringify(queryAsString));
 
     // Run both queries
-    const result1 = await this.employeeModel
-      .find(queryAsObjectId)
-      .count()
-      .exec();
+    const result1 = await this.employeeModel.find(queryAsObjectId).count().exec();
     const result2 = await this.employeeModel.find(queryAsString).count().exec();
 
     console.log('Results - ObjectId query count:', result1);
@@ -1511,7 +1386,7 @@ export class EmployeeProfileService {
     console.log('Sample employees with supervisorPositionId:');
     sampleEmployees.forEach((emp) => {
       console.log(
-        `- ${emp.fullName}: supervisor=${emp.supervisorPositionId}, type=${typeof emp.supervisorPositionId}`,
+        `- ${emp.fullName}: supervisor=${emp.supervisorPositionId}, type=${typeof emp.supervisorPositionId}`
       );
     });
 
@@ -1571,10 +1446,7 @@ export class EmployeeProfileService {
 
     let sequence = 1;
     if (lastEmployee) {
-      const lastSequence = parseInt(
-        lastEmployee.employeeNumber.split('-')[2],
-        10,
-      );
+      const lastSequence = parseInt(lastEmployee.employeeNumber.split('-')[2], 10);
       sequence = lastSequence + 1;
     }
 
@@ -1592,10 +1464,7 @@ export class EmployeeProfileService {
 
     let sequence = 1;
     if (lastCandidate) {
-      const lastSequence = parseInt(
-        lastCandidate.candidateNumber.split('-')[2],
-        10,
-      );
+      const lastSequence = parseInt(lastCandidate.candidateNumber.split('-')[2], 10);
       sequence = lastSequence + 1;
     }
 
@@ -1632,11 +1501,9 @@ export class EmployeeProfileService {
       lastAppraisalRatingLabel?: string;
       lastAppraisalScaleType?: string;
       lastDevelopmentPlanSummary?: string;
-    },
+    }
   ): Promise<void> {
-    await this.employeeModel
-      .findByIdAndUpdate(employeeId, { $set: appraisalData })
-      .exec();
+    await this.employeeModel.findByIdAndUpdate(employeeId, { $set: appraisalData }).exec();
   }
 
   async findByDepartment(departmentId: string): Promise<EmployeeProfile[]> {
@@ -1656,9 +1523,7 @@ export class EmployeeProfileService {
       .exec();
   }
 
-  async findBySupervisor(
-    supervisorPositionId: string,
-  ): Promise<EmployeeProfile[]> {
+  async findBySupervisor(supervisorPositionId: string): Promise<EmployeeProfile[]> {
     return this.employeeModel
       .find({ supervisorPositionId: new Types.ObjectId(supervisorPositionId) })
       .select('-password')
@@ -1686,18 +1551,14 @@ export class EmployeeProfileService {
     };
   }
 
-  async registerCandidate(
-    registerDto: RegisterCandidateDto,
-  ): Promise<Candidate> {
+  async registerCandidate(registerDto: RegisterCandidateDto): Promise<Candidate> {
     // Check for duplicate national ID
     const existingCandidate = await this.candidateModel
       .findOne({ nationalId: registerDto.nationalId })
       .exec();
 
     if (existingCandidate) {
-      throw new ConflictException(
-        'Candidate with this National ID already exists',
-      );
+      throw new ConflictException('Candidate with this National ID already exists');
     }
 
     // Check for duplicate personal email
@@ -1716,18 +1577,12 @@ export class EmployeeProfileService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
     // Create full name
-    const fullName = [
-      registerDto.firstName,
-      registerDto.middleName,
-      registerDto.lastName,
-    ]
+    const fullName = [registerDto.firstName, registerDto.middleName, registerDto.lastName]
       .filter(Boolean)
       .join(' ');
 
     // Convert dateOfBirth string to Date object if provided
-    const dateOfBirth = registerDto.dateOfBirth
-      ? new Date(registerDto.dateOfBirth)
-      : undefined;
+    const dateOfBirth = registerDto.dateOfBirth ? new Date(registerDto.dateOfBirth) : undefined;
 
     const candidate = new this.candidateModel({
       firstName: registerDto.firstName,

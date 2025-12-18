@@ -95,5 +95,4 @@ export class AppraisalRecord {
   archivedAt?: Date;
 }
 
-export const AppraisalRecordSchema =
-  SchemaFactory.createForClass(AppraisalRecord);
+export const AppraisalRecordSchema = SchemaFactory.createForClass(AppraisalRecord);

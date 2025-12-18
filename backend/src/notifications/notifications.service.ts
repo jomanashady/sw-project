@@ -4,10 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CreateNotificationDto } from './dtos/notification.dto';
 import { NotificationType } from './enums/notification-type.enum';
-import {
-  SystemRole,
-  EmployeeStatus,
-} from '../employee-profile/enums/employee-profile.enums';
+import { SystemRole, EmployeeStatus } from '../employee-profile/enums/employee-profile.enums';
 import { EmployeeSystemRole } from '../employee-profile/models/employee-system-role.schema';
 import { RecruitmentNotificationsService } from './services/recruitment-notifications.service';
 
@@ -22,7 +19,7 @@ export class NotificationsService {
     private employeeProfileModel: Model<any>,
     @InjectModel(EmployeeSystemRole.name)
     private employeeSystemRoleModel: Model<any>,
-    private recruitmentNotificationsService: RecruitmentNotificationsService,
+    private recruitmentNotificationsService: RecruitmentNotificationsService
   ) {}
 
   // ===== LEAVE MODULE NOTIFICATIONS =====
@@ -36,10 +33,10 @@ export class NotificationsService {
     employeeId: string,
     managerId: string,
     coordinatorId: string,
-    leaveDetails: any,
+    leaveDetails: any
   ) {
     const notifications = [];
-    
+
     // Handle missing leaveDetails gracefully
     const details = leaveDetails || {
       employeeName: 'Employee',
@@ -47,7 +44,7 @@ export class NotificationsService {
       toDate: '',
       status: 'APPROVED',
     };
-    
+
     const message = `Leave request from ${details.employeeName} (${details.fromDate} to ${details.toDate}) has been finalized with status: ${details.status}`;
 
     console.log(`[NOTIFICATION SERVICE] Creating LEAVE_FINALIZED notifications:`);
@@ -60,7 +57,7 @@ export class NotificationsService {
         to: new Types.ObjectId(employeeId),
         type: NotificationType.LEAVE_FINALIZED,
         message: `Your leave request has been ${details.status}`,
-      }),
+      })
     );
 
     // Notify Manager (Department Head)
@@ -70,7 +67,7 @@ export class NotificationsService {
           to: new Types.ObjectId(managerId),
           type: NotificationType.LEAVE_FINALIZED,
           message: message,
-        }),
+        })
       );
     }
 
@@ -82,12 +79,14 @@ export class NotificationsService {
           to: new Types.ObjectId(coordinatorId),
           type: NotificationType.LEAVE_FINALIZED,
           message: message,
-        }),
+        })
       );
     }
 
     await Promise.all(notifications);
-    console.log(`[NOTIFICATION SERVICE] Created ${notifications.length} notifications for finalized leave request`);
+    console.log(
+      `[NOTIFICATION SERVICE] Created ${notifications.length} notifications for finalized leave request`
+    );
     return { success: true, notificationsCreated: notifications.length };
   }
 
@@ -99,7 +98,7 @@ export class NotificationsService {
     leaveRequestId: string,
     employeeId: string,
     managerId: string,
-    leaveDetails: any,
+    leaveDetails: any
   ) {
     // Handle missing leaveDetails gracefully
     const details = leaveDetails || {
@@ -124,13 +123,12 @@ export class NotificationsService {
   async notifyLeaveRequestStatusChanged(
     leaveRequestId: string,
     employeeId: string,
-    status: 'APPROVED' | 'REJECTED' | 'RETURNED_FOR_CORRECTION' | 'MODIFIED',
+    status: 'APPROVED' | 'REJECTED' | 'RETURNED_FOR_CORRECTION' | 'MODIFIED'
   ) {
     const statusMessages = {
       APPROVED: 'Your leave request has been approved',
       REJECTED: 'Your leave request has been rejected',
-      RETURNED_FOR_CORRECTION:
-        'Your leave request has been returned for correction',
+      RETURNED_FOR_CORRECTION: 'Your leave request has been returned for correction',
       MODIFIED: 'Your leave request has been modified',
     };
 
@@ -156,7 +154,7 @@ export class NotificationsService {
     employeeId: string,
     endDate: Date,
     daysRemaining: number,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const message = `Shift assignment ${shiftAssignmentId} for employee ${employeeId} is expiring in ${daysRemaining} days (${endDate.toISOString().split('T')[0]}). Please renew or reassign.`;
 
@@ -183,13 +181,15 @@ export class NotificationsService {
       endDate: Date;
       daysRemaining: number;
     }>,
-    currentUserId: string,
+    currentUserId: string
   ) {
     // If no HR Admin IDs provided, fetch all HR Admins and System Admins
     let targetAdminIds = hrAdminIds;
     if (!hrAdminIds || hrAdminIds.length === 0) {
-      console.log('[BULK NOTIFICATION] No HR Admin IDs provided, fetching all HR Admins and System Admins...');
-      
+      console.log(
+        '[BULK NOTIFICATION] No HR Admin IDs provided, fetching all HR Admins and System Admins...'
+      );
+
       // Query the employee_system_roles collection for users with HR_ADMIN or SYSTEM_ADMIN roles
       const hrAdminRoles = await this.employeeSystemRoleModel
         .find({
@@ -198,8 +198,8 @@ export class NotificationsService {
         })
         .select('employeeProfileId')
         .exec();
-      
-      targetAdminIds = hrAdminRoles.map(role => role.employeeProfileId.toString());
+
+      targetAdminIds = hrAdminRoles.map((role) => role.employeeProfileId.toString());
       console.log(`[BULK NOTIFICATION] Found ${targetAdminIds.length} HR Admins/System Admins`);
     }
 
@@ -212,7 +212,7 @@ export class NotificationsService {
         expiringAssignments
           .map(
             (a) =>
-              `- ${a.employeeName || a.employeeId}: ${a.shiftName || 'Shift'} expires in ${a.daysRemaining} days`,
+              `- ${a.employeeName || a.employeeId}: ${a.shiftName || 'Shift'} expires in ${a.daysRemaining} days`
           )
           .join('\n');
 
@@ -240,10 +240,7 @@ export class NotificationsService {
       .find({
         to: new Types.ObjectId(hrAdminId),
         type: {
-          $in: [
-            NotificationType.SHIFT_EXPIRY_ALERT,
-            NotificationType.SHIFT_EXPIRY_BULK_ALERT,
-          ],
+          $in: [NotificationType.SHIFT_EXPIRY_ALERT, NotificationType.SHIFT_EXPIRY_BULK_ALERT],
         },
       })
       .sort({ createdAt: -1 })
@@ -263,7 +260,7 @@ export class NotificationsService {
     recipientId: string,
     shiftAssignmentId: string,
     newEndDate: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const message = `Shift assignment ${shiftAssignmentId} has been renewed. New end date: ${newEndDate.toISOString().split('T')[0]}.`;
 
@@ -284,7 +281,7 @@ export class NotificationsService {
     recipientId: string,
     shiftAssignmentId: string,
     employeeId: string,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const message = `Shift assignment ${shiftAssignmentId} for employee ${employeeId} has been archived/expired. Consider creating a new assignment if needed.`;
 
@@ -321,13 +318,13 @@ export class NotificationsService {
       expiryAlerts: notifications.filter(
         (n) =>
           n.type === NotificationType.SHIFT_EXPIRY_ALERT ||
-          n.type === NotificationType.SHIFT_EXPIRY_BULK_ALERT,
+          n.type === NotificationType.SHIFT_EXPIRY_BULK_ALERT
       ),
       renewalConfirmations: notifications.filter(
-        (n) => n.type === NotificationType.SHIFT_RENEWAL_CONFIRMATION,
+        (n) => n.type === NotificationType.SHIFT_RENEWAL_CONFIRMATION
       ),
       archiveNotifications: notifications.filter(
-        (n) => n.type === NotificationType.SHIFT_ARCHIVE_NOTIFICATION,
+        (n) => n.type === NotificationType.SHIFT_ARCHIVE_NOTIFICATION
       ),
     };
 
@@ -347,7 +344,7 @@ export class NotificationsService {
     attendanceRecordId: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
     date: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const message = `Missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'} detected on ${date.toISOString().split('T')[0]}. Please submit a correction request.`;
 
@@ -370,7 +367,7 @@ export class NotificationsService {
     attendanceRecordId: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
     date: Date,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const message = `Employee ${employeeName} (${employeeId}) has a missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'} on ${date.toISOString().split('T')[0]}. Pending correction review.`;
 
@@ -395,7 +392,7 @@ export class NotificationsService {
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     }>,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const notifications: any[] = [];
 
@@ -406,7 +403,7 @@ export class NotificationsService {
         alert.attendanceRecordId,
         alert.missedPunchType,
         alert.date,
-        currentUserId,
+        currentUserId
       );
       notifications.push({
         type: 'employee',
@@ -422,7 +419,7 @@ export class NotificationsService {
           alert.attendanceRecordId,
           alert.missedPunchType,
           alert.date,
-          currentUserId,
+          currentUserId
         );
         notifications.push({
           type: 'manager',
@@ -477,10 +474,7 @@ export class NotificationsService {
   /**
    * Get all missed punch notifications (for HR Admin)
    */
-  async getAllMissedPunchNotifications(filters: {
-    startDate?: Date;
-    endDate?: Date;
-  }) {
+  async getAllMissedPunchNotifications(filters: { startDate?: Date; endDate?: Date }) {
     const query: any = {
       type: {
         $in: [
@@ -504,10 +498,10 @@ export class NotificationsService {
 
     // Group by type
     const employeeAlerts = notifications.filter(
-      (n) => n.type === NotificationType.MISSED_PUNCH_EMPLOYEE_ALERT,
+      (n) => n.type === NotificationType.MISSED_PUNCH_EMPLOYEE_ALERT
     );
     const managerAlerts = notifications.filter(
-      (n) => n.type === NotificationType.MISSED_PUNCH_MANAGER_ALERT,
+      (n) => n.type === NotificationType.MISSED_PUNCH_MANAGER_ALERT
     );
 
     return {
@@ -532,10 +526,10 @@ export class NotificationsService {
     shiftAssignmentId: string,
     hrAdminId: string,
     employeeDetails: any,
-    expiryDate: Date,
+    expiryDate: Date
   ) {
     const daysUntilExpiry = Math.ceil(
-      (expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+      (expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
     );
 
     return this.sendShiftExpiryNotification(
@@ -544,7 +538,7 @@ export class NotificationsService {
       employeeDetails.employeeId || employeeDetails.id,
       expiryDate,
       daysUntilExpiry,
-      hrAdminId, // Using hrAdminId as currentUserId for legacy calls
+      hrAdminId // Using hrAdminId as currentUserId for legacy calls
     );
   }
 
@@ -556,11 +550,9 @@ export class NotificationsService {
     employeeId: string,
     managerId: string,
     coordinatorId: string,
-    attendanceDetails: any,
+    attendanceDetails: any
   ) {
-    const date = attendanceDetails.date
-      ? new Date(attendanceDetails.date)
-      : new Date();
+    const date = attendanceDetails.date ? new Date(attendanceDetails.date) : new Date();
     const missedPunchType = attendanceDetails.missedPunchType || 'CLOCK_IN';
 
     const notifications = [];
@@ -572,8 +564,8 @@ export class NotificationsService {
         attendanceDetails.attendanceRecordId || '',
         missedPunchType,
         date,
-        coordinatorId,
-      ),
+        coordinatorId
+      )
     );
 
     // Notify Manager
@@ -585,8 +577,8 @@ export class NotificationsService {
         attendanceDetails.attendanceRecordId || '',
         missedPunchType,
         date,
-        coordinatorId,
-      ),
+        coordinatorId
+      )
     );
 
     await Promise.all(notifications);
@@ -613,9 +605,7 @@ export class NotificationsService {
         .lean()
         .exec();
 
-      console.log(
-        `Found ${allNotifications.length} notifications for user ${userId}`,
-      );
+      console.log(`Found ${allNotifications.length} notifications for user ${userId}`);
 
       // Ensure isRead field is always present (default to false if not set)
       const transformed = allNotifications.map((notif: any) => ({
@@ -628,10 +618,7 @@ export class NotificationsService {
       return transformed;
     } catch (error) {
       console.error('Error fetching notifications:', error);
-      console.error(
-        'Error details:',
-        error instanceof Error ? error.message : String(error),
-      );
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }
@@ -643,7 +630,7 @@ export class NotificationsService {
     return this.notificationLogModel.findByIdAndUpdate(
       notificationId,
       { isRead: true },
-      { new: true },
+      { new: true }
     );
   }
 
@@ -681,9 +668,7 @@ export class NotificationsService {
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async handleShiftExpiryNotifications() {
     try {
-      console.log(
-        '[SCHEDULED TASK] Running shift expiry notification check...',
-      );
+      console.log('[SCHEDULED TASK] Running shift expiry notification check...');
 
       const now = new Date();
       const expiryDate = new Date(now);
@@ -714,7 +699,7 @@ export class NotificationsService {
       }
 
       console.log(
-        `[SCHEDULED TASK] Found ${expiringAssignments.length} expiring shift assignments`,
+        `[SCHEDULED TASK] Found ${expiringAssignments.length} expiring shift assignments`
       );
 
       // Get all HR ADMIN users from the employee_system_roles collection
@@ -725,11 +710,11 @@ export class NotificationsService {
         })
         .populate('employeeProfileId', 'firstName lastName')
         .exec();
-      
-      const hrAdmins = hrAdminRoles.map(role => ({
+
+      const hrAdmins = hrAdminRoles.map((role) => ({
         _id: role.employeeProfileId,
-        firstName: (role.employeeProfileId as any)?.firstName,
-        lastName: (role.employeeProfileId as any)?.lastName,
+        firstName: role.employeeProfileId?.firstName,
+        lastName: role.employeeProfileId?.lastName,
       }));
 
       if (!hrAdmins || hrAdmins.length === 0) {
@@ -737,9 +722,7 @@ export class NotificationsService {
         return;
       }
 
-      console.log(
-        `[SCHEDULED TASK] Notifying ${hrAdmins.length} HR admins about expiring shifts`,
-      );
+      console.log(`[SCHEDULED TASK] Notifying ${hrAdmins.length} HR admins about expiring shifts`);
 
       // Create notifications for each HR admin for each expiring assignment
       const hrAdminIds = hrAdmins.map((admin: any) => admin._id.toString());
@@ -748,8 +731,7 @@ export class NotificationsService {
       for (const hrAdmin of hrAdmins) {
         for (const assignment of expiringAssignments) {
           const daysRemaining = Math.ceil(
-            (new Date(assignment.endDate).getTime() - now.getTime()) /
-              (1000 * 60 * 60 * 24),
+            (new Date(assignment.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
           );
 
           const employeeName =
@@ -774,12 +756,7 @@ export class NotificationsService {
               shiftName: shiftName,
               endDate: assignment.endDate?.toISOString() || '',
               daysRemaining: daysRemaining,
-              urgency:
-                daysRemaining <= 2
-                  ? 'HIGH'
-                  : daysRemaining <= 4
-                    ? 'MEDIUM'
-                    : 'LOW',
+              urgency: daysRemaining <= 2 ? 'HIGH' : daysRemaining <= 4 ? 'MEDIUM' : 'LOW',
             },
             isRead: false,
             createdAt: new Date(),
@@ -791,15 +768,10 @@ export class NotificationsService {
 
       if (notifications.length > 0) {
         await this.notificationLogModel.insertMany(notifications);
-        console.log(
-          `[SCHEDULED TASK] Successfully created ${notifications.length} notifications`,
-        );
+        console.log(`[SCHEDULED TASK] Successfully created ${notifications.length} notifications`);
       }
     } catch (error) {
-      console.error(
-        '[SCHEDULED TASK] Error in shift expiry notification:',
-        error,
-      );
+      console.error('[SCHEDULED TASK] Error in shift expiry notification:', error);
       // Don't throw - let the scheduled task continue even if it fails
     }
   }
@@ -821,7 +793,7 @@ export class NotificationsService {
   // NOTE: All recruitment notification methods below are DELEGATIONS to RecruitmentNotificationsService
   // The actual implementations are in recruitment-notifications.service.ts
   // These methods are kept here to maintain the NotificationsService API interface
-  
+
   // Notify panel members when assigned to an interview
   async notifyInterviewPanelMembers(
     panelMemberIds: string[],
@@ -833,9 +805,12 @@ export class NotificationsService {
       method: string;
       videoLink?: string;
       stage: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyInterviewPanelMembers(panelMemberIds, interviewDetails);
+    return this.recruitmentNotificationsService.notifyInterviewPanelMembers(
+      panelMemberIds,
+      interviewDetails
+    );
   }
 
   // Notify HR staff when a candidate submits a new application
@@ -847,9 +822,12 @@ export class NotificationsService {
       positionTitle: string;
       requisitionId: string;
       isReferral?: boolean;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHRNewApplication(hrRecipientIds, applicationDetails);
+    return this.recruitmentNotificationsService.notifyHRNewApplication(
+      hrRecipientIds,
+      applicationDetails
+    );
   }
 
   // Notify panel members when an interview is cancelled
@@ -859,9 +837,12 @@ export class NotificationsService {
       candidateName: string;
       positionTitle: string;
       originalDate: Date;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyInterviewCancelled(panelMemberIds, interviewDetails);
+    return this.recruitmentNotificationsService.notifyInterviewCancelled(
+      panelMemberIds,
+      interviewDetails
+    );
   }
 
   // Notify panel members when an interview is rescheduled
@@ -875,9 +856,12 @@ export class NotificationsService {
       newDate: Date;
       method: string;
       videoLink?: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyInterviewRescheduled(panelMemberIds, interviewDetails);
+    return this.recruitmentNotificationsService.notifyInterviewRescheduled(
+      panelMemberIds,
+      interviewDetails
+    );
   }
 
   // Get all interview notifications for a user
@@ -895,9 +879,12 @@ export class NotificationsService {
       method: string;
       videoLink?: string;
       stage: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyCandidateInterviewScheduled(candidateId, interviewDetails);
+    return this.recruitmentNotificationsService.notifyCandidateInterviewScheduled(
+      candidateId,
+      interviewDetails
+    );
   }
 
   // Notify HR employees when a candidate is hired
@@ -909,9 +896,12 @@ export class NotificationsService {
       positionTitle: string;
       applicationId: string;
       offerId?: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHREmployeesCandidateHired(hrEmployeeIds, hiringDetails);
+    return this.recruitmentNotificationsService.notifyHREmployeesCandidateHired(
+      hrEmployeeIds,
+      hiringDetails
+    );
   }
 
   // Notify HR employees when a candidate is rejected
@@ -923,9 +913,12 @@ export class NotificationsService {
       positionTitle: string;
       applicationId: string;
       rejectionReason?: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHREmployeesCandidateRejected(hrEmployeeIds, rejectionDetails);
+    return this.recruitmentNotificationsService.notifyHREmployeesCandidateRejected(
+      hrEmployeeIds,
+      rejectionDetails
+    );
   }
 
   // Notify candidate when they are hired
@@ -934,9 +927,12 @@ export class NotificationsService {
     acceptanceDetails: {
       positionTitle: string;
       applicationId: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyCandidateAccepted(candidateId, acceptanceDetails);
+    return this.recruitmentNotificationsService.notifyCandidateAccepted(
+      candidateId,
+      acceptanceDetails
+    );
   }
 
   // Notify candidate when their application is rejected
@@ -946,9 +942,12 @@ export class NotificationsService {
       positionTitle: string;
       applicationId: string;
       rejectionReason?: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyCandidateRejected(candidateId, rejectionDetails);
+    return this.recruitmentNotificationsService.notifyCandidateRejected(
+      candidateId,
+      rejectionDetails
+    );
   }
 
   // Notify candidate when interview is completed (all feedback submitted)
@@ -958,9 +957,12 @@ export class NotificationsService {
       positionTitle: string;
       applicationId: string;
       interviewId: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyCandidateInterviewCompleted(candidateId, interviewDetails);
+    return this.recruitmentNotificationsService.notifyCandidateInterviewCompleted(
+      candidateId,
+      interviewDetails
+    );
   }
 
   // Notify HR manager when all interview feedback is submitted and ready for review
@@ -971,9 +973,12 @@ export class NotificationsService {
       positionTitle: string;
       applicationId: string;
       interviewId: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHRManagerFeedbackReady(hrManagerIds, reviewDetails);
+    return this.recruitmentNotificationsService.notifyHRManagerFeedbackReady(
+      hrManagerIds,
+      reviewDetails
+    );
   }
 
   // Notify candidate when they receive a job offer
@@ -984,9 +989,12 @@ export class NotificationsService {
       positionTitle: string;
       grossSalary: number;
       deadline: Date;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyCandidateOfferReceived(candidateId, offerDetails);
+    return this.recruitmentNotificationsService.notifyCandidateOfferReceived(
+      candidateId,
+      offerDetails
+    );
   }
 
   // Notify HR when candidate accepts or rejects an offer
@@ -999,7 +1007,7 @@ export class NotificationsService {
       offerId: string;
       applicationId: string;
       response: 'accepted' | 'rejected';
-    },
+    }
   ) {
     return this.recruitmentNotificationsService.notifyHROfferResponse(hrUserIds, responseDetails);
   }
@@ -1030,7 +1038,7 @@ export class NotificationsService {
   // ===== ONBOARDING → PAYROLL INTEGRATION NOTIFICATIONS =====
   // NOTE: All onboarding/payroll notification methods below are DELEGATIONS to RecruitmentNotificationsService
   // The actual implementations are in recruitment-notifications.service.ts
-  
+
   // ONB-018: Notify Payroll Team about New Hire Ready for Payroll
   async notifyPayrollTeamNewHire(
     payrollTeamIds: string[],
@@ -1043,9 +1051,12 @@ export class NotificationsService {
       grossSalary: number;
       contractStartDate: Date;
       signingBonus?: number;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyPayrollTeamNewHire(payrollTeamIds, newHireDetails);
+    return this.recruitmentNotificationsService.notifyPayrollTeamNewHire(
+      payrollTeamIds,
+      newHireDetails
+    );
   }
 
   // ONB-019: Notify Payroll Team about Signing Bonus Pending Review
@@ -1059,9 +1070,12 @@ export class NotificationsService {
       signingBonusAmount: number;
       signingBonusId?: string;
       paymentDate: Date;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyPayrollTeamSigningBonus(payrollTeamIds, bonusDetails);
+    return this.recruitmentNotificationsService.notifyPayrollTeamSigningBonus(
+      payrollTeamIds,
+      bonusDetails
+    );
   }
 
   // ONB-018: Notify HR about Payroll Task Completion
@@ -1072,15 +1086,18 @@ export class NotificationsService {
       employeeName: string;
       positionTitle: string;
       grossSalary: number;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHRPayrollTaskCompleted(hrUserIds, completionDetails);
+    return this.recruitmentNotificationsService.notifyHRPayrollTaskCompleted(
+      hrUserIds,
+      completionDetails
+    );
   }
 
   // ===== ONBOARDING NOTIFICATIONS =====
   // NOTE: All onboarding notification methods below are DELEGATIONS to RecruitmentNotificationsService
   // The actual implementations are in recruitment-notifications.service.ts
-  
+
   // ONB-005: Send Welcome Notification to New Hire
   async notifyNewHireWelcome(
     newHireId: string,
@@ -1091,7 +1108,7 @@ export class NotificationsService {
       startDate: Date;
       totalTasks: number;
       onboardingId: string;
-    },
+    }
   ) {
     return this.recruitmentNotificationsService.notifyNewHireWelcome(newHireId, welcomeDetails);
   }
@@ -1107,12 +1124,10 @@ export class NotificationsService {
   async notifyProfileChangeRequestSubmitted(
     employeeProfileId: string,
     changeRequestId: string,
-    changeDescription: string,
+    changeDescription: string
   ): Promise<{ success: boolean; notificationsSent: number; error?: string }> {
     try {
-      console.log(
-        '[NOTIFICATION SERVICE] Creating PROFILE_CHANGE_REQUEST_SUBMITTED notifications',
-      );
+      console.log('[NOTIFICATION SERVICE] Creating PROFILE_CHANGE_REQUEST_SUBMITTED notifications');
 
       // FIXED: Get HR users from employee_system_roles collection
       const hrRoles = [
@@ -1137,9 +1152,7 @@ export class NotificationsService {
         console.log(`Found ${hrSystemRoles.length} HR system role records`);
 
         // Extract employee IDs
-        const hrEmployeeIds = hrSystemRoles.map(
-          (role) => role.employeeProfileId,
-        );
+        const hrEmployeeIds = hrSystemRoles.map((role) => role.employeeProfileId);
 
         if (hrEmployeeIds.length > 0) {
           // Get employee profiles for these IDs
@@ -1152,18 +1165,14 @@ export class NotificationsService {
             .exec();
         }
 
-        console.log(
-          `Found ${hrUsers.length} HR users to notify from system roles`,
-        );
+        console.log(`Found ${hrUsers.length} HR users to notify from system roles`);
       } catch (roleError) {
         console.warn('Error querying system roles, using fallback:', roleError);
       }
 
       // Fallback if no HR users found or error
       if (hrUsers.length === 0) {
-        console.warn(
-          'No HR users found via system roles, using fallback approach',
-        );
+        console.warn('No HR users found via system roles, using fallback approach');
 
         // Try known HR user IDs from logs
         const knownHRUserIds = [
@@ -1179,16 +1188,12 @@ export class NotificationsService {
             .select('_id firstName lastName email')
             .exec();
 
-          console.log(
-            `Fallback: Found ${hrUsers.length} HR users via known IDs`,
-          );
+          console.log(`Fallback: Found ${hrUsers.length} HR users via known IDs`);
         }
       }
 
       if (hrUsers.length === 0) {
-        console.warn(
-          'No HR users found to notify. Please check employee_system_roles collection.',
-        );
+        console.warn('No HR users found to notify. Please check employee_system_roles collection.');
         return { success: true, notificationsSent: 0 };
       }
 
@@ -1249,10 +1254,7 @@ export class NotificationsService {
           notifications.push(notification);
           console.log(`Notification created for HR user: ${hrUser.email}`);
         } catch (userError) {
-          console.error(
-            `Failed to create notification for HR user ${hrUser._id}:`,
-            userError,
-          );
+          console.error(`Failed to create notification for HR user ${hrUser._id}:`, userError);
           // Continue with other users
         }
       }
@@ -1263,10 +1265,7 @@ export class NotificationsService {
         notificationsSent: notifications.length,
       };
     } catch (error) {
-      console.error(
-        'Failed to create profile change request notifications:',
-        error,
-      );
+      console.error('Failed to create profile change request notifications:', error);
       // Don't throw - notification failure shouldn't block main action
       return {
         success: false,
@@ -1287,26 +1286,19 @@ export class NotificationsService {
     employeeProfileId: string,
     changeRequestId: string,
     status: 'APPROVED' | 'REJECTED',
-    reason?: string,
+    reason?: string
   ): Promise<{ success: boolean; notification?: any; error?: string }> {
     try {
-      console.log(
-        `[NOTIFICATION SERVICE] Creating PROFILE_CHANGE_${status} notification`,
-      );
+      console.log(`[NOTIFICATION SERVICE] Creating PROFILE_CHANGE_${status} notification`);
 
       // FIXED: Clean employeeProfileId if it's an object string
       let cleanEmployeeId = employeeProfileId;
 
       // If it looks like an object string (from your error logs), extract the ID
-      if (
-        typeof employeeProfileId === 'string' &&
-        employeeProfileId.includes('ObjectId')
-      ) {
+      if (typeof employeeProfileId === 'string' && employeeProfileId.includes('ObjectId')) {
         try {
           // Extract ObjectId from the string representation
-          const match = employeeProfileId.match(
-            /ObjectId\("([0-9a-fA-F]{24})"\)/,
-          );
+          const match = employeeProfileId.match(/ObjectId\("([0-9a-fA-F]{24})"\)/);
           if (match && match[1]) {
             cleanEmployeeId = match[1];
             console.log(`✅ Extracted clean employee ID: ${cleanEmployeeId}`);
@@ -1315,16 +1307,11 @@ export class NotificationsService {
             const altMatch = employeeProfileId.match(/"([0-9a-fA-F]{24})"/);
             if (altMatch && altMatch[1]) {
               cleanEmployeeId = altMatch[1];
-              console.log(
-                `✅ Extracted clean employee ID (alt): ${cleanEmployeeId}`,
-              );
+              console.log(`✅ Extracted clean employee ID (alt): ${cleanEmployeeId}`);
             }
           }
         } catch (extractError) {
-          console.warn(
-            'Could not extract ID from string, using as-is:',
-            extractError,
-          );
+          console.warn('Could not extract ID from string, using as-is:', extractError);
         }
       }
 
@@ -1371,10 +1358,7 @@ export class NotificationsService {
         notification,
       };
     } catch (error) {
-      console.error(
-        'Failed to create profile change processed notification:',
-        error,
-      );
+      console.error('Failed to create profile change processed notification:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1392,9 +1376,12 @@ export class NotificationsService {
       deadline: Date;
       isOverdue: boolean;
       daysRemaining?: number;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyOnboardingTaskReminder(recipientId, reminderDetails);
+    return this.recruitmentNotificationsService.notifyOnboardingTaskReminder(
+      recipientId,
+      reminderDetails
+    );
   }
 
   /**
@@ -1406,12 +1393,10 @@ export class NotificationsService {
   async notifyProfileUpdated(
     employeeProfileId: string,
     updatedBy: string,
-    changes: string[],
+    changes: string[]
   ): Promise<{ success: boolean; notification?: any; error?: string }> {
     try {
-      console.log(
-        '[NOTIFICATION SERVICE] Creating PROFILE_UPDATED notification',
-      );
+      console.log('[NOTIFICATION SERVICE] Creating PROFILE_UPDATED notification');
 
       // Get updater details
       const updater = await this.employeeProfileModel
@@ -1419,9 +1404,7 @@ export class NotificationsService {
         .select('firstName lastName')
         .exec();
 
-      const updaterName = updater
-        ? `${updater.firstName} ${updater.lastName}`.trim()
-        : 'HR Admin';
+      const updaterName = updater ? `${updater.firstName} ${updater.lastName}`.trim() : 'HR Admin';
 
       // Get employee details
       const employee = await this.employeeProfileModel
@@ -1433,10 +1416,7 @@ export class NotificationsService {
         ? `${employee.firstName} ${employee.lastName}`.trim()
         : 'Employee';
 
-      const changesText =
-        changes.length > 0
-          ? `Changes: ${changes.join(', ')}`
-          : 'Profile updated';
+      const changesText = changes.length > 0 ? `Changes: ${changes.join(', ')}` : 'Profile updated';
 
       const message = `Your profile has been updated by ${updaterName}. ${changesText}`;
 
@@ -1479,9 +1459,12 @@ export class NotificationsService {
       documentName: string;
       taskName: string;
       onboardingId: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyHRDocumentUploaded(hrUserIds, documentDetails);
+    return this.recruitmentNotificationsService.notifyHRDocumentUploaded(
+      hrUserIds,
+      documentDetails
+    );
   }
 
   // ONB-009, ONB-013: Notify about Access Provisioning
@@ -1493,9 +1476,12 @@ export class NotificationsService {
       accessType: string;
       systemName: string;
       provisionedBy: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyAccessProvisioned(recipientIds, accessDetails);
+    return this.recruitmentNotificationsService.notifyAccessProvisioned(
+      recipientIds,
+      accessDetails
+    );
   }
 
   // ONB-012: Notify about Equipment/Workspace Reserved
@@ -1508,9 +1494,12 @@ export class NotificationsService {
       workspaceDetails?: string;
       reservedBy: string;
       readyDate: Date;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyEquipmentReserved(recipientIds, reservationDetails);
+    return this.recruitmentNotificationsService.notifyEquipmentReserved(
+      recipientIds,
+      reservationDetails
+    );
   }
 
   // ONB-001: Notify Departments About Assigned Onboarding Tasks
@@ -1523,9 +1512,12 @@ export class NotificationsService {
       tasks: string[];
       deadline: Date;
       onboardingId: string;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyOnboardingTaskAssigned(recipientIds, taskDetails);
+    return this.recruitmentNotificationsService.notifyOnboardingTaskAssigned(
+      recipientIds,
+      taskDetails
+    );
   }
 
   // Notify about Onboarding Completion
@@ -1537,9 +1529,12 @@ export class NotificationsService {
       positionTitle: string;
       completedDate: Date;
       totalTasks: number;
-    },
+    }
   ) {
-    return this.recruitmentNotificationsService.notifyOnboardingCompleted(recipientIds, completionDetails);
+    return this.recruitmentNotificationsService.notifyOnboardingCompleted(
+      recipientIds,
+      completionDetails
+    );
   }
 
   // Get all onboarding-related notifications for a user
@@ -1567,7 +1562,7 @@ export class NotificationsService {
       reason: string;
       requestedLastDay?: string;
       department?: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1577,13 +1572,14 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `📝 Resignation Request Submitted (OFF-018)\n\n` +
+        const message =
+          `📝 Resignation Request Submitted (OFF-018)\n\n` +
           `An employee has submitted a resignation request.\n\n` +
           `👤 Employee: ${resignationDetails.employeeName}\n` +
           `🏢 Department: ${resignationDetails.department || 'N/A'}\n` +
           `📋 Reason: ${resignationDetails.reason}\n` +
-          (resignationDetails.requestedLastDay 
-            ? `📅 Requested Last Day: ${new Date(resignationDetails.requestedLastDay).toLocaleDateString()}\n` 
+          (resignationDetails.requestedLastDay
+            ? `📅 Requested Last Day: ${new Date(resignationDetails.requestedLastDay).toLocaleDateString()}\n`
             : '') +
           `\nPlease review and process this resignation request.`;
 
@@ -1616,23 +1612,28 @@ export class NotificationsService {
       newStatus: string;
       effectiveDate?: string;
       hrComments?: string;
-    },
+    }
   ) {
     if (!employeeId) {
       return { success: false, message: 'No employee ID provided' };
     }
 
     try {
-      const statusEmoji = statusDetails.newStatus === 'approved' ? '✅' : 
-                         statusDetails.newStatus === 'rejected' ? '❌' : '⏳';
-      
-      const message = `${statusEmoji} Resignation Status Updated (OFF-019)\n\n` +
+      const statusEmoji =
+        statusDetails.newStatus === 'approved'
+          ? '✅'
+          : statusDetails.newStatus === 'rejected'
+            ? '❌'
+            : '⏳';
+
+      const message =
+        `${statusEmoji} Resignation Status Updated (OFF-019)\n\n` +
         `Your resignation request has been ${statusDetails.newStatus.toUpperCase()}.\n\n` +
-        (statusDetails.effectiveDate 
-          ? `📅 Effective Date: ${new Date(statusDetails.effectiveDate).toLocaleDateString()}\n` 
+        (statusDetails.effectiveDate
+          ? `📅 Effective Date: ${new Date(statusDetails.effectiveDate).toLocaleDateString()}\n`
           : '') +
         (statusDetails.hrComments ? `💬 HR Comments: ${statusDetails.hrComments}\n` : '') +
-        (statusDetails.newStatus === 'approved' 
+        (statusDetails.newStatus === 'approved'
           ? `\nNext steps: Please complete the offboarding checklist and return company assets.`
           : '');
 
@@ -1666,7 +1667,7 @@ export class NotificationsService {
       performanceScore?: number;
       initiatedBy: string;
       terminationDate?: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1676,16 +1677,17 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `⚠️ Termination Initiated (OFF-001)\n\n` +
+        const message =
+          `⚠️ Termination Initiated (OFF-001)\n\n` +
           `A termination review has been initiated.\n\n` +
           `👤 Employee: ${terminationDetails.employeeName}\n` +
           `📋 Reason: ${terminationDetails.reason}\n` +
-          (terminationDetails.performanceScore !== undefined 
-            ? `📊 Performance Score: ${terminationDetails.performanceScore.toFixed(2)}\n` 
+          (terminationDetails.performanceScore !== undefined
+            ? `📊 Performance Score: ${terminationDetails.performanceScore.toFixed(2)}\n`
             : '') +
           `👤 Initiated By: ${terminationDetails.initiatedBy}\n` +
-          (terminationDetails.terminationDate 
-            ? `📅 Proposed Date: ${new Date(terminationDetails.terminationDate).toLocaleDateString()}\n` 
+          (terminationDetails.terminationDate
+            ? `📅 Proposed Date: ${new Date(terminationDetails.terminationDate).toLocaleDateString()}\n`
             : '') +
           `\nPlease review and take appropriate action.`;
 
@@ -1718,7 +1720,7 @@ export class NotificationsService {
       employeeName: string;
       effectiveDate: string;
       reason: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1728,7 +1730,8 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `🔴 Termination Approved (OFF-001)\n\n` +
+        const message =
+          `🔴 Termination Approved (OFF-001)\n\n` +
           `A termination has been approved.\n\n` +
           `👤 Employee: ${terminationDetails.employeeName}\n` +
           `📅 Effective Date: ${new Date(terminationDetails.effectiveDate).toLocaleDateString()}\n` +
@@ -1766,18 +1769,19 @@ export class NotificationsService {
       reason: string;
       performanceScore?: number;
       initiatedBy: string;
-    },
+    }
   ) {
     if (!employeeId) {
       return { success: false, message: 'No employee ID provided' };
     }
 
     try {
-      const message = `⚠️ Employment Review Notice\n\n` +
+      const message =
+        `⚠️ Employment Review Notice\n\n` +
         `Your employment is currently under review.\n\n` +
         `📋 Reason: ${terminationDetails.reason}\n` +
-        (terminationDetails.performanceScore !== undefined 
-          ? `📊 Performance Score: ${terminationDetails.performanceScore}${terminationDetails.performanceScore > 5 ? '%' : '/5'}\n` 
+        (terminationDetails.performanceScore !== undefined
+          ? `📊 Performance Score: ${terminationDetails.performanceScore}${terminationDetails.performanceScore > 5 ? '%' : '/5'}\n`
           : '') +
         `👤 Initiated by: ${terminationDetails.initiatedBy}\n\n` +
         `A member of HR will contact you shortly to discuss next steps and the offboarding process.`;
@@ -1809,18 +1813,21 @@ export class NotificationsService {
       reason: string;
       effectiveDate: string;
       hrComments?: string;
-    },
+    }
   ) {
     if (!employeeId) {
       return { success: false, message: 'No employee ID provided' };
     }
 
     try {
-      const message = `🔴 Employment Termination Notice\n\n` +
+      const message =
+        `🔴 Employment Termination Notice\n\n` +
         `Your employment has been terminated.\n\n` +
         `📅 Effective Date: ${new Date(terminationDetails.effectiveDate).toLocaleDateString()}\n` +
         `📋 Reason: ${terminationDetails.reason}\n` +
-        (terminationDetails.hrComments ? `💬 HR Comments: ${terminationDetails.hrComments}\n\n` : '\n') +
+        (terminationDetails.hrComments
+          ? `💬 HR Comments: ${terminationDetails.hrComments}\n\n`
+          : '\n') +
         `Next Steps:\n` +
         `• Complete the offboarding checklist\n` +
         `• Return all company assets (laptop, badge, phone, etc.)\n` +
@@ -1855,7 +1862,7 @@ export class NotificationsService {
       employeeName: string;
       terminationDate: string;
       departments: string[];
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1865,7 +1872,8 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `📋 Clearance Checklist Created (OFF-006)\n\n` +
+        const message =
+          `📋 Clearance Checklist Created (OFF-006)\n\n` +
           `An offboarding checklist has been created.\n\n` +
           `👤 Employee: ${clearanceDetails.employeeName}\n` +
           `📅 Termination Date: ${new Date(clearanceDetails.terminationDate).toLocaleDateString()}\n` +
@@ -1902,7 +1910,7 @@ export class NotificationsService {
       department: string;
       terminationDate: string;
       checklistId: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -1910,14 +1918,19 @@ export class NotificationsService {
 
     const notifications: any[] = [];
     const deptIcons: { [key: string]: string } = {
-      'IT': '💻', 'HR': '👤', 'FINANCE': '💰', 
-      'FACILITIES': '🏢', 'ADMIN': '📋', 'LINE_MANAGER': '👔'
+      IT: '💻',
+      HR: '👤',
+      FINANCE: '💰',
+      FACILITIES: '🏢',
+      ADMIN: '📋',
+      LINE_MANAGER: '👔',
     };
     const icon = deptIcons[clearanceDetails.department?.toUpperCase()] || '📁';
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `${icon} Clearance Sign-Off Required (OFF-010)\n\n` +
+        const message =
+          `${icon} Clearance Sign-Off Required (OFF-010)\n\n` +
           `Your department needs to complete a clearance sign-off.\n\n` +
           `👤 Employee: ${clearanceDetails.employeeName}\n` +
           `🏢 Your Department: ${clearanceDetails.department}\n` +
@@ -1954,19 +1967,24 @@ export class NotificationsService {
       newStatus: string;
       updatedBy: string;
       comments?: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
     }
 
     const notifications: any[] = [];
-    const statusEmoji = clearanceDetails.newStatus === 'approved' ? '✅' : 
-                       clearanceDetails.newStatus === 'rejected' ? '❌' : '⏳';
+    const statusEmoji =
+      clearanceDetails.newStatus === 'approved'
+        ? '✅'
+        : clearanceDetails.newStatus === 'rejected'
+          ? '❌'
+          : '⏳';
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `${statusEmoji} Clearance Item Updated (OFF-010)\n\n` +
+        const message =
+          `${statusEmoji} Clearance Item Updated (OFF-010)\n\n` +
           `A clearance item has been updated.\n\n` +
           `👤 Employee: ${clearanceDetails.employeeName}\n` +
           `🏢 Department: ${clearanceDetails.department}\n` +
@@ -2002,7 +2020,7 @@ export class NotificationsService {
       employeeId: string;
       employeeName: string;
       completionDate: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -2012,7 +2030,8 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `✅ All Clearances Approved (OFF-010)\n\n` +
+        const message =
+          `✅ All Clearances Approved (OFF-010)\n\n` +
           `All department clearances have been approved.\n\n` +
           `👤 Employee: ${clearanceDetails.employeeName}\n` +
           `📅 Completion Date: ${new Date(clearanceDetails.completionDate).toLocaleDateString()}\n\n` +
@@ -2030,7 +2049,10 @@ export class NotificationsService {
         });
         notifications.push(notification);
       } catch (error) {
-        console.error(`Failed to send all clearances approved notification to ${recipientId}:`, error);
+        console.error(
+          `Failed to send all clearances approved notification to ${recipientId}:`,
+          error
+        );
       }
     }
 
@@ -2048,7 +2070,7 @@ export class NotificationsService {
       revokedSystems: string[];
       effectiveDate: string;
       revokedBy: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -2058,11 +2080,13 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const systemsList = accessDetails.revokedSystems.length > 0
-          ? accessDetails.revokedSystems.map(s => `  • ${s}`).join('\n')
-          : '  • All system access';
+        const systemsList =
+          accessDetails.revokedSystems.length > 0
+            ? accessDetails.revokedSystems.map((s) => `  • ${s}`).join('\n')
+            : '  • All system access';
 
-        const message = `🔒 System Access Revoked (OFF-007)\n\n` +
+        const message =
+          `🔒 System Access Revoked (OFF-007)\n\n` +
           `System access has been revoked for security.\n\n` +
           `👤 Employee: ${accessDetails.employeeName}\n` +
           `📅 Effective: ${new Date(accessDetails.effectiveDate).toLocaleDateString()}\n` +
@@ -2100,7 +2124,7 @@ export class NotificationsService {
       leaveEncashment?: number;
       deductions?: number;
       estimatedFinalAmount?: number;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -2110,20 +2134,21 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `💰 Final Settlement Triggered (OFF-013)\n\n` +
+        const message =
+          `💰 Final Settlement Triggered (OFF-013)\n\n` +
           `Final settlement calculation has been initiated.\n\n` +
           `👤 Employee: ${settlementDetails.employeeName}\n` +
-          (settlementDetails.leaveBalance !== undefined 
-            ? `📅 Leave Balance: ${settlementDetails.leaveBalance} days\n` 
+          (settlementDetails.leaveBalance !== undefined
+            ? `📅 Leave Balance: ${settlementDetails.leaveBalance} days\n`
             : '') +
-          (settlementDetails.leaveEncashment !== undefined 
-            ? `💵 Leave Encashment: $${settlementDetails.leaveEncashment.toFixed(2)}\n` 
+          (settlementDetails.leaveEncashment !== undefined
+            ? `💵 Leave Encashment: $${settlementDetails.leaveEncashment.toFixed(2)}\n`
             : '') +
-          (settlementDetails.deductions !== undefined 
-            ? `📉 Deductions: $${settlementDetails.deductions.toFixed(2)}\n` 
+          (settlementDetails.deductions !== undefined
+            ? `📉 Deductions: $${settlementDetails.deductions.toFixed(2)}\n`
             : '') +
-          (settlementDetails.estimatedFinalAmount !== undefined 
-            ? `💰 Estimated Final: $${settlementDetails.estimatedFinalAmount.toFixed(2)}\n` 
+          (settlementDetails.estimatedFinalAmount !== undefined
+            ? `💰 Estimated Final: $${settlementDetails.estimatedFinalAmount.toFixed(2)}\n`
             : '') +
           `\nPayroll team will process the final payment.`;
 
@@ -2156,7 +2181,7 @@ export class NotificationsService {
       employeeName: string;
       finalAmount: number;
       paymentDate: string;
-    },
+    }
   ) {
     if (!recipientIds || recipientIds.length === 0) {
       return { success: true, notificationsCreated: 0 };
@@ -2166,7 +2191,8 @@ export class NotificationsService {
 
     for (const recipientId of recipientIds) {
       try {
-        const message = `✅ Final Settlement Completed (OFF-013)\n\n` +
+        const message =
+          `✅ Final Settlement Completed (OFF-013)\n\n` +
           `Final settlement has been processed.\n\n` +
           `👤 Employee: ${settlementDetails.employeeName}\n` +
           `💰 Final Amount: $${settlementDetails.finalAmount.toFixed(2)}\n` +
@@ -2185,7 +2211,10 @@ export class NotificationsService {
         });
         notifications.push(notification);
       } catch (error) {
-        console.error(`Failed to send final settlement completed notification to ${recipientId}:`, error);
+        console.error(
+          `Failed to send final settlement completed notification to ${recipientId}:`,
+          error
+        );
       }
     }
 

@@ -4,4 +4,3 @@ export class FinalizeLeaveRequestDto {
   @IsString()
   leaveRequestId: string;
 }
-

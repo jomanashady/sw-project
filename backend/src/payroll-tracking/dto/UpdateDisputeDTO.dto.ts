@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsMongoId,
-  IsOptional,
-  IsEnum,
-  MinLength,
-} from 'class-validator';
+import { IsString, IsMongoId, IsOptional, IsEnum, MinLength } from 'class-validator';
 import { DisputeStatus } from '../enums/payroll-tracking-enum';
 
 export class UpdateDisputeDTO {

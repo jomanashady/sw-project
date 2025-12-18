@@ -22,8 +22,6 @@ export class ApplicationStatusHistory {
   changedBy: Types.ObjectId;
 }
 
-export type ApplicationStatusHistoryDocument =
-  HydratedDocument<ApplicationStatusHistory>;
-export const ApplicationStatusHistorySchema = SchemaFactory.createForClass(
-  ApplicationStatusHistory,
-);
+export type ApplicationStatusHistoryDocument = HydratedDocument<ApplicationStatusHistory>;
+export const ApplicationStatusHistorySchema =
+  SchemaFactory.createForClass(ApplicationStatusHistory);

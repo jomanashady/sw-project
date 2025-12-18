@@ -31,10 +31,7 @@ import {
   PaySlipPaymentStatus,
 } from './enums/payroll-execution-enum';
 import { LeaveStatus } from '../leaves/enums/leave-status.enum';
-import {
-  TimeExceptionType,
-  TimeExceptionStatus,
-} from '../time-management/models/enums/index';
+import { TimeExceptionType, TimeExceptionStatus } from '../time-management/models/enums/index';
 import { RefundStatus } from '../payroll-tracking/enums/payroll-tracking-enum';
 import { SigningBonusReviewDto } from './dto/SigningBonusReviewDto.dto';
 import { SigningBonusEditDto } from './dto/SigningBonusEditDto.dto';
@@ -46,40 +43,46 @@ import { FinanceDecisionDto } from './dto/FinanceDecisionDto.dto';
 import { ManagerApprovalReviewDto } from './dto/ManagerApprovalReviewDto.dto';
 import { ReviewPayrollPeriodDto } from './dto/ReviewPayrollPeriodDto.dto';
 import { EditPayrollPeriodDto } from './dto/EditPayrollPeriodDto.dto';
-import { terminationAndResignationBenefits, terminationAndResignationBenefitsDocument } from '../payroll-configuration/models/terminationAndResignationBenefits';
+import {
+  terminationAndResignationBenefits,
+  terminationAndResignationBenefitsDocument,
+} from '../payroll-configuration/models/terminationAndResignationBenefits';
 import { allowance, allowanceDocument } from '../payroll-configuration/models/allowance.schema';
 import { taxRules, taxRulesDocument } from '../payroll-configuration/models/taxRules.schema';
-import { insuranceBrackets, insuranceBracketsDocument } from '../payroll-configuration/models/insuranceBrackets.schema';
+import {
+  insuranceBrackets,
+  insuranceBracketsDocument,
+} from '../payroll-configuration/models/insuranceBrackets.schema';
 import { payGrade, payGradeDocument } from '../payroll-configuration/models/payGrades.schema';
 import { TerminationRequest } from '../recruitment/models/termination-request.schema';
 import { EmployeeProfile } from '../employee-profile/models/employee-profile.schema';
 import { Position } from '../organization-structure/models/position.schema';
-import {
-  employeePenalties,
-  employeePenaltiesDocument,
-} from './models/employeePenalties.schema';
+import { employeePenalties, employeePenaltiesDocument } from './models/employeePenalties.schema';
 import { ConfigStatus } from '../payroll-configuration/enums/payroll-configuration-enums';
 import { EmployeeStatus, SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { TerminationStatus } from '../recruitment/enums/termination-status.enum';
-import { EmployeeSystemRole, EmployeeSystemRoleDocument } from '../employee-profile/models/employee-system-role.schema';
+import {
+  EmployeeSystemRole,
+  EmployeeSystemRoleDocument,
+} from '../employee-profile/models/employee-system-role.schema';
 
 /**
  * ====================================================================================
  * PAYROLL EXECUTION SERVICE - COMPLETE PAYROLL PROCESSING WORKFLOW
  * ====================================================================================
- * 
+ *
  * This service implements the complete payroll processing workflow organized by phases:
- * 
+ *
  * PHASE 0 - Pre-Run Reviews & Approvals:
  *   - Review, edit, approve/reject signing bonuses
  *   - Review, edit, approve/reject termination/resignation benefits
  *   - Ensures all pending items are reviewed before payroll initiation
- * 
+ *
  * PHASE 1 - Payroll Initiation:
  *   - Process payroll initiation (create payroll run)
  *   - Review payroll period (approve/reject)
  *   - Edit payroll initiation if rejected
- * 
+ *
  * PHASE 1.1 - Payroll Draft Generation:
  *   - Phase 1.1.A: Fetch employees & check HR events (new hire, termination, resignation)
  *     * Auto-process signing bonuses for new hires
@@ -94,22 +97,22 @@ import { EmployeeSystemRole, EmployeeSystemRoleDocument } from '../employee-prof
  *     * Calculate Net Pay = Net Salary - Penalties + Refunds
  *     * Prorated salary for mid-month hires/terminations
  *   - Phase 1.1.C: Draft generation with full breakdowns
- * 
+ *
  * PHASE 2 - Payroll Draft Review:
  *   - Flag irregularities (salary spikes, missing bank accounts, negative net pay)
  *   - Status changes to UNDER_REVIEW
- * 
+ *
  * PHASE 3 - Review & Approval:
  *   - Payroll Specialist: Review in preview dashboard, publish for approval
  *   - Payroll Manager: Review, resolve exceptions, approve/reject
  *   - Finance Staff: Review, approve/reject (sets paymentStatus to PAID if approved)
  *   - Payroll Manager: Lock/freeze payroll after Finance approval
  *   - Payroll Manager: Unfreeze with reason if needed
- * 
+ *
  * PHASE 5 - Execution:
  *   - Auto-generate and distribute payslips (PDF, Email, Portal)
  *   - Only after Finance approval and Lock status
- * 
+ *
  * All calculations follow business rules:
  * - Net Salary = Gross Salary (Base + Allowances) - Taxes (% of Base) - Insurance
  * - Net Pay = Net Salary - Penalties + Refunds
@@ -131,8 +134,10 @@ export class PayrollExecutionService {
     @InjectModel(EmployeeTerminationResignation.name)
     private employeeTerminationResignationModel: Model<EmployeeTerminationResignationDocument>,
     @InjectModel(paySlip.name) private paySlipModel: Model<PayslipDocument>,
-    @InjectModel(employeePenalties.name) private employeePenaltiesModel: Model<employeePenaltiesDocument>,
-    @InjectModel(EmployeeSystemRole.name) private employeeSystemRoleModel: Model<EmployeeSystemRoleDocument>,
+    @InjectModel(employeePenalties.name)
+    private employeePenaltiesModel: Model<employeePenaltiesDocument>,
+    @InjectModel(EmployeeSystemRole.name)
+    private employeeSystemRoleModel: Model<EmployeeSystemRoleDocument>,
     @InjectModel(EmployeeProfile.name) private employeeProfileModel: Model<EmployeeProfile>,
     // PayrollConfigurationService is exported from PayrollConfigurationModule - inject directly
     private readonly payrollConfigurationService: PayrollConfigurationService,
@@ -142,7 +147,7 @@ export class PayrollExecutionService {
     // EmployeeProfileService is exported from EmployeeProfileModule - inject directly
     private readonly employeeProfileService: EmployeeProfileService,
     // LeavesService is exported from LeavesModule - inject directly
-    private readonly leavesService: LeavesService,
+    private readonly leavesService: LeavesService
   ) {}
 
   // ====================================================================================
@@ -152,13 +157,18 @@ export class PayrollExecutionService {
   // before payroll initiation can begin.
   // ====================================================================================
 
-  async createPayrollRun(createPayrollRunDto: CreatePayrollRunDto, currentUserId: string): Promise<payrollRuns> {
+  async createPayrollRun(
+    createPayrollRunDto: CreatePayrollRunDto,
+    currentUserId: string
+  ): Promise<payrollRuns> {
     // Ensure payrollManagerId is set - use provided one or find default
     let payrollManagerId = createPayrollRunDto.payrollManagerId;
     if (!payrollManagerId) {
       const defaultManager = await this.findDefaultPayrollManager();
       if (!defaultManager) {
-        throw new Error('No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.');
+        throw new Error(
+          'No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.'
+        );
       }
       payrollManagerId = defaultManager;
     }
@@ -181,7 +191,7 @@ export class PayrollExecutionService {
   async reviewPayroll(
     runId: string,
     reviewDto: PublishRunForApprovalDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(runId);
     if (!payrollRun) throw new Error('Payroll run not found');
@@ -192,7 +202,7 @@ export class PayrollExecutionService {
 
   async generateEmployeePayrollDetails(
     employeePayrollDetailsDto: EmployeePayrollDetailsUpsertDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<employeePayrollDetails> {
     const employeePayrollDetails = new this.employeePayrollDetailsModel({
       ...employeePayrollDetailsDto,
@@ -209,7 +219,7 @@ export class PayrollExecutionService {
     exceptionCode: string,
     exceptionMessage: string,
     currentUserId: string,
-    employeeId?: string,
+    employeeId?: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(runId);
 
@@ -222,12 +232,7 @@ export class PayrollExecutionService {
 
     // If employeeId is provided, store exception in employee's payroll details
     if (employeeId) {
-      await this.addExceptionToEmployee(
-        employeeId,
-        runId,
-        exceptionCode,
-        exceptionMessage,
-      );
+      await this.addExceptionToEmployee(employeeId, runId, exceptionCode, exceptionMessage);
     }
 
     // Log the exception details
@@ -252,7 +257,7 @@ export class PayrollExecutionService {
     employeeId: string,
     payrollRunId: string,
     exceptionCode: string,
-    exceptionMessage: string,
+    exceptionMessage: string
   ): Promise<void> {
     try {
       const payrollDetails = await this.employeePayrollDetailsModel.findOne({
@@ -264,7 +269,7 @@ export class PayrollExecutionService {
         // If payroll details don't exist yet, create a placeholder entry
         // This can happen if exception is flagged before payroll calculation
         console.warn(
-          `Payroll details not found for employee ${employeeId} in run ${payrollRunId}. Exception logged but not stored per employee.`,
+          `Payroll details not found for employee ${employeeId} in run ${payrollRunId}. Exception logged but not stored per employee.`
         );
         return;
       }
@@ -323,11 +328,8 @@ export class PayrollExecutionService {
       payrollDetails.exceptions = JSON.stringify(exceptionsData);
       await payrollDetails.save();
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        `Error adding exception to employee ${employeeId}: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error adding exception to employee ${employeeId}: ${errorMessage}`);
       // Don't throw - allow payroll run exception count to be updated even if per-employee storage fails
     }
   }
@@ -337,10 +339,7 @@ export class PayrollExecutionService {
   // ====================================================================================
   // REQ-PY-5: Auto-detect and flag irregularities
   // BR 9: Irregularity flagging with detailed tracking per employee
-  async detectIrregularities(
-    payrollRunId: string,
-    currentUserId: string,
-  ): Promise<string[]> {
+  async detectIrregularities(payrollRunId: string, currentUserId: string): Promise<string[]> {
     const payrollRun = await this.payrollRunModel.findById(payrollRunId);
     if (!payrollRun) throw new Error('Payroll run not found');
 
@@ -354,21 +353,18 @@ export class PayrollExecutionService {
 
     for (const detail of payrollDetails) {
       const employeeId =
-        (detail.employeeId as any)._id?.toString() ||
-        (detail.employeeId as any).toString();
+        (detail.employeeId as any)._id?.toString() || (detail.employeeId as any).toString();
 
       // Check for negative net pay
       if (detail.netPay < 0) {
         const message = `Employee has negative net pay: ${detail.netPay}`;
-        irregularities.push(
-          `Employee ${employeeId} has negative net pay: ${detail.netPay}`,
-        );
+        irregularities.push(`Employee ${employeeId} has negative net pay: ${detail.netPay}`);
         await this.flagPayrollException(
           payrollRunId,
           'NEGATIVE_NET_PAY',
           message,
           currentUserId,
-          employeeId,
+          employeeId
         );
       }
 
@@ -381,7 +377,7 @@ export class PayrollExecutionService {
           'MISSING_BANK_ACCOUNT',
           message,
           currentUserId,
-          employeeId,
+          employeeId
         );
       }
 
@@ -393,7 +389,7 @@ export class PayrollExecutionService {
           // Get historical payroll data for this employee
           const historicalData = await this.getEmployeeHistoricalPayrollData(
             employeeId,
-            payrollRun.payrollPeriod,
+            payrollRun.payrollPeriod
           );
 
           if (historicalData && historicalData.averageBaseSalary > 0) {
@@ -405,20 +401,19 @@ export class PayrollExecutionService {
 
             // Flag if salary is more than 200% of average OR more than 50% increase
             const isSpike =
-              detail.baseSalary > historicalData.averageBaseSalary * 2 ||
-              percentageIncrease > 50;
+              detail.baseSalary > historicalData.averageBaseSalary * 2 || percentageIncrease > 50;
 
             if (isSpike) {
               const message = `Sudden salary spike detected: Current ${detail.baseSalary} vs Historical Average ${historicalData.averageBaseSalary.toFixed(2)} (${percentageIncrease.toFixed(1)}% increase). Previous runs: ${historicalData.previousRunsCount}`;
               irregularities.push(
-                `Employee ${employeeId} has sudden salary spike: ${detail.baseSalary} (${percentageIncrease.toFixed(1)}% increase from average)`,
+                `Employee ${employeeId} has sudden salary spike: ${detail.baseSalary} (${percentageIncrease.toFixed(1)}% increase from average)`
               );
               await this.flagPayrollException(
                 payrollRunId,
                 'SALARY_SPIKE',
                 message,
                 currentUserId,
-                employeeId,
+                employeeId
               );
             }
           } else if (historicalData && historicalData.previousRunsCount === 0) {
@@ -429,11 +424,8 @@ export class PayrollExecutionService {
         }
       } catch (error) {
         // Skip if employee not found or error in historical data retrieval
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.warn(
-          `Error checking salary spike for employee ${employeeId}: ${errorMessage}`,
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`Error checking salary spike for employee ${employeeId}: ${errorMessage}`);
       }
     }
 
@@ -460,34 +452,25 @@ export class PayrollExecutionService {
       .exec();
 
     // Check for pending termination benefits that need review
-    const pendingTerminationBenefits =
-      await this.employeeTerminationResignationModel
-        .find({
-          status: BenefitStatus.PENDING,
-        })
-        .populate('employeeId', 'employeeNumber firstName lastName')
-        .populate('benefitId', 'name amount')
-        .select(
-          '_id employeeId benefitId givenAmount status terminationId createdAt',
-        )
-        .exec();
+    const pendingTerminationBenefits = await this.employeeTerminationResignationModel
+      .find({
+        status: BenefitStatus.PENDING,
+      })
+      .populate('employeeId', 'employeeNumber firstName lastName')
+      .populate('benefitId', 'name amount')
+      .select('_id employeeId benefitId givenAmount status terminationId createdAt')
+      .exec();
 
-    if (
-      pendingSigningBonuses.length > 0 ||
-      pendingTerminationBenefits.length > 0
-    ) {
+    if (pendingSigningBonuses.length > 0 || pendingTerminationBenefits.length > 0) {
       // Build detailed error message with specific items
       const errorDetails: string[] = [];
 
       if (pendingSigningBonuses.length > 0) {
         const bonusDetails = pendingSigningBonuses
           .map((bonus: any) => {
-            const employee = bonus.employeeId as any;
-            const employeeInfo =
-              employee?.employeeNumber ||
-              employee?._id?.toString() ||
-              'Unknown';
-            const bonusConfig = bonus.signingBonusId as any;
+            const employee = bonus.employeeId;
+            const employeeInfo = employee?.employeeNumber || employee?._id?.toString() || 'Unknown';
+            const bonusConfig = bonus.signingBonusId;
             const bonusName = bonusConfig?.name || 'Unknown Bonus';
             const amount = bonus.givenAmount || bonusConfig?.amount || 0;
             return `  - Signing Bonus ID: ${bonus._id}, Employee: ${employeeInfo}, Bonus: ${bonusName}, Amount: ${amount}`;
@@ -495,19 +478,16 @@ export class PayrollExecutionService {
           .join('\n');
 
         errorDetails.push(
-          `Pending Signing Bonuses (${pendingSigningBonuses.length}):\n${bonusDetails}`,
+          `Pending Signing Bonuses (${pendingSigningBonuses.length}):\n${bonusDetails}`
         );
       }
 
       if (pendingTerminationBenefits.length > 0) {
         const benefitDetails = pendingTerminationBenefits
           .map((benefit: any) => {
-            const employee = benefit.employeeId as any;
-            const employeeInfo =
-              employee?.employeeNumber ||
-              employee?._id?.toString() ||
-              'Unknown';
-            const benefitConfig = benefit.benefitId as any;
+            const employee = benefit.employeeId;
+            const employeeInfo = employee?.employeeNumber || employee?._id?.toString() || 'Unknown';
+            const benefitConfig = benefit.benefitId;
             const benefitName = benefitConfig?.name || 'Unknown Benefit';
             const amount = benefit.givenAmount || benefitConfig?.amount || 0;
             return `  - Termination Benefit ID: ${benefit._id}, Employee: ${employeeInfo}, Benefit: ${benefitName}, Amount: ${amount}`;
@@ -515,7 +495,7 @@ export class PayrollExecutionService {
           .join('\n');
 
         errorDetails.push(
-          `Pending Termination Benefits (${pendingTerminationBenefits.length}):\n${benefitDetails}`,
+          `Pending Termination Benefits (${pendingTerminationBenefits.length}):\n${benefitDetails}`
         );
       }
 
@@ -530,29 +510,23 @@ export class PayrollExecutionService {
         errorMessage,
         pendingSigningBonuses: pendingSigningBonuses.map((b: any) => ({
           id: b._id.toString(),
-          employeeId:
-            (b.employeeId as any)?._id?.toString() ||
-            (b.employeeId as any)?.toString(),
-          employeeNumber: (b.employeeId as any)?.employeeNumber,
-          signingBonusId: (b.signingBonusId as any)?._id?.toString(),
-          bonusName: (b.signingBonusId as any)?.name,
+          employeeId: b.employeeId?._id?.toString() || b.employeeId?.toString(),
+          employeeNumber: b.employeeId?.employeeNumber,
+          signingBonusId: b.signingBonusId?._id?.toString(),
+          bonusName: b.signingBonusId?.name,
           givenAmount: b.givenAmount,
           createdAt: b.createdAt,
         })),
-        pendingTerminationBenefits: pendingTerminationBenefits.map(
-          (b: any) => ({
-            id: b._id.toString(),
-            employeeId:
-              (b.employeeId as any)?._id?.toString() ||
-              (b.employeeId as any)?.toString(),
-            employeeNumber: (b.employeeId as any)?.employeeNumber,
-            benefitId: (b.benefitId as any)?._id?.toString(),
-            benefitName: (b.benefitId as any)?.name,
-            givenAmount: b.givenAmount,
-            terminationId: (b.terminationId as any)?.toString(),
-            createdAt: b.createdAt,
-          }),
-        ),
+        pendingTerminationBenefits: pendingTerminationBenefits.map((b: any) => ({
+          id: b._id.toString(),
+          employeeId: b.employeeId?._id?.toString() || b.employeeId?.toString(),
+          employeeNumber: b.employeeId?.employeeNumber,
+          benefitId: b.benefitId?._id?.toString(),
+          benefitName: b.benefitId?.name,
+          givenAmount: b.givenAmount,
+          terminationId: b.terminationId?.toString(),
+          createdAt: b.createdAt,
+        })),
       };
     }
 
@@ -584,7 +558,12 @@ export class PayrollExecutionService {
     allReviewsComplete: boolean;
   }> {
     // Count signing bonuses by status
-    const [signingBonusesPending, signingBonusesApproved, signingBonusesRejected, signingBonusesTotal] = await Promise.all([
+    const [
+      signingBonusesPending,
+      signingBonusesApproved,
+      signingBonusesRejected,
+      signingBonusesTotal,
+    ] = await Promise.all([
       this.employeeSigningBonusModel.countDocuments({ status: BonusStatus.PENDING }).exec(),
       this.employeeSigningBonusModel.countDocuments({ status: BonusStatus.APPROVED }).exec(),
       this.employeeSigningBonusModel.countDocuments({ status: BonusStatus.REJECTED }).exec(),
@@ -592,18 +571,26 @@ export class PayrollExecutionService {
     ]);
 
     // Count termination benefits by status
-    const [terminationBenefitsPending, terminationBenefitsApproved, terminationBenefitsRejected, terminationBenefitsTotal] = await Promise.all([
-      this.employeeTerminationResignationModel.countDocuments({ status: BenefitStatus.PENDING }).exec(),
-      this.employeeTerminationResignationModel.countDocuments({ status: BenefitStatus.APPROVED }).exec(),
-      this.employeeTerminationResignationModel.countDocuments({ status: BenefitStatus.REJECTED }).exec(),
+    const [
+      terminationBenefitsPending,
+      terminationBenefitsApproved,
+      terminationBenefitsRejected,
+      terminationBenefitsTotal,
+    ] = await Promise.all([
+      this.employeeTerminationResignationModel
+        .countDocuments({ status: BenefitStatus.PENDING })
+        .exec(),
+      this.employeeTerminationResignationModel
+        .countDocuments({ status: BenefitStatus.APPROVED })
+        .exec(),
+      this.employeeTerminationResignationModel
+        .countDocuments({ status: BenefitStatus.REJECTED })
+        .exec(),
       this.employeeTerminationResignationModel.countDocuments().exec(),
     ]);
 
     // Get the most recent payroll run to check period status
-    const latestPayrollRun = await this.payrollRunModel
-      .findOne()
-      .sort({ createdAt: -1 })
-      .exec();
+    const latestPayrollRun = await this.payrollRunModel.findOne().sort({ createdAt: -1 }).exec();
 
     let payrollPeriodStatus: 'pending' | 'approved' | 'rejected' = 'pending';
     let payrollRunId: string | undefined;
@@ -611,7 +598,7 @@ export class PayrollExecutionService {
 
     if (latestPayrollRun) {
       payrollRunId = latestPayrollRun._id.toString();
-      
+
       // Convert payrollPeriod Date to string format (YYYY-MM-DD)
       if (latestPayrollRun.payrollPeriod) {
         const date = new Date(latestPayrollRun.payrollPeriod);
@@ -619,7 +606,10 @@ export class PayrollExecutionService {
       }
 
       // Determine status based on payroll run status
-      if (latestPayrollRun.status === PayRollStatus.APPROVED || latestPayrollRun.status === PayRollStatus.LOCKED) {
+      if (
+        latestPayrollRun.status === PayRollStatus.APPROVED ||
+        latestPayrollRun.status === PayRollStatus.LOCKED
+      ) {
         payrollPeriodStatus = 'approved';
       } else if (latestPayrollRun.status === PayRollStatus.REJECTED) {
         payrollPeriodStatus = 'rejected';
@@ -629,9 +619,9 @@ export class PayrollExecutionService {
     }
 
     // Check if all reviews are complete
-    const allReviewsComplete = 
-      signingBonusesPending === 0 && 
-      terminationBenefitsPending === 0 && 
+    const allReviewsComplete =
+      signingBonusesPending === 0 &&
+      terminationBenefitsPending === 0 &&
       payrollPeriodStatus === 'approved';
 
     return {
@@ -658,10 +648,7 @@ export class PayrollExecutionService {
 
   // Helper: Validate payroll run status transition
   // BR: Enforce proper workflow sequence (DRAFT → UNDER_REVIEW → PENDING_FINANCE → APPROVED → LOCKED)
-  private validateStatusTransition(
-    currentStatus: PayRollStatus,
-    newStatus: PayRollStatus,
-  ): void {
+  private validateStatusTransition(currentStatus: PayRollStatus, newStatus: PayRollStatus): void {
     // Define valid status transitions
     const validTransitions: Record<PayRollStatus, PayRollStatus[]> = {
       [PayRollStatus.DRAFT]: [
@@ -696,22 +683,17 @@ export class PayrollExecutionService {
 
     if (!allowedTransitions.includes(newStatus)) {
       const allowedStatuses =
-        allowedTransitions.length > 0
-          ? allowedTransitions.join(', ')
-          : 'none (must be recreated)';
+        allowedTransitions.length > 0 ? allowedTransitions.join(', ') : 'none (must be recreated)';
 
       throw new Error(
         `Invalid status transition: Cannot change from '${currentStatus}' to '${newStatus}'. ` +
           `Valid transitions from '${currentStatus}' are: ${allowedStatuses}. ` +
-          `Expected workflow: DRAFT → UNDER_REVIEW → PENDING_FINANCE_APPROVAL → APPROVED → LOCKED`,
+          `Expected workflow: DRAFT → UNDER_REVIEW → PENDING_FINANCE_APPROVAL → APPROVED → LOCKED`
       );
     }
   }
 
-  async lockPayroll(
-    runId: string,
-    currentUserId: string,
-  ): Promise<payrollRuns> {
+  async lockPayroll(runId: string, currentUserId: string): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(runId);
     if (!payrollRun) throw new Error('Payroll run not found');
 
@@ -725,22 +707,30 @@ export class PayrollExecutionService {
     // REQ-PY-8: Automatically generate and distribute payslips after locking (REQ-PY-7)
     // Check if payment status is PAID (Finance approved) - if yes, auto-generate payslips
     if (savedPayrollRun.paymentStatus === PayRollPaymentStatus.PAID) {
-      console.log(`[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked and payment status is PAID. Auto-generating payslips...`);
+      console.log(
+        `[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked and payment status is PAID. Auto-generating payslips...`
+      );
       try {
         // Auto-generate payslips via Portal (default distribution method)
         await this.generateAndDistributePayslips(
           savedPayrollRun._id.toString(),
           'PORTAL',
-          currentUserId,
+          currentUserId
         );
-        console.log(`[Auto-Generate Payslips] Successfully auto-generated payslips for payroll run ${savedPayrollRun._id}`);
+        console.log(
+          `[Auto-Generate Payslips] Successfully auto-generated payslips for payroll run ${savedPayrollRun._id}`
+        );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[Auto-Generate Payslips] Failed to auto-generate payslips for payroll run ${savedPayrollRun._id}: ${errorMessage}`);
+        console.error(
+          `[Auto-Generate Payslips] Failed to auto-generate payslips for payroll run ${savedPayrollRun._id}: ${errorMessage}`
+        );
         // Don't fail the lock if payslip generation fails - log and continue
       }
     } else {
-      console.log(`[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked but payment status is not PAID yet. Payslips will be auto-generated when Finance approves.`);
+      console.log(
+        `[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked but payment status is not PAID yet. Payslips will be auto-generated when Finance approves.`
+      );
     }
 
     return savedPayrollRun;
@@ -752,7 +742,7 @@ export class PayrollExecutionService {
   async unlockPayroll(
     runId: string,
     unlockReason: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(runId);
     if (!payrollRun) throw new Error('Payroll run not found');
@@ -764,14 +754,14 @@ export class PayrollExecutionService {
     // This ensures exceptional circumstances are documented
     if (!unlockReason || unlockReason.trim().length === 0) {
       throw new Error(
-        'Unlock reason is required when unlocking a payroll run. Please provide a reason documenting the exceptional circumstances that require this action.',
+        'Unlock reason is required when unlocking a payroll run. Please provide a reason documenting the exceptional circumstances that require this action.'
       );
     }
 
     // Minimum length validation to ensure meaningful reason
     if (unlockReason.trim().length < 10) {
       throw new Error(
-        'Unlock reason must be at least 10 characters long. Please provide a detailed explanation of the exceptional circumstances.',
+        'Unlock reason must be at least 10 characters long. Please provide a detailed explanation of the exceptional circumstances.'
       );
     }
 
@@ -786,10 +776,7 @@ export class PayrollExecutionService {
   // REQ-PY-7: Freeze finalized payroll (alias for lockPayroll to match requirement terminology)
   // Note: Freeze and Lock are functionally the same - both set status to LOCKED
   // This method provides the "freeze" terminology as mentioned in requirements
-  async freezePayroll(
-    runId: string,
-    currentUserId: string,
-  ): Promise<payrollRuns> {
+  async freezePayroll(runId: string, currentUserId: string): Promise<payrollRuns> {
     // Freeze is functionally the same as lock - both prevent modifications
     return this.lockPayroll(runId, currentUserId);
   }
@@ -802,7 +789,7 @@ export class PayrollExecutionService {
   async unfreezePayroll(
     runId: string,
     unfreezeReason: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     // Unfreeze is functionally the same as unlock - both allow modifications with reason
     // Used for exceptional circumstances where legitimate corrections are needed
@@ -837,10 +824,7 @@ export class PayrollExecutionService {
   }
 
   // Helper: Format entity field with currency
-  private formatEntityWithCurrency(
-    entityName: string,
-    currency: string = 'USD',
-  ): string {
+  private formatEntityWithCurrency(entityName: string, currency: string = 'USD'): string {
     return `${entityName}|${currency.toUpperCase()}`;
   }
 
@@ -855,11 +839,7 @@ export class PayrollExecutionService {
 
   // Helper: Currency conversion rates (in production, this would come from an external service or database)
   // BR 20: Location-based pay scales with currency conversion
-  private getCurrencyConversionRate(
-    fromCurrency: string,
-    toCurrency: string,
-    date?: Date,
-  ): number {
+  private getCurrencyConversionRate(fromCurrency: string, toCurrency: string, date?: Date): number {
     // If same currency, return 1
     if (fromCurrency.toUpperCase() === toCurrency.toUpperCase()) {
       return 1;
@@ -941,7 +921,7 @@ export class PayrollExecutionService {
 
     // If no conversion rate found, log warning and return 1 (no conversion)
     console.warn(
-      `Currency conversion rate not found: ${from} to ${to}. Using 1.0 (no conversion).`,
+      `Currency conversion rate not found: ${from} to ${to}. Using 1.0 (no conversion).`
     );
     return 1;
   }
@@ -951,7 +931,7 @@ export class PayrollExecutionService {
     amount: number,
     fromCurrency: string,
     toCurrency: string,
-    date?: Date,
+    date?: Date
   ): number {
     if (amount === 0) return 0;
 
@@ -970,13 +950,16 @@ export class PayrollExecutionService {
   // BR 1: Employment contract requirements
   // BR 2: Contract terms validation
   // BR 20: Multi-currency support (currency stored in entity field)
-  async processPayrollInitiation(payrollPeriod: Date, entity: string, payrollSpecialistId: string, currency: string | undefined, currentUserId: string, payrollManagerId?: string): Promise<payrollRuns> {
+  async processPayrollInitiation(
+    payrollPeriod: Date,
+    entity: string,
+    payrollSpecialistId: string,
+    currency: string | undefined,
+    currentUserId: string,
+    payrollManagerId?: string
+  ): Promise<payrollRuns> {
     // Validate payroll period input
-    if (
-      !payrollPeriod ||
-      !(payrollPeriod instanceof Date) ||
-      isNaN(payrollPeriod.getTime())
-    ) {
+    if (!payrollPeriod || !(payrollPeriod instanceof Date) || isNaN(payrollPeriod.getTime())) {
       throw new Error('Invalid payroll period. Must be a valid date.');
     }
 
@@ -996,7 +979,7 @@ export class PayrollExecutionService {
 
     if (periodDate > maxFutureDate) {
       throw new Error(
-        `Payroll period cannot be more than ${maxFutureMonths} months in the future.`,
+        `Payroll period cannot be more than ${maxFutureMonths} months in the future.`
       );
     }
 
@@ -1019,7 +1002,7 @@ export class PayrollExecutionService {
 
     if (existingRun) {
       throw new Error(
-        `Payroll run already exists for period ${year}-${String(month + 1).padStart(2, '0')}. Existing runId: ${existingRun.runId}`,
+        `Payroll run already exists for period ${year}-${String(month + 1).padStart(2, '0')}. Existing runId: ${existingRun.runId}`
       );
     }
 
@@ -1071,7 +1054,9 @@ export class PayrollExecutionService {
       // Find a default payroll manager
       const defaultManager = await this.findDefaultPayrollManager();
       if (!defaultManager) {
-        throw new Error('No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.');
+        throw new Error(
+          'No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.'
+        );
       }
       try {
         finalPayrollManagerId = new mongoose.Types.ObjectId(defaultManager) as any;
@@ -1116,7 +1101,7 @@ export class PayrollExecutionService {
       const managerRole = await this.employeeSystemRoleModel
         .findOne({
           roles: { $in: [SystemRole.PAYROLL_MANAGER] },
-          isActive: true
+          isActive: true,
         })
         .exec();
 
@@ -1126,7 +1111,9 @@ export class PayrollExecutionService {
         return managerId;
       }
 
-      console.warn('No payroll manager found in the system. Please create a payroll manager or provide payrollManagerId in the request.');
+      console.warn(
+        'No payroll manager found in the system. Please create a payroll manager or provide payrollManagerId in the request.'
+      );
       return null;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1139,9 +1126,7 @@ export class PayrollExecutionService {
   // BR 1: Employment contract requirements - Active contract with defined role, type, dates, and salary basis
   // BR 2: Contract terms validation
   // Egyptian Labor Law 2025 compliance
-  private async validatePayrollPeriodAgainstContracts(
-    payrollPeriod: Date,
-  ): Promise<void> {
+  private async validatePayrollPeriodAgainstContracts(payrollPeriod: Date): Promise<void> {
     const year = payrollPeriod.getFullYear();
     const month = payrollPeriod.getMonth();
     const periodStart = new Date(year, month, 1);
@@ -1159,12 +1144,11 @@ export class PayrollExecutionService {
     const missingFields: string[] = [];
 
     for (const employee of activeEmployees) {
-      const employeeData = employee as any;
+      const employeeData = employee;
       const employeeNumber =
-        employeeData.employeeNumber ||
-        employeeData._id?.toString() ||
-        'Unknown';
-      const employeeName = employeeData.fullName || 
+        employeeData.employeeNumber || employeeData._id?.toString() || 'Unknown';
+      const employeeName =
+        employeeData.fullName ||
         `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() ||
         employeeNumber;
 
@@ -1172,14 +1156,14 @@ export class PayrollExecutionService {
       // 1. Check for defined role (primaryPositionId)
       if (!employeeData.primaryPositionId) {
         missingFields.push(
-          `Employee ${employeeNumber} (${employeeName}): Missing defined role (primaryPositionId). Egyptian Labor Law 2025 requires a defined role in the employment contract.`,
+          `Employee ${employeeNumber} (${employeeName}): Missing defined role (primaryPositionId). Egyptian Labor Law 2025 requires a defined role in the employment contract.`
         );
       }
 
       // 2. Check for contract type (full-time, part-time, hourly, commission-based, etc.)
       if (!employeeData.contractType) {
         missingFields.push(
-          `Employee ${employeeNumber} (${employeeName}): Missing contract type. Egyptian Labor Law 2025 requires contract type (full-time, part-time, hourly, commission-based, etc.) to be defined.`,
+          `Employee ${employeeNumber} (${employeeName}): Missing contract type. Egyptian Labor Law 2025 requires contract type (full-time, part-time, hourly, commission-based, etc.) to be defined.`
         );
       }
 
@@ -1187,7 +1171,7 @@ export class PayrollExecutionService {
       const contractStartDate = employeeData.contractStartDate;
       if (!contractStartDate) {
         missingFields.push(
-          `Employee ${employeeNumber} (${employeeName}): Missing contract start date. Egyptian Labor Law 2025 requires employment contracts to have a defined start date.`,
+          `Employee ${employeeNumber} (${employeeName}): Missing contract start date. Egyptian Labor Law 2025 requires employment contracts to have a defined start date.`
         );
       }
 
@@ -1199,7 +1183,7 @@ export class PayrollExecutionService {
       // 5. Check for salary basis (payGradeId)
       if (!employeeData.payGradeId) {
         missingFields.push(
-          `Employee ${employeeNumber} (${employeeName}): Missing salary basis (payGradeId). Egyptian Labor Law 2025 requires employment contracts to specify the salary basis.`,
+          `Employee ${employeeNumber} (${employeeName}): Missing salary basis (payGradeId). Egyptian Labor Law 2025 requires employment contracts to specify the salary basis.`
         );
       }
 
@@ -1211,7 +1195,7 @@ export class PayrollExecutionService {
         // Check if payroll period is before contract start date
         if (periodEnd < contractStart) {
           contractViolations.push(
-            `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before contract start date (${contractStart.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed before contract start date.`,
+            `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before contract start date (${contractStart.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed before contract start date.`
           );
         }
       }
@@ -1223,7 +1207,7 @@ export class PayrollExecutionService {
         // Check if payroll period is after contract end date
         if (periodStart > contractEnd) {
           contractViolations.push(
-            `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is after contract end date (${contractEnd.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed after contract expiration.`,
+            `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is after contract end date (${contractEnd.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed after contract expiration.`
           );
         }
       } else {
@@ -1235,7 +1219,7 @@ export class PayrollExecutionService {
 
           if (periodEnd < hireDate) {
             contractViolations.push(
-              `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before date of hire (${hireDate.toISOString().split('T')[0]}).`,
+              `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before date of hire (${hireDate.toISOString().split('T')[0]}).`
             );
           }
         }
@@ -1247,15 +1231,15 @@ export class PayrollExecutionService {
         const contractStart = new Date(contractStartDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         // Contract start date should not be more than reasonable time in the future
         // (e.g., 30 days for onboarding)
         const maxFutureStartDate = new Date();
         maxFutureStartDate.setDate(maxFutureStartDate.getDate() + 30);
-        
+
         if (contractStart > maxFutureStartDate) {
           contractViolations.push(
-            `Employee ${employeeNumber} (${employeeName}): Contract start date (${contractStart.toISOString().split('T')[0]}) is more than 30 days in the future. This may violate Egyptian Labor Law 2025 contract validity requirements.`,
+            `Employee ${employeeNumber} (${employeeName}): Contract start date (${contractStart.toISOString().split('T')[0]}) is more than 30 days in the future. This may violate Egyptian Labor Law 2025 contract validity requirements.`
           );
         }
       }
@@ -1264,10 +1248,10 @@ export class PayrollExecutionService {
       if (contractStartDate && contractEndDate) {
         const contractStart = new Date(contractStartDate);
         const contractEnd = new Date(contractEndDate);
-        
+
         if (contractEnd < contractStart) {
           contractViolations.push(
-            `Employee ${employeeNumber} (${employeeName}): Contract end date (${contractEnd.toISOString().split('T')[0]}) is before contract start date (${contractStart.toISOString().split('T')[0]}). This violates Egyptian Labor Law 2025 contract validity requirements.`,
+            `Employee ${employeeNumber} (${employeeName}): Contract end date (${contractEnd.toISOString().split('T')[0]}) is before contract start date (${contractStart.toISOString().split('T')[0]}). This violates Egyptian Labor Law 2025 contract validity requirements.`
           );
         }
       }
@@ -1282,7 +1266,7 @@ export class PayrollExecutionService {
       const issueDetails = allIssues.slice(0, 10).join('; '); // Show first 10 issues
       const moreIssues = issueCount > 10 ? ` and ${issueCount - 10} more` : '';
 
-      const errorMessage = 
+      const errorMessage =
         `Payroll processing blocked: ${issueCount} employee(s) have contract validation issues. ` +
         `Egyptian Labor Law 2025 requires active employment contracts with defined role, type, start/end dates, and salary basis before payroll can be processed. ` +
         `Details: ${issueDetails}${moreIssues}. ` +
@@ -1295,28 +1279,25 @@ export class PayrollExecutionService {
   // Helper: Validate payroll cycle compliance
   // BR 3: Payroll must be processed within defined cycles (monthly, etc.) per contract or region following local laws
   // Egyptian Labor Law 2025: Payroll must be processed monthly at the end of each month
-  private async validatePayrollCycleCompliance(
-    payrollPeriod: Date,
-    entity: string,
-  ): Promise<void> {
+  private async validatePayrollCycleCompliance(payrollPeriod: Date, entity: string): Promise<void> {
     // Validate that payroll period is aligned to monthly cycle (first day of month)
     // Egyptian Labor Law 2025 requires monthly payroll processing
     const periodDate = new Date(payrollPeriod);
     periodDate.setHours(0, 0, 0, 0);
-    
+
     // Check if the payroll period is the first day of a month (monthly cycle alignment)
     const isFirstDayOfMonth = periodDate.getDate() === 1;
-    
+
     if (!isFirstDayOfMonth) {
       // Calculate the first day of the month for the given period
       const firstDayOfMonth = new Date(periodDate.getFullYear(), periodDate.getMonth(), 1);
-      
+
       throw new Error(
         `Payroll cycle validation failed: Payroll period must be aligned to monthly cycles (first day of month). ` +
-        `Egyptian Labor Law 2025 requires payroll to be processed monthly. ` +
-        `Provided period: ${periodDate.toISOString().split('T')[0]}, ` +
-        `Expected period: ${firstDayOfMonth.toISOString().split('T')[0]} (first day of ${periodDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}). ` +
-        `Please use the first day of the target month as the payroll period.`
+          `Egyptian Labor Law 2025 requires payroll to be processed monthly. ` +
+          `Provided period: ${periodDate.toISOString().split('T')[0]}, ` +
+          `Expected period: ${firstDayOfMonth.toISOString().split('T')[0]} (first day of ${periodDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}). ` +
+          `Please use the first day of the target month as the payroll period.`
       );
     }
 
@@ -1324,18 +1305,18 @@ export class PayrollExecutionService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    
+
     // Allow processing for current month and up to 12 months in the past (for corrections)
     const maxPastMonths = 12;
     const minAllowedDate = new Date(currentMonthStart);
     minAllowedDate.setMonth(minAllowedDate.getMonth() - maxPastMonths);
-    
+
     if (periodDate < minAllowedDate) {
       throw new Error(
         `Payroll cycle validation failed: Payroll period is too far in the past. ` +
-        `Egyptian Labor Law 2025 compliance: Payroll corrections are limited to ${maxPastMonths} months. ` +
-        `Provided period: ${periodDate.toISOString().split('T')[0]}, ` +
-        `Minimum allowed: ${minAllowedDate.toISOString().split('T')[0]}.`
+          `Egyptian Labor Law 2025 compliance: Payroll corrections are limited to ${maxPastMonths} months. ` +
+          `Provided period: ${periodDate.toISOString().split('T')[0]}, ` +
+          `Minimum allowed: ${minAllowedDate.toISOString().split('T')[0]}.`
       );
     }
 
@@ -1343,8 +1324,8 @@ export class PayrollExecutionService {
     if (!entity || entity.trim().length === 0) {
       throw new Error(
         `Payroll cycle validation failed: Entity/region is required. ` +
-        `Egyptian Labor Law 2025 compliance: Payroll must be processed per contract or region. ` +
-        `Please provide a valid entity/region name for this payroll run.`
+          `Egyptian Labor Law 2025 compliance: Payroll must be processed per contract or region. ` +
+          `Please provide a valid entity/region name for this payroll run.`
       );
     }
 
@@ -1359,14 +1340,14 @@ export class PayrollExecutionService {
     baseSalary: number,
     employeeId: string,
     payrollRunId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<void> {
     // Egyptian Labor Law 2025: Minimum salary bracket identification
     // The minimum wage is enforced through approved pay grades (minimum baseSalary: 6000 EGP)
     // This is the minimum salary bracket enforced by Egyptian Labor Law 2025
-    
+
     const MINIMUM_SALARY_BRACKET = 6000; // Egyptian Labor Law 2025 minimum wage (EGP)
-    
+
     if (baseSalary > 0 && baseSalary < MINIMUM_SALARY_BRACKET) {
       // Get employee details for better error message
       let employeeNumber = employeeId;
@@ -1375,7 +1356,8 @@ export class PayrollExecutionService {
         const employee = await this.employeeProfileService.findOne(employeeId);
         if (employee) {
           employeeNumber = employee.employeeNumber || employeeId;
-          employeeName = employee.fullName || 
+          employeeName =
+            employee.fullName ||
             `${employee.firstName || ''} ${employee.lastName || ''}`.trim() ||
             employeeNumber;
         }
@@ -1389,10 +1371,10 @@ export class PayrollExecutionService {
         payrollRunId,
         'MINIMUM_SALARY_VIOLATION',
         `Employee ${employeeNumber}${employeeName ? ` (${employeeName})` : ''}: Base salary ${baseSalary} is below the minimum salary bracket (${MINIMUM_SALARY_BRACKET} EGP) enforced by Egyptian Labor Law 2025. ` +
-        `The system must identify and enforce minimum salary brackets as per local labor law requirements. ` +
-        `Please ensure the employee's pay grade meets the minimum wage requirements.`,
+          `The system must identify and enforce minimum salary brackets as per local labor law requirements. ` +
+          `Please ensure the employee's pay grade meets the minimum wage requirements.`,
         currentUserId,
-        employeeId,
+        employeeId
       );
 
       // Note: We flag the exception but don't block payroll processing
@@ -1404,9 +1386,17 @@ export class PayrollExecutionService {
   // REQ-PY-24: Review and approve processed payroll initiation
   // REQ-PY-23: When approved, automatically start processing (draft generation)
   // This method reviews the payroll initiation and automatically triggers draft generation if approved
-  async reviewPayrollInitiation(runId: string, approved: boolean, reviewerId: string, rejectionReason: string | undefined, currentUserId: string): Promise<payrollRuns> {
-    console.log(`[Review Initiation] Starting review for payroll run: ${runId}, approved: ${approved}`);
-    
+  async reviewPayrollInitiation(
+    runId: string,
+    approved: boolean,
+    reviewerId: string,
+    rejectionReason: string | undefined,
+    currentUserId: string
+  ): Promise<payrollRuns> {
+    console.log(
+      `[Review Initiation] Starting review for payroll run: ${runId}, approved: ${approved}`
+    );
+
     const payrollRun = await this.payrollRunModel.findOne({ runId });
     if (!payrollRun) {
       throw new Error('Payroll run not found');
@@ -1415,7 +1405,7 @@ export class PayrollExecutionService {
     // Validate that payroll run is in a state that can be reviewed
     if (payrollRun.status !== PayRollStatus.DRAFT) {
       throw new Error(
-        `Payroll run ${runId} is in ${payrollRun.status} status and cannot be reviewed. Only DRAFT status payroll runs can be reviewed.`,
+        `Payroll run ${runId} is in ${payrollRun.status} status and cannot be reviewed. Only DRAFT status payroll runs can be reviewed.`
       );
     }
 
@@ -1433,7 +1423,7 @@ export class PayrollExecutionService {
       (payrollRun as any).updatedBy = currentUserId;
       await payrollRun.save();
       console.log(`[Review Initiation] Payroll run saved. Starting draft generation...`);
-      
+
       // Automatically generate draft details for the approved payroll initiation
       // This processes all employees and calculates their payroll
       // REQ-PY-23: Automatic draft generation after approval
@@ -1443,16 +1433,19 @@ export class PayrollExecutionService {
       } catch (error) {
         // If draft generation fails, update status and throw error
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[Review Initiation] Error generating draft for payroll run ${runId}: ${errorMessage}`);
-        console.error(`[Review Initiation] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace');
+        console.error(
+          `[Review Initiation] Error generating draft for payroll run ${runId}: ${errorMessage}`
+        );
+        console.error(
+          `[Review Initiation] Stack trace:`,
+          error instanceof Error ? error.stack : 'No stack trace'
+        );
         throw new Error(`Failed to generate draft after approval: ${errorMessage}`);
       }
 
       // Reload the payroll run to get updated totals and exceptions
       // This ensures we return the payroll run with all the latest updates from draft generation
-      const updatedPayrollRun = await this.payrollRunModel.findById(
-        payrollRun._id,
-      );
+      const updatedPayrollRun = await this.payrollRunModel.findById(payrollRun._id);
       if (!updatedPayrollRun) {
         throw new Error('Payroll run not found after draft generation');
       }
@@ -1471,9 +1464,7 @@ export class PayrollExecutionService {
 
       // Clear any draft details if they exist (since it was rejected before processing)
       // This allows the payroll to be re-edited and re-reviewed
-      await this.employeePayrollDetailsModel
-        .deleteMany({ payrollRunId: payrollRun._id })
-        .exec();
+      await this.employeePayrollDetailsModel.deleteMany({ payrollRunId: payrollRun._id }).exec();
 
       (payrollRun as any).updatedBy = currentUserId;
       return await payrollRun.save();
@@ -1486,7 +1477,7 @@ export class PayrollExecutionService {
   async editPayrollInitiation(
     runId: string,
     updates: Partial<CreatePayrollRunDto>,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findOne({ runId });
     if (!payrollRun) throw new Error('Payroll run not found');
@@ -1494,7 +1485,7 @@ export class PayrollExecutionService {
     // Cannot edit locked payroll runs
     if (payrollRun.status === PayRollStatus.LOCKED) {
       throw new Error(
-        'Cannot edit locked payroll run. Please unlock it first if you need to make changes.',
+        'Cannot edit locked payroll run. Please unlock it first if you need to make changes.'
       );
     }
 
@@ -1505,7 +1496,7 @@ export class PayrollExecutionService {
       payrollRun.status === PayRollStatus.APPROVED
     ) {
       throw new Error(
-        `Cannot edit payroll run in ${payrollRun.status} status. Please reject it first if you need to make changes.`,
+        `Cannot edit payroll run in ${payrollRun.status} status. Please reject it first if you need to make changes.`
       );
     }
 
@@ -1515,9 +1506,7 @@ export class PayrollExecutionService {
 
     if (updates.payrollPeriod) {
       // Validate payroll period if being updated
-      await this.validatePayrollPeriodAgainstContracts(
-        new Date(updates.payrollPeriod),
-      );
+      await this.validatePayrollPeriodAgainstContracts(new Date(updates.payrollPeriod));
       payrollRun.payrollPeriod = new Date(updates.payrollPeriod);
     }
     if (updates.entity) {
@@ -1533,7 +1522,7 @@ export class PayrollExecutionService {
     }
     if (updates.payrollSpecialistId) {
       payrollRun.payrollSpecialistId = new mongoose.Types.ObjectId(
-        updates.payrollSpecialistId,
+        updates.payrollSpecialistId
       ) as any;
     }
 
@@ -1552,7 +1541,7 @@ export class PayrollExecutionService {
   // This method reviews the payroll period and updates the status accordingly
   async reviewPayrollPeriod(
     reviewDto: ReviewPayrollPeriodDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(reviewDto.payrollRunId);
     if (!payrollRun) {
@@ -1560,14 +1549,20 @@ export class PayrollExecutionService {
     }
 
     // Validate that payroll run is in a state that can be reviewed
-    if (payrollRun.status !== PayRollStatus.DRAFT && payrollRun.status !== PayRollStatus.UNDER_REVIEW) {
+    if (
+      payrollRun.status !== PayRollStatus.DRAFT &&
+      payrollRun.status !== PayRollStatus.UNDER_REVIEW
+    ) {
       throw new Error(
-        `Payroll run ${reviewDto.payrollRunId} is in ${payrollRun.status} status and cannot be reviewed. Only DRAFT or UNDER_REVIEW status payroll runs can be reviewed.`,
+        `Payroll run ${reviewDto.payrollRunId} is in ${payrollRun.status} status and cannot be reviewed. Only DRAFT or UNDER_REVIEW status payroll runs can be reviewed.`
       );
     }
 
     // Update status based on review
-    if (reviewDto.status === PayRollStatus.APPROVED || reviewDto.status === PayRollStatus.UNDER_REVIEW) {
+    if (
+      reviewDto.status === PayRollStatus.APPROVED ||
+      reviewDto.status === PayRollStatus.UNDER_REVIEW
+    ) {
       // Approve or move to under review
       payrollRun.status = reviewDto.status;
       // Clear any previous rejection reason if re-approved
@@ -1591,7 +1586,7 @@ export class PayrollExecutionService {
   // This method allows editing just the payroll period for rejected payroll runs
   async editPayrollPeriod(
     editDto: EditPayrollPeriodDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(editDto.payrollRunId);
     if (!payrollRun) {
@@ -1599,19 +1594,14 @@ export class PayrollExecutionService {
     }
 
     // Can only edit period if payroll is in DRAFT or REJECTED status
-    if (
-      payrollRun.status !== PayRollStatus.DRAFT &&
-      payrollRun.status !== PayRollStatus.REJECTED
-    ) {
+    if (payrollRun.status !== PayRollStatus.DRAFT && payrollRun.status !== PayRollStatus.REJECTED) {
       throw new Error(
-        `Cannot edit payroll period for payroll run in ${payrollRun.status} status. Only DRAFT or REJECTED payroll runs can have their period edited.`,
+        `Cannot edit payroll period for payroll run in ${payrollRun.status} status. Only DRAFT or REJECTED payroll runs can have their period edited.`
       );
     }
 
     // Validate payroll period against contracts
-    await this.validatePayrollPeriodAgainstContracts(
-      new Date(editDto.payrollPeriod),
-    );
+    await this.validatePayrollPeriodAgainstContracts(new Date(editDto.payrollPeriod));
 
     // Update the payroll period
     payrollRun.payrollPeriod = new Date(editDto.payrollPeriod);
@@ -1632,9 +1622,7 @@ export class PayrollExecutionService {
   // ====================================================================================
   // REQ-PY-27: Automatically process signing bonuses
   // BR 24: Signing bonuses must be processed only for employees flagged as eligible in their contracts (linked through Employee Profile)
-  async processSigningBonuses(
-    currentUserId: string,
-  ): Promise<employeeSigningBonus[]> {
+  async processSigningBonuses(currentUserId: string): Promise<employeeSigningBonus[]> {
     const PositionModel = this.payrollRunModel.db.model(Position.name);
     const ContractModel = this.payrollRunModel.db.model('Contract');
     const OnboardingModel = this.payrollRunModel.db.model('Onboarding');
@@ -1660,7 +1648,7 @@ export class PayrollExecutionService {
     // Get all approved signing bonuses using PayrollConfigurationService
     const signingBonusesResult = await this.payrollConfigurationService.findAllSigningBonuses({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved signing bonuses
+      limit: 1000, // Get all approved signing bonuses
     });
     const approvedSigningBonuses = signingBonusesResult?.data || [];
 
@@ -1714,7 +1702,7 @@ export class PayrollExecutionService {
 
       // Find matching signing bonus configuration by position title
       const signingBonusConfig = approvedSigningBonuses.find(
-        (bonus: any) => bonus.positionName === (position as any).title,
+        (bonus: any) => bonus.positionName === position.title
       );
 
       if (signingBonusConfig) {
@@ -1722,14 +1710,12 @@ export class PayrollExecutionService {
         // Use contract signingBonus amount if available, otherwise use configuration amount
         // Priority: contract signingBonus > configuration amount
         const finalAmount =
-          contractSigningBonus !== undefined
-            ? contractSigningBonus
-            : bonusData.amount;
+          contractSigningBonus !== undefined ? contractSigningBonus : bonusData.amount;
 
         // Create employee signing bonus record
         const employeeBonus = new this.employeeSigningBonusModel({
-          employeeId: employee._id as any,
-          signingBonusId: bonusData._id as any,
+          employeeId: employee._id,
+          signingBonusId: bonusData._id,
           givenAmount: finalAmount, // Use contract amount if available (BR 24), otherwise configuration amount
           status: BonusStatus.PENDING,
           createdBy: currentUserId,
@@ -1745,7 +1731,10 @@ export class PayrollExecutionService {
   }
 
   // Create employee signing bonus manually
-  async createEmployeeSigningBonus(createDto: CreateEmployeeSigningBonusDto, currentUserId: string): Promise<employeeSigningBonus> {
+  async createEmployeeSigningBonus(
+    createDto: CreateEmployeeSigningBonusDto,
+    currentUserId: string
+  ): Promise<employeeSigningBonus> {
     // Validate employee exists
     const employee = await this.employeeProfileService.findOne(createDto.employeeId);
     if (!employee) {
@@ -1753,7 +1742,9 @@ export class PayrollExecutionService {
     }
 
     // Validate signing bonus configuration exists
-    const signingBonusConfig = await this.payrollConfigurationService.findOneSigningBonus(createDto.signingBonusId);
+    const signingBonusConfig = await this.payrollConfigurationService.findOneSigningBonus(
+      createDto.signingBonusId
+    );
     if (!signingBonusConfig) {
       throw new Error(`Signing bonus configuration not found with ID: ${createDto.signingBonusId}`);
     }
@@ -1761,11 +1752,13 @@ export class PayrollExecutionService {
     // Check if signing bonus already exists for this employee
     const existingBonus = await this.employeeSigningBonusModel.findOne({
       employeeId: new mongoose.Types.ObjectId(createDto.employeeId) as any,
-      signingBonusId: new mongoose.Types.ObjectId(createDto.signingBonusId) as any
+      signingBonusId: new mongoose.Types.ObjectId(createDto.signingBonusId) as any,
     });
 
     if (existingBonus) {
-      throw new Error(`Signing bonus already exists for this employee and configuration. Use edit-signing-bonus endpoint instead. Existing ID: ${existingBonus._id}`);
+      throw new Error(
+        `Signing bonus already exists for this employee and configuration. Use edit-signing-bonus endpoint instead. Existing ID: ${existingBonus._id}`
+      );
     }
 
     // Create the employee signing bonus
@@ -1776,56 +1769,84 @@ export class PayrollExecutionService {
       status: createDto.status || BonusStatus.PENDING,
       paymentDate: createDto.paymentDate ? new Date(createDto.paymentDate) : undefined,
       createdBy: currentUserId,
-      updatedBy: currentUserId
+      updatedBy: currentUserId,
     });
 
     const savedBonus = await employeeBonus.save();
-    console.log(`[Create Signing Bonus] Created employee signing bonus: ${savedBonus._id} for employee: ${createDto.employeeId}`);
+    console.log(
+      `[Create Signing Bonus] Created employee signing bonus: ${savedBonus._id} for employee: ${createDto.employeeId}`
+    );
     return savedBonus;
   }
 
   // REQ-PY-28: Review and approve processed signing bonuses
-  async reviewSigningBonus(reviewDto: SigningBonusReviewDto, currentUserId: string): Promise<employeeSigningBonus> {
+  async reviewSigningBonus(
+    reviewDto: SigningBonusReviewDto,
+    currentUserId: string
+  ): Promise<employeeSigningBonus> {
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(reviewDto.employeeSigningBonusId)) {
       throw new Error(`Invalid signing bonus ID format: ${reviewDto.employeeSigningBonusId}`);
     }
 
-    console.log(`[Review Signing Bonus] Looking for signing bonus with ID: ${reviewDto.employeeSigningBonusId}`);
+    console.log(
+      `[Review Signing Bonus] Looking for signing bonus with ID: ${reviewDto.employeeSigningBonusId}`
+    );
     const bonus = await this.employeeSigningBonusModel.findById(reviewDto.employeeSigningBonusId);
-    
+
     if (!bonus) {
       // Check if any signing bonuses exist to help with debugging
       const totalCount = await this.employeeSigningBonusModel.countDocuments();
-      const pendingCount = await this.employeeSigningBonusModel.countDocuments({ status: BonusStatus.PENDING });
-      console.error(`[Review Signing Bonus] Signing bonus not found. ID: ${reviewDto.employeeSigningBonusId}, Total employee signing bonuses in DB: ${totalCount}, Pending: ${pendingCount}`);
-      
+      const pendingCount = await this.employeeSigningBonusModel.countDocuments({
+        status: BonusStatus.PENDING,
+      });
+      console.error(
+        `[Review Signing Bonus] Signing bonus not found. ID: ${reviewDto.employeeSigningBonusId}, Total employee signing bonuses in DB: ${totalCount}, Pending: ${pendingCount}`
+      );
+
       // Check if the ID might be from the wrong collection (signingbonus config instead of employeesigningbonus)
       try {
-        const configCheck = await this.payrollConfigurationService.findOneSigningBonus(reviewDto.employeeSigningBonusId);
-        
+        const configCheck = await this.payrollConfigurationService.findOneSigningBonus(
+          reviewDto.employeeSigningBonusId
+        );
+
         if (configCheck) {
-          throw new Error(`The ID ${reviewDto.employeeSigningBonusId} belongs to a signing bonus CONFIGURATION (from 'signingbonus' collection), not an employee signing bonus record. You need to use an ID from the 'employeesigningbonus' collection. Please call 'POST /api/v1/payroll/process-signing-bonuses' first to create employee signing bonus records, then use one of those IDs.`);
+          throw new Error(
+            `The ID ${reviewDto.employeeSigningBonusId} belongs to a signing bonus CONFIGURATION (from 'signingbonus' collection), not an employee signing bonus record. You need to use an ID from the 'employeesigningbonus' collection. Please call 'POST /api/v1/payroll/process-signing-bonuses' first to create employee signing bonus records, then use one of those IDs.`
+          );
         }
       } catch (error) {
         // If findOneSigningBonus throws NotFoundException, that's fine - it means it's not a config ID
         // Continue with the original error message
       }
-      
+
       if (totalCount === 0) {
-        throw new Error(`No employee signing bonuses exist in the system. The ID you provided (${reviewDto.employeeSigningBonusId}) was not found in the 'employeesigningbonus' collection. Please call 'POST /api/v1/payroll/process-signing-bonuses' endpoint first to create signing bonuses for eligible employees (those hired within the last 30 days with matching position configurations).`);
+        throw new Error(
+          `No employee signing bonuses exist in the system. The ID you provided (${reviewDto.employeeSigningBonusId}) was not found in the 'employeesigningbonus' collection. Please call 'POST /api/v1/payroll/process-signing-bonuses' endpoint first to create signing bonuses for eligible employees (those hired within the last 30 days with matching position configurations).`
+        );
       } else {
         // Get a few example IDs to help the user
-        const examples = await this.employeeSigningBonusModel.find().limit(5).select('_id employeeId status').populate('employeeId', 'fullName employeeNumber').exec();
-        const exampleDetails = examples.map(b => {
-          const emp = (b as any).employeeId;
-          return `${b._id.toString()} (Employee: ${emp?.fullName || emp?.employeeNumber || 'N/A'}, Status: ${b.status})`;
-        }).join('; ');
-        throw new Error(`Employee signing bonus not found with ID: ${reviewDto.employeeSigningBonusId}. Available employee signing bonus IDs (examples): ${exampleDetails}. Please use a valid employee signing bonus ID from the 'process-signing-bonuses' response.`);
+        const examples = await this.employeeSigningBonusModel
+          .find()
+          .limit(5)
+          .select('_id employeeId status')
+          .populate('employeeId', 'fullName employeeNumber')
+          .exec();
+        const exampleDetails = examples
+          .map((b) => {
+            const emp = (b as any).employeeId;
+            return `${b._id.toString()} (Employee: ${emp?.fullName || emp?.employeeNumber || 'N/A'}, Status: ${b.status})`;
+          })
+          .join('; ');
+        throw new Error(
+          `Employee signing bonus not found with ID: ${reviewDto.employeeSigningBonusId}. Available employee signing bonus IDs (examples): ${exampleDetails}. Please use a valid employee signing bonus ID from the 'process-signing-bonuses' response.`
+        );
       }
     }
 
-    console.log(`[Review Signing Bonus] Found signing bonus. Current status: ${bonus.status}, Updating to: ${reviewDto.status}`);
+    console.log(
+      `[Review Signing Bonus] Found signing bonus. Current status: ${bonus.status}, Updating to: ${reviewDto.status}`
+    );
 
     bonus.status = reviewDto.status;
     if (reviewDto.paymentDate) {
@@ -1834,7 +1855,9 @@ export class PayrollExecutionService {
 
     (bonus as any).updatedBy = currentUserId;
     const savedBonus = await bonus.save();
-    console.log(`[Review Signing Bonus] Signing bonus updated successfully. New status: ${savedBonus.status}`);
+    console.log(
+      `[Review Signing Bonus] Signing bonus updated successfully. New status: ${savedBonus.status}`
+    );
     return savedBonus;
   }
 
@@ -1844,7 +1867,7 @@ export class PayrollExecutionService {
     employeeId: string | undefined,
     page: number,
     limit: number,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<{ data: employeeSigningBonus[]; total: number; page: number; limit: number }> {
     const query: any = {};
 
@@ -1854,10 +1877,10 @@ export class PayrollExecutionService {
 
     if (employeeId && employeeId.trim()) {
       const searchTerm = employeeId.trim();
-      
+
       // Try to find employees matching the search term
       let employeeIds: mongoose.Types.ObjectId[] = [];
-      
+
       // First, try as ObjectId
       if (mongoose.Types.ObjectId.isValid(searchTerm)) {
         const objectId = new mongoose.Types.ObjectId(searchTerm);
@@ -1866,14 +1889,14 @@ export class PayrollExecutionService {
           employeeIds.push(objectId);
         }
       }
-      
+
       // Also search by employeeNumber
       const employeesByNumber = await this.employeeProfileModel
         .find({ employeeNumber: { $regex: searchTerm, $options: 'i' } })
         .select('_id')
         .exec();
-      employeeIds.push(...employeesByNumber.map(emp => emp._id as mongoose.Types.ObjectId));
-      
+      employeeIds.push(...employeesByNumber.map((emp) => emp._id));
+
       // Also search by name (firstName or lastName)
       const nameParts = searchTerm.split(/\s+/);
       const nameQuery: any = {};
@@ -1888,16 +1911,15 @@ export class PayrollExecutionService {
         nameQuery.firstName = { $regex: nameParts[0], $options: 'i' };
         nameQuery.lastName = { $regex: nameParts.slice(1).join(' '), $options: 'i' };
       }
-      
-      const employeesByName = await this.employeeProfileModel
-        .find(nameQuery)
-        .select('_id')
-        .exec();
-      employeeIds.push(...employeesByName.map(emp => emp._id as mongoose.Types.ObjectId));
-      
+
+      const employeesByName = await this.employeeProfileModel.find(nameQuery).select('_id').exec();
+      employeeIds.push(...employeesByName.map((emp) => emp._id));
+
       // Remove duplicates
-      employeeIds = [...new Set(employeeIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id) as any);
-      
+      employeeIds = [...new Set(employeeIds.map((id) => id.toString()))].map(
+        (id) => new mongoose.Types.ObjectId(id) as any
+      );
+
       if (employeeIds.length > 0) {
         query.employeeId = { $in: employeeIds };
       } else {
@@ -1929,10 +1951,7 @@ export class PayrollExecutionService {
   }
 
   // Get signing bonus by ID
-  async getSigningBonusById(
-    id: string,
-    currentUserId: string,
-  ): Promise<employeeSigningBonus> {
+  async getSigningBonusById(id: string, currentUserId: string): Promise<employeeSigningBonus> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error(`Invalid signing bonus ID format: ${id}`);
     }
@@ -1953,11 +1972,9 @@ export class PayrollExecutionService {
   // REQ-PY-29: Manually edit signing bonuses when needed
   async editSigningBonus(
     editDto: SigningBonusEditDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<employeeSigningBonus> {
-    const bonus = await this.employeeSigningBonusModel.findById(
-      editDto.employeeSigningBonusId,
-    );
+    const bonus = await this.employeeSigningBonusModel.findById(editDto.employeeSigningBonusId);
     if (!bonus) throw new Error('Signing bonus not found');
 
     // Validation: Check if this signing bonus is part of any locked payroll run
@@ -1995,7 +2012,7 @@ export class PayrollExecutionService {
             if (new Date(bonusCreatedAt) <= periodEnd) {
               throw new Error(
                 `Cannot edit signing bonus. This bonus is part of a locked payroll run (RunId: ${lockedPayroll.runId}, Period: ${payrollPeriod.toISOString().split('T')[0]}). ` +
-                  `Please unlock the payroll run first if you need to make changes.`,
+                  `Please unlock the payroll run first if you need to make changes.`
               );
             }
           }
@@ -2005,13 +2022,13 @@ export class PayrollExecutionService {
 
     // Handle signingBonusId change (switching to different config)
     if (editDto.signingBonusId) {
-      bonus.signingBonusId = new mongoose.Types.ObjectId(
-        editDto.signingBonusId,
-      ) as any;
+      bonus.signingBonusId = new mongoose.Types.ObjectId(editDto.signingBonusId) as any;
       // If switching to a different signing bonus config, update givenAmount from new config
       // Note: If givenAmount is also provided in DTO, it will override this (manual edit takes precedence)
       try {
-        const newConfig = await this.payrollConfigurationService.findOneSigningBonus(editDto.signingBonusId);
+        const newConfig = await this.payrollConfigurationService.findOneSigningBonus(
+          editDto.signingBonusId
+        );
         if (newConfig && newConfig.amount) {
           // Only update from config if manual givenAmount is not provided
           if (editDto.givenAmount === undefined) {
@@ -2020,11 +2037,8 @@ export class PayrollExecutionService {
         }
       } catch (error) {
         // If config not found, keep existing givenAmount (or use manual givenAmount if provided)
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.warn(
-          `Signing bonus config ${editDto.signingBonusId} not found: ${errorMessage}`,
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`Signing bonus config ${editDto.signingBonusId} not found: ${errorMessage}`);
       }
     }
 
@@ -2057,18 +2071,19 @@ export class PayrollExecutionService {
   // REQ-PY-30 & REQ-PY-33: Automatically process benefits upon resignation/termination
   // According to business rules & signed contracts
   async processTerminationResignationBenefits(
-    currentUserId: string,
+    currentUserId: string
   ): Promise<EmployeeTerminationResignation[]> {
-    const TerminationRequestModel = this.payrollRunModel.db.model(
-      TerminationRequest.name,
-    );
+    const TerminationRequestModel = this.payrollRunModel.db.model(TerminationRequest.name);
     // Note: terminationAndResignationBenefits is accessed via PayrollConfigurationService, not directly
 
     // Get all approved termination requests that haven't been processed
     const approvedTerminations = await TerminationRequestModel.find({
       status: TerminationStatus.APPROVED,
     })
-      .populate('employeeId', 'employeeNumber firstName lastName dateOfHire contractStartDate contractEndDate')
+      .populate(
+        'employeeId',
+        'employeeNumber firstName lastName dateOfHire contractStartDate contractEndDate'
+      )
       .populate('contractId')
       .exec();
 
@@ -2076,28 +2091,29 @@ export class PayrollExecutionService {
 
     for (const termination of approvedTerminations) {
       // Check if benefit already exists for this termination
-      const existingBenefit =
-        await this.employeeTerminationResignationModel.findOne({
-          terminationId: termination._id,
-        });
+      const existingBenefit = await this.employeeTerminationResignationModel.findOne({
+        terminationId: termination._id,
+      });
 
       if (existingBenefit) {
         continue; // Skip if already processed
       }
 
       // Get employee details for validation (with PayGrade populated for salary calculations)
-      const employee = await this.employeeProfileService.findOne(
-        termination.employeeId.toString(),
-      );
+      const employee = await this.employeeProfileService.findOne(termination.employeeId.toString());
       if (!employee) {
         console.warn(
-          `[Process Termination Benefits] Employee not found for termination ${termination._id}`,
+          `[Process Termination Benefits] Employee not found for termination ${termination._id}`
         );
         continue;
       }
 
       // Ensure PayGrade is populated if not already
-      if (employee.payGradeId && typeof employee.payGradeId === 'object' && employee.payGradeId !== null) {
+      if (
+        employee.payGradeId &&
+        typeof employee.payGradeId === 'object' &&
+        employee.payGradeId !== null
+      ) {
         // Already populated
       } else if (employee.payGradeId) {
         // Need to populate
@@ -2111,34 +2127,34 @@ export class PayrollExecutionService {
       // Get all approved termination/resignation benefits using PayrollConfigurationService
       const benefitsResult = await this.payrollConfigurationService.findAllTerminationBenefits({
         status: ConfigStatus.APPROVED,
-        limit: 1000 // Get all approved termination benefits
+        limit: 1000, // Get all approved termination benefits
       });
       const benefits = benefitsResult?.data || [];
 
       // For each approved benefit, validate eligibility according to business rules & contracts
       for (const benefit of benefits) {
         const benefitData = benefit as any;
-        
+
         // Validate eligibility according to business rules & signed contracts
         const eligibilityCheck = await this.validateTerminationBenefitEligibility(
           employee,
           termination,
-          benefitData,
+          benefitData
         );
 
         if (!eligibilityCheck.isEligible) {
           console.log(
-            `[Process Termination Benefits] Employee ${employee.employeeNumber} is not eligible for benefit ${benefitData.name}: ${eligibilityCheck.reason}`,
+            `[Process Termination Benefits] Employee ${employee.employeeNumber} is not eligible for benefit ${benefitData.name}: ${eligibilityCheck.reason}`
           );
           continue; // Skip this benefit if employee is not eligible
         }
 
         // Create employee termination benefit record
         const employeeBenefit = new this.employeeTerminationResignationModel({
-          employeeId: termination.employeeId as any,
-          benefitId: benefitData._id as any,
+          employeeId: termination.employeeId,
+          benefitId: benefitData._id,
           givenAmount: eligibilityCheck.calculatedAmount || benefitData.amount, // Use calculated amount if available
-          terminationId: termination._id as any,
+          terminationId: termination._id,
           status: BenefitStatus.PENDING,
           createdBy: currentUserId,
           updatedBy: currentUserId,
@@ -2147,7 +2163,7 @@ export class PayrollExecutionService {
         await employeeBenefit.save();
         processedBenefits.push(employeeBenefit);
         console.log(
-          `[Process Termination Benefits] Created benefit ${benefitData.name} (${eligibilityCheck.calculatedAmount || benefitData.amount}) for employee ${employee.employeeNumber}`,
+          `[Process Termination Benefits] Created benefit ${benefitData.name} (${eligibilityCheck.calculatedAmount || benefitData.amount}) for employee ${employee.employeeNumber}`
         );
       }
     }
@@ -2159,7 +2175,7 @@ export class PayrollExecutionService {
   private async validateTerminationBenefitEligibility(
     employee: any,
     termination: any,
-    benefitConfig: any,
+    benefitConfig: any
   ): Promise<{
     isEligible: boolean;
     reason?: string;
@@ -2192,15 +2208,12 @@ export class PayrollExecutionService {
       : new Date(); // Use current date if termination date not specified
 
     const tenureMonths =
-      (terminationDate.getTime() - contractStartDate.getTime()) /
-      (1000 * 60 * 60 * 24 * 30.44); // Average days per month
+      (terminationDate.getTime() - contractStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44); // Average days per month
 
     const tenureYears = tenureMonths / 12;
 
     // 3. Check contract end date (if contract has ended, employee may still be eligible for benefits)
-    const contractEndDate = employee.contractEndDate
-      ? new Date(employee.contractEndDate)
-      : null;
+    const contractEndDate = employee.contractEndDate ? new Date(employee.contractEndDate) : null;
 
     // 4. Validate against business rules stored in benefit terms
     // The benefit.terms field can contain business rules in JSON format or plain text
@@ -2213,16 +2226,15 @@ export class PayrollExecutionService {
       } catch {
         // If not JSON, treat as plain text and check for common patterns
         const termsLower = benefitConfig.terms.toLowerCase();
-        
+
         // Extract minimum tenure if mentioned (e.g., "minimum 12 months", "at least 1 year")
         const minTenureMatch = benefitConfig.terms.match(
-          /(?:minimum|min|at least|after)\s*(\d+)\s*(?:month|year|yr)/i,
+          /(?:minimum|min|at least|after)\s*(\d+)\s*(?:month|year|yr)/i
         );
         if (minTenureMatch) {
           const value = parseInt(minTenureMatch[1]);
-          const unit = termsLower.includes('year') || termsLower.includes('yr')
-            ? 'years'
-            : 'months';
+          const unit =
+            termsLower.includes('year') || termsLower.includes('yr') ? 'years' : 'months';
           businessRules.minTenure = { value, unit };
         }
 
@@ -2241,7 +2253,7 @@ export class PayrollExecutionService {
     if (businessRules.minTenure) {
       const { value, unit } = businessRules.minTenure;
       const requiredTenure = unit === 'years' ? value * 12 : value;
-      
+
       if (tenureMonths < requiredTenure) {
         return {
           isEligible: false,
@@ -2252,9 +2264,8 @@ export class PayrollExecutionService {
 
     // 6. Check if benefit applies to this termination type
     // Termination initiator: 'employee' = resignation, 'hr' or 'manager' = termination
-    const terminationType =
-      termination.initiator === 'employee' ? 'resignation' : 'termination';
-    
+    const terminationType = termination.initiator === 'employee' ? 'resignation' : 'termination';
+
     if (businessRules.appliesTo && Array.isArray(businessRules.appliesTo)) {
       if (!businessRules.appliesTo.includes(terminationType)) {
         return {
@@ -2266,19 +2277,22 @@ export class PayrollExecutionService {
 
     // 7. Calculate benefit amount based on business rules (if calculation method specified)
     let calculatedAmount = benefitConfig.amount;
-    if (businessRules.calculationMethod === 'tenure_based' || businessRules.calculationMethod === 'percentage_of_salary') {
+    if (
+      businessRules.calculationMethod === 'tenure_based' ||
+      businessRules.calculationMethod === 'percentage_of_salary'
+    ) {
       // Get employee base salary from PayGrade
       let baseSalary = 0;
       if (employee.payGradeId) {
         // If payGradeId is populated (object), get baseSalary directly
         if (typeof employee.payGradeId === 'object' && employee.payGradeId !== null) {
-          baseSalary = (employee.payGradeId as any).baseSalary || 0;
+          baseSalary = employee.payGradeId.baseSalary || 0;
         } else {
           // If payGradeId is just an ID, we need to fetch the PayGrade
           const PayGradeModel = this.payrollRunModel.db.model(payGrade.name);
           const payGradeDoc = await PayGradeModel.findById(employee.payGradeId).exec();
           if (payGradeDoc) {
-            baseSalary = (payGradeDoc as any).baseSalary || 0;
+            baseSalary = payGradeDoc.baseSalary || 0;
           }
         }
       }
@@ -2294,7 +2308,7 @@ export class PayrollExecutionService {
         }
       } else {
         console.warn(
-          `[Validate Termination Benefit] Cannot calculate benefit amount for employee ${employee.employeeNumber}: base salary not found in PayGrade`,
+          `[Validate Termination Benefit] Cannot calculate benefit amount for employee ${employee.employeeNumber}: base salary not found in PayGrade`
         );
       }
     }
@@ -2303,7 +2317,7 @@ export class PayrollExecutionService {
     if (contractEndDate && terminationDate > contractEndDate) {
       // Contract ended before termination - may still be eligible but log for review
       console.log(
-        `[Validate Termination Benefit] Contract ended on ${contractEndDate.toISOString()}, but termination date is ${terminationDate.toISOString()}`,
+        `[Validate Termination Benefit] Contract ended on ${contractEndDate.toISOString()}, but termination date is ${terminationDate.toISOString()}`
       );
     }
 
@@ -2315,7 +2329,10 @@ export class PayrollExecutionService {
   }
 
   // Create employee termination benefit manually
-  async createEmployeeTerminationBenefit(createDto: CreateEmployeeTerminationBenefitDto, currentUserId: string): Promise<EmployeeTerminationResignation> {
+  async createEmployeeTerminationBenefit(
+    createDto: CreateEmployeeTerminationBenefitDto,
+    currentUserId: string
+  ): Promise<EmployeeTerminationResignation> {
     // Validate employee exists
     const employee = await this.employeeProfileService.findOne(createDto.employeeId);
     if (!employee) {
@@ -2323,14 +2340,20 @@ export class PayrollExecutionService {
     }
 
     // Validate termination benefit configuration exists
-    const benefitConfig = await this.payrollConfigurationService.findOneTerminationBenefit(createDto.benefitId);
+    const benefitConfig = await this.payrollConfigurationService.findOneTerminationBenefit(
+      createDto.benefitId
+    );
     if (!benefitConfig) {
-      throw new Error(`Termination benefit configuration not found with ID: ${createDto.benefitId}`);
+      throw new Error(
+        `Termination benefit configuration not found with ID: ${createDto.benefitId}`
+      );
     }
 
     // Validate termination request exists
     const TerminationRequestModel = this.payrollRunModel.db.model(TerminationRequest.name);
-    const terminationRequest = await TerminationRequestModel.findById(createDto.terminationId).exec();
+    const terminationRequest = await TerminationRequestModel.findById(
+      createDto.terminationId
+    ).exec();
     if (!terminationRequest) {
       throw new Error(`Termination request not found with ID: ${createDto.terminationId}`);
     }
@@ -2339,11 +2362,13 @@ export class PayrollExecutionService {
     const existingBenefit = await this.employeeTerminationResignationModel.findOne({
       employeeId: new mongoose.Types.ObjectId(createDto.employeeId) as any,
       benefitId: new mongoose.Types.ObjectId(createDto.benefitId) as any,
-      terminationId: new mongoose.Types.ObjectId(createDto.terminationId) as any
+      terminationId: new mongoose.Types.ObjectId(createDto.terminationId) as any,
     });
 
     if (existingBenefit) {
-      throw new Error(`Termination benefit already exists for this employee, benefit configuration, and termination request. Use edit-termination-benefit endpoint instead. Existing ID: ${existingBenefit._id}`);
+      throw new Error(
+        `Termination benefit already exists for this employee, benefit configuration, and termination request. Use edit-termination-benefit endpoint instead. Existing ID: ${existingBenefit._id}`
+      );
     }
 
     // Create the employee termination benefit
@@ -2354,71 +2379,105 @@ export class PayrollExecutionService {
       givenAmount: createDto.givenAmount,
       status: createDto.status || BenefitStatus.PENDING,
       createdBy: currentUserId,
-      updatedBy: currentUserId
+      updatedBy: currentUserId,
     });
 
     const savedBenefit = await employeeBenefit.save();
-    console.log(`[Create Termination Benefit] Created employee termination benefit: ${savedBenefit._id} for employee: ${createDto.employeeId}`);
+    console.log(
+      `[Create Termination Benefit] Created employee termination benefit: ${savedBenefit._id} for employee: ${createDto.employeeId}`
+    );
     return savedBenefit;
   }
 
   // REQ-PY-31: Review and approve processed benefits upon resignation
-  async reviewTerminationBenefit(reviewDto: TerminationBenefitReviewDto, currentUserId: string): Promise<EmployeeTerminationResignation> {
+  async reviewTerminationBenefit(
+    reviewDto: TerminationBenefitReviewDto,
+    currentUserId: string
+  ): Promise<EmployeeTerminationResignation> {
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(reviewDto.employeeTerminationResignationId)) {
-      throw new Error(`Invalid termination benefit ID format: ${reviewDto.employeeTerminationResignationId}`);
+      throw new Error(
+        `Invalid termination benefit ID format: ${reviewDto.employeeTerminationResignationId}`
+      );
     }
 
-    console.log(`[Review Termination Benefit] Looking for termination benefit with ID: ${reviewDto.employeeTerminationResignationId}`);
-    const benefit = await this.employeeTerminationResignationModel.findById(reviewDto.employeeTerminationResignationId);
-    
+    console.log(
+      `[Review Termination Benefit] Looking for termination benefit with ID: ${reviewDto.employeeTerminationResignationId}`
+    );
+    const benefit = await this.employeeTerminationResignationModel.findById(
+      reviewDto.employeeTerminationResignationId
+    );
+
     if (!benefit) {
       // Check if any termination benefits exist to help with debugging
       const totalCount = await this.employeeTerminationResignationModel.countDocuments();
-      const pendingCount = await this.employeeTerminationResignationModel.countDocuments({ status: BenefitStatus.PENDING });
-      console.error(`[Review Termination Benefit] Termination benefit not found. ID: ${reviewDto.employeeTerminationResignationId}, Total termination benefits in DB: ${totalCount}, Pending: ${pendingCount}`);
-      
+      const pendingCount = await this.employeeTerminationResignationModel.countDocuments({
+        status: BenefitStatus.PENDING,
+      });
+      console.error(
+        `[Review Termination Benefit] Termination benefit not found. ID: ${reviewDto.employeeTerminationResignationId}, Total termination benefits in DB: ${totalCount}, Pending: ${pendingCount}`
+      );
+
       // Check if the ID might be from the wrong collection (terminationAndResignationBenefits config instead of EmployeeTerminationResignation)
       try {
-        const configCheck = await this.payrollConfigurationService.findOneTerminationBenefit(reviewDto.employeeTerminationResignationId);
-        
+        const configCheck = await this.payrollConfigurationService.findOneTerminationBenefit(
+          reviewDto.employeeTerminationResignationId
+        );
+
         if (configCheck) {
-          throw new Error(`The ID ${reviewDto.employeeTerminationResignationId} belongs to a termination benefit CONFIGURATION (from 'terminationandresignationbenefits' collection), not an employee termination benefit record. You need to use an ID from the 'employeeterminationresignations' collection. Please call 'POST /api/v1/payroll/process-termination-benefits' first to create employee termination benefit records, then use one of those IDs.`);
+          throw new Error(
+            `The ID ${reviewDto.employeeTerminationResignationId} belongs to a termination benefit CONFIGURATION (from 'terminationandresignationbenefits' collection), not an employee termination benefit record. You need to use an ID from the 'employeeterminationresignations' collection. Please call 'POST /api/v1/payroll/process-termination-benefits' first to create employee termination benefit records, then use one of those IDs.`
+          );
         }
       } catch (error) {
         // If findOneTerminationBenefit throws NotFoundException, that's fine - it means it's not a config ID
         // Continue with the original error message
       }
-      
+
       if (totalCount === 0) {
-        throw new Error(`No employee termination benefits exist in the system. The ID you provided (${reviewDto.employeeTerminationResignationId}) was not found in the 'employeeterminationresignations' collection. Please call 'POST /api/v1/payroll/process-termination-benefits' endpoint first to create termination benefits for eligible employees (those with approved termination requests).`);
+        throw new Error(
+          `No employee termination benefits exist in the system. The ID you provided (${reviewDto.employeeTerminationResignationId}) was not found in the 'employeeterminationresignations' collection. Please call 'POST /api/v1/payroll/process-termination-benefits' endpoint first to create termination benefits for eligible employees (those with approved termination requests).`
+        );
       } else {
         // Get a few example IDs to help the user
-        const examples = await this.employeeTerminationResignationModel.find().limit(5).select('_id employeeId status').populate('employeeId', 'fullName employeeNumber').exec();
-        const exampleDetails = examples.map(b => {
-          const emp = (b as any).employeeId;
-          return `${b._id.toString()} (Employee: ${emp?.fullName || emp?.employeeNumber || 'N/A'}, Status: ${b.status})`;
-        }).join('; ');
-        throw new Error(`Employee termination benefit not found with ID: ${reviewDto.employeeTerminationResignationId}. Available employee termination benefit IDs (examples): ${exampleDetails}. Please use a valid employee termination benefit ID from the 'process-termination-benefits' response.`);
+        const examples = await this.employeeTerminationResignationModel
+          .find()
+          .limit(5)
+          .select('_id employeeId status')
+          .populate('employeeId', 'fullName employeeNumber')
+          .exec();
+        const exampleDetails = examples
+          .map((b) => {
+            const emp = (b as any).employeeId;
+            return `${b._id.toString()} (Employee: ${emp?.fullName || emp?.employeeNumber || 'N/A'}, Status: ${b.status})`;
+          })
+          .join('; ');
+        throw new Error(
+          `Employee termination benefit not found with ID: ${reviewDto.employeeTerminationResignationId}. Available employee termination benefit IDs (examples): ${exampleDetails}. Please use a valid employee termination benefit ID from the 'process-termination-benefits' response.`
+        );
       }
     }
 
-    console.log(`[Review Termination Benefit] Found termination benefit. Current status: ${benefit.status}, Updating to: ${reviewDto.status}`);
+    console.log(
+      `[Review Termination Benefit] Found termination benefit. Current status: ${benefit.status}, Updating to: ${reviewDto.status}`
+    );
 
     benefit.status = reviewDto.status;
     (benefit as any).updatedBy = currentUserId;
     const savedBenefit = await benefit.save();
-    console.log(`[Review Termination Benefit] Termination benefit updated successfully. New status: ${savedBenefit.status}`);
+    console.log(
+      `[Review Termination Benefit] Termination benefit updated successfully. New status: ${savedBenefit.status}`
+    );
     return savedBenefit;
   }
 
   // REQ-PY-32: Manually edit benefits upon resignation when needed
   async editTerminationBenefit(
     editDto: TerminationBenefitEditDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<EmployeeTerminationResignation> {
     const benefit = await this.employeeTerminationResignationModel.findById(
-      editDto.employeeTerminationResignationId,
+      editDto.employeeTerminationResignationId
     );
     if (!benefit) throw new Error('Termination benefit not found');
 
@@ -2457,7 +2516,7 @@ export class PayrollExecutionService {
             if (new Date(benefitCreatedAt) <= periodEnd) {
               throw new Error(
                 `Cannot edit termination benefit. This benefit is part of a locked payroll run (RunId: ${lockedPayroll.runId}, Period: ${payrollPeriod.toISOString().split('T')[0]}). ` +
-                  `Please unlock the payroll run first if you need to make changes.`,
+                  `Please unlock the payroll run first if you need to make changes.`
               );
             }
           }
@@ -2471,7 +2530,9 @@ export class PayrollExecutionService {
       // If switching to a different benefit config, update givenAmount from new config
       // Note: If givenAmount is also provided in DTO, it will override this (manual edit takes precedence)
       try {
-        const newConfig = await this.payrollConfigurationService.findOneTerminationBenefit(editDto.benefitId);
+        const newConfig = await this.payrollConfigurationService.findOneTerminationBenefit(
+          editDto.benefitId
+        );
         if (newConfig && newConfig.amount) {
           // Only update from config if manual givenAmount is not provided
           if (editDto.givenAmount === undefined) {
@@ -2480,19 +2541,14 @@ export class PayrollExecutionService {
         }
       } catch (error) {
         // If config not found, keep existing givenAmount (or use manual givenAmount if provided)
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.warn(
-          `Termination benefit config ${editDto.benefitId} not found: ${errorMessage}`,
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`Termination benefit config ${editDto.benefitId} not found: ${errorMessage}`);
       }
     }
 
     // Handle terminationId update
     if (editDto.terminationId) {
-      benefit.terminationId = new mongoose.Types.ObjectId(
-        editDto.terminationId,
-      ) as any;
+      benefit.terminationId = new mongoose.Types.ObjectId(editDto.terminationId) as any;
     }
 
     // Handle status update
@@ -2520,8 +2576,13 @@ export class PayrollExecutionService {
     type: 'TERMINATION' | 'RESIGNATION' | undefined,
     page: number,
     limit: number,
-    currentUserId: string,
-  ): Promise<{ data: EmployeeTerminationResignation[]; total: number; page: number; limit: number }> {
+    currentUserId: string
+  ): Promise<{
+    data: EmployeeTerminationResignation[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const query: any = {};
 
     if (status) {
@@ -2530,10 +2591,10 @@ export class PayrollExecutionService {
 
     if (employeeId && employeeId.trim()) {
       const searchTerm = employeeId.trim();
-      
+
       // Try to find employees matching the search term
       let employeeIds: mongoose.Types.ObjectId[] = [];
-      
+
       // First, try as ObjectId
       if (mongoose.Types.ObjectId.isValid(searchTerm)) {
         const objectId = new mongoose.Types.ObjectId(searchTerm);
@@ -2542,14 +2603,14 @@ export class PayrollExecutionService {
           employeeIds.push(objectId);
         }
       }
-      
+
       // Also search by employeeNumber
       const employeesByNumber = await this.employeeProfileModel
         .find({ employeeNumber: { $regex: searchTerm, $options: 'i' } })
         .select('_id')
         .exec();
-      employeeIds.push(...employeesByNumber.map(emp => emp._id as mongoose.Types.ObjectId));
-      
+      employeeIds.push(...employeesByNumber.map((emp) => emp._id));
+
       // Also search by name (firstName or lastName)
       const nameParts = searchTerm.split(/\s+/);
       const nameQuery: any = {};
@@ -2564,16 +2625,15 @@ export class PayrollExecutionService {
         nameQuery.firstName = { $regex: nameParts[0], $options: 'i' };
         nameQuery.lastName = { $regex: nameParts.slice(1).join(' '), $options: 'i' };
       }
-      
-      const employeesByName = await this.employeeProfileModel
-        .find(nameQuery)
-        .select('_id')
-        .exec();
-      employeeIds.push(...employeesByName.map(emp => emp._id as mongoose.Types.ObjectId));
-      
+
+      const employeesByName = await this.employeeProfileModel.find(nameQuery).select('_id').exec();
+      employeeIds.push(...employeesByName.map((emp) => emp._id));
+
       // Remove duplicates
-      employeeIds = [...new Set(employeeIds.map(id => id.toString()))].map(id => new mongoose.Types.ObjectId(id) as any);
-      
+      employeeIds = [...new Set(employeeIds.map((id) => id.toString()))].map(
+        (id) => new mongoose.Types.ObjectId(id) as any
+      );
+
       if (employeeIds.length > 0) {
         query.employeeId = { $in: employeeIds };
       } else {
@@ -2585,7 +2645,8 @@ export class PayrollExecutionService {
     // Filter by termination type if specified
     // We need to find termination requests with the specified type first
     if (type) {
-      const TerminationRequestModel = this.employeeTerminationResignationModel.db.model('TerminationRequest');
+      const TerminationRequestModel =
+        this.employeeTerminationResignationModel.db.model('TerminationRequest');
       const terminations = await TerminationRequestModel.find({ type }).select('_id').exec();
       const terminationIds = terminations.map((t: any) => t._id);
       if (terminationIds.length === 0) {
@@ -2626,7 +2687,7 @@ export class PayrollExecutionService {
   // Get termination benefit by ID
   async getTerminationBenefitById(
     id: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<EmployeeTerminationResignation> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error(`Invalid termination benefit ID format: ${id}`);
@@ -2653,7 +2714,7 @@ export class PayrollExecutionService {
     employeeId: string,
     payrollRunId: string,
     baseSalary: number | undefined,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<employeePayrollDetails> {
     // Get employee using EmployeeProfileService
     const employee = await this.employeeProfileService.findOne(employeeId);
@@ -2667,7 +2728,9 @@ export class PayrollExecutionService {
     // Step 1: Try to fetch from PayGrade first (automatic retrieval)
     if (employee.payGradeId) {
       try {
-        const payGradeData = await this.payrollConfigurationService.findOnePayGrade(employee.payGradeId.toString());
+        const payGradeData = await this.payrollConfigurationService.findOnePayGrade(
+          employee.payGradeId.toString()
+        );
         if (payGradeData) {
           // Only use PayGrade if it's approved (BR: Use approved configurations only)
           if (payGradeData.status === ConfigStatus.APPROVED) {
@@ -2681,7 +2744,7 @@ export class PayrollExecutionService {
                 'INVALID_PAYGRADE_SALARY',
                 `PayGrade ${employee.payGradeId} has invalid baseSalary (${payGradeData.baseSalary}) for employee ${employeeId}`,
                 currentUserId,
-                employeeId,
+                employeeId
               );
             }
           } else {
@@ -2691,23 +2754,22 @@ export class PayrollExecutionService {
               'PAYGRADE_NOT_APPROVED',
               `PayGrade ${employee.payGradeId} is not approved (status: ${payGradeData.status}) for employee ${employeeId}. Cannot use baseSalary from PayGrade.`,
               currentUserId,
-              employeeId,
+              employeeId
             );
           }
         }
       } catch (error) {
         // PayGrade not found or error fetching
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         await this.flagPayrollException(
           payrollRunId,
           'PAYGRADE_NOT_FOUND',
           `PayGrade ${employee.payGradeId} not found or error fetching for employee ${employeeId}: ${errorMessage}`,
           currentUserId,
-          employeeId,
+          employeeId
         );
         console.warn(
-          `PayGrade ${employee.payGradeId} not found for employee ${employeeId}: ${errorMessage}`,
+          `PayGrade ${employee.payGradeId} not found for employee ${employeeId}: ${errorMessage}`
         );
       }
     } else {
@@ -2717,7 +2779,7 @@ export class PayrollExecutionService {
         'NO_PAYGRADE_ASSIGNED',
         `Employee ${employeeId} has no PayGrade assigned. Cannot automatically retrieve baseSalary.`,
         currentUserId,
-        employeeId,
+        employeeId
       );
     }
 
@@ -2734,7 +2796,7 @@ export class PayrollExecutionService {
           'BASE_SALARY_OVERRIDE',
           `Base salary override: Provided ${baseSalary} differs from PayGrade baseSalary ${actualBaseSalary} for employee ${employeeId}`,
           currentUserId,
-          employeeId,
+          employeeId
         );
       }
       actualBaseSalary = baseSalary;
@@ -2749,12 +2811,17 @@ export class PayrollExecutionService {
         'MISSING_BASE_SALARY',
         `No valid baseSalary found for employee ${employeeId}. PayGrade: ${employee.payGradeId ? employee.payGradeId.toString() : 'none'}, Provided: ${baseSalary || 'none'}`,
         currentUserId,
-        employeeId,
+        employeeId
       );
     }
 
     // BR 4: Validate minimum salary bracket compliance (Egyptian Labor Law 2025)
-    await this.validateMinimumSalaryBracket(actualBaseSalary, employeeId, payrollRunId, currentUserId);
+    await this.validateMinimumSalaryBracket(
+      actualBaseSalary,
+      employeeId,
+      payrollRunId,
+      currentUserId
+    );
 
     // Get payroll run to access payroll period for prorated calculations
     const payrollRun = await this.payrollRunModel.findById(payrollRunId);
@@ -2774,12 +2841,12 @@ export class PayrollExecutionService {
     const payrollPeriodStart = new Date(
       payrollPeriodEnd.getFullYear(),
       payrollPeriodEnd.getMonth(),
-      1,
+      1
     );
     const payrollPeriodEndDate = new Date(
       payrollPeriodEnd.getFullYear(),
       payrollPeriodEnd.getMonth() + 1,
-      0,
+      0
     );
 
     // Normalize dates to start of day for accurate comparison
@@ -2830,21 +2897,20 @@ export class PayrollExecutionService {
           startDate,
           endDate,
           payrollPeriodEndDate,
-          currentUserId,
+          currentUserId
         );
       } catch (error) {
         // If proration calculation fails, flag as exception but continue with full salary
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(
-          `Error calculating prorated salary for employee ${employeeId}: ${errorMessage}`,
+          `Error calculating prorated salary for employee ${employeeId}: ${errorMessage}`
         );
         await this.flagPayrollException(
           payrollRunId,
           'PRORATION_ERROR',
           `Failed to calculate prorated salary for employee ${employeeId}: ${errorMessage}`,
           currentUserId,
-          employeeId,
+          employeeId
         );
       }
     }
@@ -2853,11 +2919,11 @@ export class PayrollExecutionService {
     // BR 20: Allowances as part of employment contract
     // BR 38: Allowance structure support
     // BR 39: Allowance types tracking
-    const allowancesResult = await this.payrollConfigurationService.findAllAllowances({ 
+    const allowancesResult = await this.payrollConfigurationService.findAllAllowances({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved allowances
+      limit: 1000, // Get all approved allowances
     });
-    
+
     // Get employee-specific applicable allowances (BR 20, BR 38, BR 39)
     const applicableAllowances = await this.getApplicableAllowancesForEmployee(
       employee,
@@ -2866,7 +2932,7 @@ export class PayrollExecutionService {
 
     let totalAllowances = 0;
     for (const allowance of applicableAllowances) {
-      totalAllowances += (allowance as any).amount || 0;
+      totalAllowances += allowance.amount || 0;
     }
 
     // Note: If proration was applied to base salary, allowances are typically also prorated
@@ -2883,16 +2949,13 @@ export class PayrollExecutionService {
     const statutoryBreakdown = await this.applyStatutoryRulesWithBreakdown(
       actualBaseSalary,
       employeeId,
-      grossSalary, // Pass grossSalary for insurance calculations
+      grossSalary // Pass grossSalary for insurance calculations
     );
     const statutoryDeductions = statutoryBreakdown.total;
 
     // Get penalties from Time Management (missing working hours/days) and Leaves (unpaid leave)
     // BR 31: Store breakdown of penalties for auditability
-    const penaltiesBreakdown = await this.calculatePenaltiesWithBreakdown(
-      employeeId,
-      payrollRunId,
-    );
+    const penaltiesBreakdown = await this.calculatePenaltiesWithBreakdown(employeeId, payrollRunId);
     const penalties = penaltiesBreakdown.total;
 
     // Get refunds using PayrollTrackingService
@@ -2919,8 +2982,7 @@ export class PayrollExecutionService {
     };
 
     // Get currency from payroll run for storage in exceptions
-    const payrollRunForCurrency =
-      await this.payrollRunModel.findById(payrollRunId);
+    const payrollRunForCurrency = await this.payrollRunModel.findById(payrollRunId);
     const currency = payrollRunForCurrency
       ? this.getPayrollRunCurrency(payrollRunForCurrency)
       : 'USD';
@@ -2970,9 +3032,7 @@ export class PayrollExecutionService {
 
   // Helper: Get termination information (returns termination request if exists)
   private async getTerminationInfo(employeeId: string): Promise<any> {
-    const TerminationRequestModel = this.payrollRunModel.db.model(
-      TerminationRequest.name,
-    );
+    const TerminationRequestModel = this.payrollRunModel.db.model(TerminationRequest.name);
     const termination = await TerminationRequestModel.findOne({
       employeeId: new mongoose.Types.ObjectId(employeeId) as any,
       status: TerminationStatus.APPROVED,
@@ -2989,9 +3049,7 @@ export class PayrollExecutionService {
   // Helper: Check if employee resigned
   private async checkResignation(employeeId: string): Promise<boolean> {
     // Similar to termination check, but would check resignation-specific status
-    const TerminationRequestModel = this.payrollRunModel.db.model(
-      TerminationRequest.name,
-    );
+    const TerminationRequestModel = this.payrollRunModel.db.model(TerminationRequest.name);
     const resignation = await TerminationRequestModel.findOne({
       employeeId: new mongoose.Types.ObjectId(employeeId) as any,
       status: TerminationStatus.APPROVED,
@@ -3001,14 +3059,8 @@ export class PayrollExecutionService {
   }
 
   // Helper: Calculate penalties from Time Management and Leaves
-  private async calculatePenalties(
-    employeeId: string,
-    payrollRunId: string,
-  ): Promise<number> {
-    const breakdown = await this.calculatePenaltiesWithBreakdown(
-      employeeId,
-      payrollRunId,
-    );
+  private async calculatePenalties(employeeId: string, payrollRunId: string): Promise<number> {
+    const breakdown = await this.calculatePenaltiesWithBreakdown(employeeId, payrollRunId);
     return breakdown.total;
   }
 
@@ -3017,7 +3069,7 @@ export class PayrollExecutionService {
   // BR 34: Missing working hours/days penalties
   private async calculatePenaltiesWithBreakdown(
     employeeId: string,
-    payrollRunId: string,
+    payrollRunId: string
   ): Promise<{
     total: number;
     timeManagementPenalties: number;
@@ -3039,17 +3091,16 @@ export class PayrollExecutionService {
     let baseSalary = 0;
     if (employee.payGradeId) {
       try {
-        const payGradeDoc = await this.payrollConfigurationService.findOnePayGrade(employee.payGradeId.toString());
+        const payGradeDoc = await this.payrollConfigurationService.findOnePayGrade(
+          employee.payGradeId.toString()
+        );
         if (payGradeDoc && payGradeDoc.status === ConfigStatus.APPROVED) {
           baseSalary = payGradeDoc.baseSalary || 0;
           // Note: Minimum salary bracket validation is already performed in the main calculation flow
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.warn(
-          `Could not fetch PayGrade for employee ${employeeId}: ${errorMessage}`,
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`Could not fetch PayGrade for employee ${employeeId}: ${errorMessage}`);
       }
     }
 
@@ -3073,46 +3124,38 @@ export class PayrollExecutionService {
       const periodEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
       // Get all leave requests for this employee within the payroll period
-      const leaveRequests = await this.leavesService.getPastLeaveRequests(
-        employeeId,
-        {
-          fromDate: periodStart,
-          toDate: periodEnd,
-          status: LeaveStatus.APPROVED, // Only approved leaves are considered
-        },
-      );
+      const leaveRequests = await this.leavesService.getPastLeaveRequests(employeeId, {
+        fromDate: periodStart,
+        toDate: periodEnd,
+        status: LeaveStatus.APPROVED, // Only approved leaves are considered
+      });
 
       // Batch fetch all unique LeaveTypes to avoid N+1 queries
-      const uniqueLeaveTypeIds = [
-        ...new Set(leaveRequests.map((lr: any) => lr.leaveTypeId)),
-      ];
+      const uniqueLeaveTypeIds = [...new Set(leaveRequests.map((lr: any) => lr.leaveTypeId))];
 
       // Access LeaveType model via db.model (since it's in LeavesModule)
       const LeaveTypeModel = this.payrollRunModel.db.model('LeaveType');
       const leaveTypes = await LeaveTypeModel.find({
         _id: {
-          $in: uniqueLeaveTypeIds.map(
-            (id: any) => new mongoose.Types.ObjectId(id),
-          ),
+          $in: uniqueLeaveTypeIds.map((id: any) => new mongoose.Types.ObjectId(id)),
         },
       }).exec();
 
       // Create a map for quick lookup: leaveTypeId -> paid status
       const leaveTypePaidMap = new Map<string, boolean>();
       for (const leaveType of leaveTypes) {
-        const lt = leaveType as any;
+        const lt = leaveType;
         leaveTypePaidMap.set(lt._id.toString(), lt.paid !== false); // Default to true if not specified
       }
 
       // Filter for unpaid leaves and calculate penalties
       for (const leaveRequest of leaveRequests) {
-        const leaveTypeId =
-          leaveRequest.leaveTypeId?.toString() || leaveRequest.leaveTypeId;
+        const leaveTypeId = leaveRequest.leaveTypeId?.toString() || leaveRequest.leaveTypeId;
         const isPaid = leaveTypePaidMap.get(leaveTypeId);
 
         // If leave type is not found in map, skip (already logged in batch fetch)
         // If isPaid is false, it's an unpaid leave
-        if (isPaid === false) {
+        if (!isPaid) {
           // This is an unpaid leave - calculate penalty
           // BR 11: Unpaid leave deduction = daily rate * duration days
           const durationDays = leaveRequest.durationDays || 0;
@@ -3121,10 +3164,9 @@ export class PayrollExecutionService {
         }
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn(
-        `Error calculating unpaid leave penalties for employee ${employeeId}: ${errorMessage}`,
+        `Error calculating unpaid leave penalties for employee ${employeeId}: ${errorMessage}`
       );
       // Continue with time management penalties even if leaves calculation fails
     }
@@ -3141,8 +3183,7 @@ export class PayrollExecutionService {
       const periodEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
       // Access AttendanceRecord and TimeException models via db.model
-      const AttendanceRecordModel =
-        this.payrollRunModel.db.model('AttendanceRecord');
+      const AttendanceRecordModel = this.payrollRunModel.db.model('AttendanceRecord');
       const TimeExceptionModel = this.payrollRunModel.db.model('TimeException');
 
       // Get attendance records for this employee within the payroll period
@@ -3175,14 +3216,13 @@ export class PayrollExecutionService {
       // Note: This is a simplified calculation - actual penalty amounts would come from
       // LatenessRule or other configuration. For now, we'll use a default calculation.
       for (const exception of timeExceptions) {
-        const exceptionData = exception as any;
+        const exceptionData = exception;
         const exceptionType = exceptionData.type;
 
         // Check if the exception's attendance record date falls within payroll period
         // Since we don't have direct date on TimeException, we'll check via AttendanceRecord
         const attendanceRecord = attendanceRecords.find(
-          (ar: any) =>
-            ar._id.toString() === exceptionData.attendanceRecordId?.toString(),
+          (ar: any) => ar._id.toString() === exceptionData.attendanceRecordId?.toString()
         );
 
         if (attendanceRecord) {
@@ -3211,7 +3251,7 @@ export class PayrollExecutionService {
       // Also check for missing working days (attendance records with very low or zero work minutes)
       // This would indicate missing days that should be penalized
       for (const attendanceRecord of attendanceRecords) {
-        const record = attendanceRecord as any;
+        const record = attendanceRecord;
         const totalWorkMinutes = record.totalWorkMinutes || 0;
         const expectedWorkMinutes = 8 * 60; // 8 hours = 480 minutes
 
@@ -3225,10 +3265,9 @@ export class PayrollExecutionService {
         }
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn(
-        `Error calculating time management penalties for employee ${employeeId}: ${errorMessage}`,
+        `Error calculating time management penalties for employee ${employeeId}: ${errorMessage}`
       );
       // Continue even if time management calculation fails
     }
@@ -3250,7 +3289,7 @@ export class PayrollExecutionService {
   // a flexible matching system based on naming conventions and employee attributes
   private async getApplicableAllowancesForEmployee(
     employee: any,
-    allAllowances: any[],
+    allAllowances: any[]
   ): Promise<any[]> {
     // Validate inputs
     if (!employee || !allAllowances || allAllowances.length === 0) {
@@ -3274,9 +3313,7 @@ export class PayrollExecutionService {
     if (employeePosition) {
       if (typeof employeePosition === 'object' && employeePosition !== null) {
         // Populated object
-        positionTitle = ((employeePosition as any).title || '')
-          .toLowerCase()
-          .trim();
+        positionTitle = (employeePosition.title || '').toLowerCase().trim();
       } else if (typeof employeePosition === 'string') {
         // ObjectId as string - would need to fetch, but for now skip position matching
         positionTitle = '';
@@ -3284,14 +3321,9 @@ export class PayrollExecutionService {
     }
 
     if (employeeDepartment) {
-      if (
-        typeof employeeDepartment === 'object' &&
-        employeeDepartment !== null
-      ) {
+      if (typeof employeeDepartment === 'object' && employeeDepartment !== null) {
         // Populated object
-        departmentName = ((employeeDepartment as any).name || '')
-          .toLowerCase()
-          .trim();
+        departmentName = (employeeDepartment.name || '').toLowerCase().trim();
       } else if (typeof employeeDepartment === 'string') {
         // ObjectId as string - would need to fetch, but for now skip department matching
         departmentName = '';
@@ -3301,9 +3333,7 @@ export class PayrollExecutionService {
     if (employeePayGrade) {
       if (typeof employeePayGrade === 'object' && employeePayGrade !== null) {
         // Populated object
-        payGradeGrade = ((employeePayGrade as any).grade || '')
-          .toLowerCase()
-          .trim();
+        payGradeGrade = (employeePayGrade.grade || '').toLowerCase().trim();
       } else if (typeof employeePayGrade === 'string') {
         // ObjectId as string - would need to fetch, but for now skip pay grade matching
         payGradeGrade = '';
@@ -3314,9 +3344,7 @@ export class PayrollExecutionService {
     const contractTypeStr = employeeContractType
       ? String(employeeContractType).toLowerCase().trim()
       : '';
-    const workTypeStr = employeeWorkType
-      ? String(employeeWorkType).toLowerCase().trim()
-      : '';
+    const workTypeStr = employeeWorkType ? String(employeeWorkType).toLowerCase().trim() : '';
 
     // Define matching keywords
     // Universal allowances - apply to all employees regardless of position/department
@@ -3392,14 +3420,7 @@ export class PayrollExecutionService {
     ];
 
     // Work type keywords
-    const workTypeKeywords = [
-      'remote',
-      'hybrid',
-      'onsite',
-      'office',
-      'field',
-      'travel',
-    ];
+    const workTypeKeywords = ['remote', 'hybrid', 'onsite', 'office', 'field', 'travel'];
 
     const applicableAllowances: any[] = [];
 
@@ -3418,7 +3439,7 @@ export class PayrollExecutionService {
 
       // Step 1: Check if it's a universal allowance (applies to all employees)
       const isUniversal = universalAllowanceKeywords.some((keyword) =>
-        allowanceName.includes(keyword),
+        allowanceName.includes(keyword)
       );
 
       if (isUniversal) {
@@ -3460,9 +3481,7 @@ export class PayrollExecutionService {
           if (allowanceName.includes('grade')) {
             // Check if pay grade is mentioned in allowance name
             // This handles cases like "Grade A", "Grade 1", etc.
-            const payGradeParts = payGradeGrade
-              .split(' ')
-              .filter((p) => p.length > 0);
+            const payGradeParts = payGradeGrade.split(' ').filter((p) => p.length > 0);
             const gradeMatch =
               payGradeParts.some((part) => allowanceName.includes(part)) ||
               allowanceName.includes(payGradeGrade);
@@ -3502,18 +3521,10 @@ export class PayrollExecutionService {
         // Step 7: Fallback logic - if no specific match found
         if (!isApplicable) {
           // Check if allowance has position/department-specific keywords
-          const hasPositionKeyword = positionKeywords.some((kw) =>
-            allowanceName.includes(kw),
-          );
-          const hasDepartmentKeyword = departmentKeywords.some((kw) =>
-            allowanceName.includes(kw),
-          );
-          const hasContractKeyword = contractTypeKeywords.some((kw) =>
-            allowanceName.includes(kw),
-          );
-          const hasWorkTypeKeyword = workTypeKeywords.some((kw) =>
-            allowanceName.includes(kw),
-          );
+          const hasPositionKeyword = positionKeywords.some((kw) => allowanceName.includes(kw));
+          const hasDepartmentKeyword = departmentKeywords.some((kw) => allowanceName.includes(kw));
+          const hasContractKeyword = contractTypeKeywords.some((kw) => allowanceName.includes(kw));
+          const hasWorkTypeKeyword = workTypeKeywords.some((kw) => allowanceName.includes(kw));
           const hasPayGradeKeyword = allowanceName.includes('grade');
 
           // If allowance has specific keywords but didn't match, exclude it
@@ -3543,23 +3554,16 @@ export class PayrollExecutionService {
     // Safety check: If filtering resulted in empty set, return all allowances
     // This ensures backward compatibility and prevents breaking existing payrolls
     // However, this should rarely happen if universal allowances are properly configured
-    return applicableAllowances.length > 0
-      ? applicableAllowances
-      : allAllowances;
+    return applicableAllowances.length > 0 ? applicableAllowances : allAllowances;
   }
 
   // Helper: Calculate refunds if available using PayrollTrackingService
   // REQ-PY-18: Employees can list all refunds generated for them
   // REQ-PY-45 & REQ-PY-46: Finance monitors refunds pending payroll execution
-  private async calculateRefunds(
-    employeeId: string,
-    payrollRunId: string,
-  ): Promise<number> {
+  private async calculateRefunds(employeeId: string, payrollRunId: string): Promise<number> {
     try {
       // Get all refunds for the employee using PayrollTrackingService
-      const refunds = await (
-        this.payrollTrackingService as any
-      ).getRefundsByEmployeeId(employeeId);
+      const refunds = await (this.payrollTrackingService as any).getRefundsByEmployeeId(employeeId);
 
       if (!refunds || refunds.length === 0) {
         return 0;
@@ -3570,13 +3574,12 @@ export class PayrollExecutionService {
       // Only include refunds with status PENDING that haven't been paid in any payroll run
       let totalRefunds = 0;
       for (const refund of refunds) {
-        const refundData = refund as any;
+        const refundData = refund;
 
         // Check if refund is pending and not yet paid in a payroll run
         // Use RefundStatus enum for proper type checking
         const isPending =
-          refundData.status === RefundStatus.PENDING ||
-          refundData.status === 'pending';
+          refundData.status === RefundStatus.PENDING || refundData.status === 'pending';
         const notPaid = !refundData.paidInPayrollRunId;
 
         if (isPending && notPaid) {
@@ -3595,11 +3598,8 @@ export class PayrollExecutionService {
     } catch (error) {
       // If service is not available or error occurs, return 0
       // This ensures payroll calculation continues even if refunds service is unavailable
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.warn(
-        `Error fetching refunds for employee ${employeeId}: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`Error fetching refunds for employee ${employeeId}: ${errorMessage}`);
       return 0;
     }
   }
@@ -3613,7 +3613,7 @@ export class PayrollExecutionService {
     startDate: Date,
     endDate: Date,
     payrollPeriodEnd: Date,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<number> {
     // Validate inputs
     if (baseSalary <= 0) {
@@ -3622,7 +3622,7 @@ export class PayrollExecutionService {
 
     if (startDate > endDate) {
       throw new Error(
-        `Invalid date range: startDate (${startDate}) cannot be after endDate (${endDate})`,
+        `Invalid date range: startDate (${startDate}) cannot be after endDate (${endDate})`
       );
     }
 
@@ -3630,7 +3630,7 @@ export class PayrollExecutionService {
     const daysInMonth = new Date(
       payrollPeriodEnd.getFullYear(),
       payrollPeriodEnd.getMonth() + 1,
-      0,
+      0
     ).getDate();
 
     // Calculate days worked (inclusive of both start and end dates)
@@ -3652,12 +3652,9 @@ export class PayrollExecutionService {
   async applyStatutoryRules(
     baseSalary: number,
     employeeId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<number> {
-    const breakdown = await this.applyStatutoryRulesWithBreakdown(
-      baseSalary,
-      employeeId,
-    );
+    const breakdown = await this.applyStatutoryRulesWithBreakdown(baseSalary, employeeId);
     return breakdown.total;
   }
 
@@ -3667,7 +3664,7 @@ export class PayrollExecutionService {
   async applyStatutoryRulesWithBreakdown(
     baseSalary: number,
     employeeId: string,
-    grossSalary?: number, // Optional: if provided, use for insurance calculations; otherwise use baseSalary
+    grossSalary?: number // Optional: if provided, use for insurance calculations; otherwise use baseSalary
   ): Promise<{
     total: number;
     taxes: number;
@@ -3677,7 +3674,7 @@ export class PayrollExecutionService {
     if (!baseSalary || baseSalary < 0) {
       throw new Error('Base salary must be a positive number');
     }
-    
+
     // Use grossSalary for insurance calculations if provided, otherwise fall back to baseSalary
     const salaryForInsurance = grossSalary && grossSalary > 0 ? grossSalary : baseSalary;
 
@@ -3688,19 +3685,19 @@ export class PayrollExecutionService {
     // BR 5: Payroll income taxes' brackets identified and enforced through Local Tax Law
     // BR 35: Taxes = % of Base Salary
     // Egyptian Tax Law 2025: Tax brackets (tax rules) must be identified and enforced
-    const taxRulesResult = await this.payrollConfigurationService.findAllTaxRules({ 
+    const taxRulesResult = await this.payrollConfigurationService.findAllTaxRules({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved tax rules
+      limit: 1000, // Get all approved tax rules
     });
-    
+
     const approvedTaxRules = taxRulesResult?.data || [];
-    
+
     // BR 5: Identify tax brackets enforced through Egyptian Tax Law 2025
     if (approvedTaxRules.length === 0) {
       console.warn(
         `[Tax Brackets Identification] No approved tax rules (tax brackets) found for employee ${employeeId}. ` +
-        `Egyptian Tax Law 2025 requires payroll income tax brackets to be identified and enforced. ` +
-        `Please ensure tax brackets are configured and approved in the payroll configuration.`
+          `Egyptian Tax Law 2025 requires payroll income tax brackets to be identified and enforced. ` +
+          `Please ensure tax brackets are configured and approved in the payroll configuration.`
       );
     } else {
       // Identify and log tax brackets being applied
@@ -3713,14 +3710,14 @@ export class PayrollExecutionService {
           enforcedThrough: 'Egyptian Tax Law 2025',
         };
       });
-      
+
       console.log(
         `[Tax Brackets Identification] Employee ${employeeId}, Base Salary: ${baseSalary}. ` +
-        `Identified ${identifiedTaxBrackets.length} tax bracket(s) enforced through Egyptian Tax Law 2025: ` +
-        `${identifiedTaxBrackets.map(tb => `${tb.name} (${tb.rate}%)`).join(', ')}`
+          `Identified ${identifiedTaxBrackets.length} tax bracket(s) enforced through Egyptian Tax Law 2025: ` +
+          identifiedTaxBrackets.map((tb) => `${tb.name} (${tb.rate}%)`).join(', ')
       );
     }
-    
+
     for (const rule of approvedTaxRules) {
       const ruleData = rule as any;
       // Tax rules use 'rate' field (percentage), and apply to all base salaries
@@ -3735,13 +3732,13 @@ export class PayrollExecutionService {
     // Get pension/insurance rules using PayrollConfigurationService
     // BR 7: Social insurances' brackets identified and enforced through Social Insurance and Pensions Law
     // BR 35: Social/Health Insurance = % of Base Salary (within salary brackets)
-    const insuranceRulesResult = await this.payrollConfigurationService.findAllInsuranceBrackets({ 
+    const insuranceRulesResult = await this.payrollConfigurationService.findAllInsuranceBrackets({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved insurance brackets
+      limit: 1000, // Get all approved insurance brackets
     });
-    
+
     const approvedInsuranceBrackets = insuranceRulesResult?.data || [];
-    
+
     // BR 7: Identify social insurance brackets enforced through Social Insurance and Pensions Law
     // Note: Bracket matching uses baseSalary to determine which bracket applies, but calculation uses grossSalary
     const applicableInsuranceBrackets = approvedInsuranceBrackets.filter((rule: any) => {
@@ -3755,15 +3752,17 @@ export class PayrollExecutionService {
           baseSalary <= ruleData.maxSalary)
       );
     });
-    
+
     if (applicableInsuranceBrackets.length === 0 && approvedInsuranceBrackets.length > 0) {
       console.warn(
         `[Social Insurance Brackets Identification] No applicable insurance brackets found for employee ${employeeId} with base salary ${baseSalary}. ` +
-        `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced. ` +
-        `Available brackets: ${approvedInsuranceBrackets.map((b: any) => {
-          const bData = b.toObject ? b.toObject() : b;
-          return `${bData.name} (${bData.minSalary}-${bData.maxSalary || '∞'})`;
-        }).join(', ')}`
+          `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced. ` +
+          `Available brackets: ${approvedInsuranceBrackets
+            .map((b: any) => {
+              const bData = b.toObject ? b.toObject() : b;
+              return `${bData.name} (${bData.minSalary}-${bData.maxSalary || '∞'})`;
+            })
+            .join(', ')}`
       );
     } else if (applicableInsuranceBrackets.length > 0) {
       // Identify and log social insurance brackets being applied
@@ -3779,20 +3778,25 @@ export class PayrollExecutionService {
           enforcedThrough: 'Social Insurance and Pensions Law',
         };
       });
-      
+
       console.log(
         `[Social Insurance Brackets Identification] Employee ${employeeId}, Base Salary: ${baseSalary}, Gross Salary: ${salaryForInsurance}. ` +
-        `Identified ${identifiedInsuranceBrackets.length} social insurance bracket(s) enforced through Social Insurance and Pensions Law: ` +
-        `${identifiedInsuranceBrackets.map(ib => `${ib.name} (${ib.minSalary}-${ib.maxSalary || '∞'}, Employee: ${ib.employeeRate}%, Employer: ${ib.employerRate}%)`).join(', ')}`
+          `Identified ${identifiedInsuranceBrackets.length} social insurance bracket(s) enforced through Social Insurance and Pensions Law: ` +
+          identifiedInsuranceBrackets
+            .map(
+              (ib) =>
+                `${ib.name} (${ib.minSalary}-${ib.maxSalary || '∞'}, Employee: ${ib.employeeRate}%, Employer: ${ib.employerRate}%)`
+            )
+            .join(', ')
       );
     } else if (approvedInsuranceBrackets.length === 0) {
       console.warn(
         `[Social Insurance Brackets Identification] No approved insurance brackets found for employee ${employeeId}. ` +
-        `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced. ` +
-        `Please ensure insurance brackets are configured and approved in the payroll configuration.`
+          `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced. ` +
+          `Please ensure insurance brackets are configured and approved in the payroll configuration.`
       );
     }
-    
+
     for (const rule of applicableInsuranceBrackets) {
       const ruleData = rule as any;
       // Insurance brackets use 'minSalary' and 'maxSalary' fields, and 'employeeRate' (percentage)
@@ -3827,12 +3831,17 @@ export class PayrollExecutionService {
   // BR 1: Employment contract requirements
   // BR 2: Contract terms validation
   // BR 20: Multi-currency support (currency stored in entity field)
-  async generateDraftPayrollRun(payrollPeriod: Date, entity: string, payrollSpecialistId: string, currency: string | undefined, currentUserId: string, payrollManagerId?: string): Promise<payrollRuns> {
+  async generateDraftPayrollRun(
+    payrollPeriod: Date,
+    entity: string,
+    payrollSpecialistId: string,
+    currency: string | undefined,
+    currentUserId: string,
+    payrollManagerId?: string
+  ): Promise<payrollRuns> {
     // Validate inputs
     if (!payrollPeriod || !entity || !payrollSpecialistId) {
-      throw new Error(
-        'Payroll period, entity, and payroll specialist ID are required',
-      );
+      throw new Error('Payroll period, entity, and payroll specialist ID are required');
     }
 
     // Validate payroll period is a valid date
@@ -3863,7 +3872,7 @@ export class PayrollExecutionService {
 
     if (existingRun) {
       throw new Error(
-        `Payroll run already exists for period ${year}-${String(month + 1).padStart(2, '0')}. Existing runId: ${existingRun.runId}`,
+        `Payroll run already exists for period ${year}-${String(month + 1).padStart(2, '0')}. Existing runId: ${existingRun.runId}`
       );
     }
 
@@ -3885,9 +3894,7 @@ export class PayrollExecutionService {
       : (employeesResult as any).data || [];
 
     if (activeEmployees.length === 0) {
-      throw new Error(
-        'No active employees found. Cannot generate draft payroll run.',
-      );
+      throw new Error('No active employees found. Cannot generate draft payroll run.');
     }
 
     // Generate runId (e.g., PR-2025-0001)
@@ -3918,7 +3925,9 @@ export class PayrollExecutionService {
       // Find a default payroll manager
       const defaultManager = await this.findDefaultPayrollManager();
       if (!defaultManager) {
-        throw new Error('No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.');
+        throw new Error(
+          'No payroll manager found. Please provide payrollManagerId or ensure a payroll manager exists in the system.'
+        );
       }
       try {
         finalPayrollManagerId = new mongoose.Types.ObjectId(defaultManager) as any;
@@ -3963,24 +3972,16 @@ export class PayrollExecutionService {
     // 6. Integrates approved bonuses and benefits into netPay
     // 7. Updates payroll run totals and exception counts
     try {
-      await this.generateDraftDetailsForPayrollRun(
-        savedPayrollRun._id.toString(),
-        currentUserId,
-      );
+      await this.generateDraftDetailsForPayrollRun(savedPayrollRun._id.toString(), currentUserId);
     } catch (error) {
       // If draft generation fails, delete the payroll run to maintain data consistency
       await this.payrollRunModel.findByIdAndDelete(savedPayrollRun._id);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to generate draft payroll details: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to generate draft payroll details: ${errorMessage}`);
     }
 
     // Reload the payroll run to get updated totals and exceptions
-    const updatedPayrollRun = await this.payrollRunModel.findById(
-      savedPayrollRun._id,
-    );
+    const updatedPayrollRun = await this.payrollRunModel.findById(savedPayrollRun._id);
     if (!updatedPayrollRun) {
       throw new Error('Payroll run not found after draft generation');
     }
@@ -3991,9 +3992,12 @@ export class PayrollExecutionService {
   // Private helper method: Generate draft details for an existing payroll run
   // This method processes all employees and calculates their payroll for a given payroll run
   // REQ-PY-23: Automatic draft generation after payroll initiation approval
-  private async generateDraftDetailsForPayrollRun(payrollRunId: string, currentUserId: string): Promise<void> {
+  private async generateDraftDetailsForPayrollRun(
+    payrollRunId: string,
+    currentUserId: string
+  ): Promise<void> {
     console.log(`[Draft Generation] Starting draft generation for payroll run: ${payrollRunId}`);
-    
+
     // First, automatically process signing bonuses and termination benefits
     // This ensures all HR events are processed before payroll calculation
     console.log(`[Draft Generation] Processing signing bonuses...`);
@@ -4013,12 +4017,14 @@ export class PayrollExecutionService {
 
     // Get active employees using EmployeeProfileService
     console.log(`[Draft Generation] Fetching active employees...`);
-    const employeesResult = await this.employeeProfileService.findAll({ 
+    const employeesResult = await this.employeeProfileService.findAll({
       status: EmployeeStatus.ACTIVE,
       page: 1,
       limit: 10000, // Get all active employees
     } as any);
-    const activeEmployees = Array.isArray(employeesResult) ? employeesResult : (employeesResult as any).data || [];
+    const activeEmployees = Array.isArray(employeesResult)
+      ? employeesResult
+      : (employeesResult as any).data || [];
     console.log(`[Draft Generation] Found ${activeEmployees.length} active employees.`);
 
     // Update employee count in payroll run
@@ -4035,7 +4041,9 @@ export class PayrollExecutionService {
     let totalNetPay = 0;
     let exceptions = 0;
 
-    console.log(`[Draft Generation] Starting payroll calculation for ${activeEmployees.length} employees...`);
+    console.log(
+      `[Draft Generation] Starting payroll calculation for ${activeEmployees.length} employees...`
+    );
     for (let i = 0; i < activeEmployees.length; i++) {
       const employee = activeEmployees[i];
       if ((i + 1) % 10 === 0) {
@@ -4048,7 +4056,7 @@ export class PayrollExecutionService {
           employee._id.toString(),
           payrollRunId,
           undefined,
-          currentUserId,
+          currentUserId
         );
 
         // Check if base salary is 0 (no PayGrade configured)
@@ -4059,16 +4067,15 @@ export class PayrollExecutionService {
             'MISSING_BASE_SALARY',
             `Employee ${employee._id} has no PayGrade/base salary configured`,
             currentUserId,
-            employee._id.toString(),
+            employee._id.toString()
           );
         }
 
         // Add approved signing bonuses to netPay
-        const approvedSigningBonus =
-          await this.employeeSigningBonusModel.findOne({
-            employeeId: employee._id,
-            status: BonusStatus.APPROVED,
-          });
+        const approvedSigningBonus = await this.employeeSigningBonusModel.findOne({
+          employeeId: employee._id,
+          status: BonusStatus.APPROVED,
+        });
         if (approvedSigningBonus) {
           (payrollDetails as any).bonus = approvedSigningBonus.givenAmount;
           (payrollDetails as any).netPay += approvedSigningBonus.givenAmount;
@@ -4076,11 +4083,10 @@ export class PayrollExecutionService {
         }
 
         // Add approved termination/resignation benefits to netPay
-        const approvedBenefits =
-          await this.employeeTerminationResignationModel.find({
-            employeeId: employee._id,
-            status: BenefitStatus.APPROVED,
-          });
+        const approvedBenefits = await this.employeeTerminationResignationModel.find({
+          employeeId: employee._id,
+          status: BenefitStatus.APPROVED,
+        });
         let totalBenefits = 0;
         for (const benefit of approvedBenefits) {
           totalBenefits += benefit.givenAmount;
@@ -4095,18 +4101,22 @@ export class PayrollExecutionService {
       } catch (error) {
         exceptions++;
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[Draft Generation] Error calculating payroll for employee ${employee._id}: ${errorMessage}`);
+        console.error(
+          `[Draft Generation] Error calculating payroll for employee ${employee._id}: ${errorMessage}`
+        );
         await this.flagPayrollException(
           payrollRunId,
           'CALC_ERROR',
           `Error calculating payroll for employee ${employee._id}: ${errorMessage}`,
           currentUserId,
-          employee._id.toString(),
+          employee._id.toString()
         );
       }
     }
-    
-    console.log(`[Draft Generation] Completed payroll calculation. Total net pay: ${totalNetPay}, Exceptions: ${exceptions}`);
+
+    console.log(
+      `[Draft Generation] Completed payroll calculation. Total net pay: ${totalNetPay}, Exceptions: ${exceptions}`
+    );
 
     // Update payroll run with totals
     payrollRun.exceptions = exceptions;
@@ -4166,7 +4176,7 @@ export class PayrollExecutionService {
   async getPayrollPreview(
     payrollRunId: string,
     targetCurrency: string | undefined,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<any> {
     const payrollRun = await this.payrollRunModel.findById(payrollRunId);
     if (!payrollRun) throw new Error('Payroll run not found');
@@ -4195,55 +4205,31 @@ export class PayrollExecutionService {
       let netPay = detail.netPay;
 
       if (needsConversion) {
-        baseSalary = this.convertCurrency(
-          baseSalary,
-          sourceCurrency,
-          displayCurrency,
-        );
-        allowances = this.convertCurrency(
-          allowances,
-          sourceCurrency,
-          displayCurrency,
-        );
-        deductions = this.convertCurrency(
-          deductions,
-          sourceCurrency,
-          displayCurrency,
-        );
-        netSalary = this.convertCurrency(
-          netSalary,
-          sourceCurrency,
-          displayCurrency,
-        );
+        baseSalary = this.convertCurrency(baseSalary, sourceCurrency, displayCurrency);
+        allowances = this.convertCurrency(allowances, sourceCurrency, displayCurrency);
+        deductions = this.convertCurrency(deductions, sourceCurrency, displayCurrency);
+        netSalary = this.convertCurrency(netSalary, sourceCurrency, displayCurrency);
         netPay = this.convertCurrency(netPay, sourceCurrency, displayCurrency);
 
         // Convert breakdown amounts if available
         if (breakdown) {
-          breakdown.taxes = this.convertCurrency(
-            breakdown.taxes,
-            sourceCurrency,
-            displayCurrency,
-          );
+          breakdown.taxes = this.convertCurrency(breakdown.taxes, sourceCurrency, displayCurrency);
           breakdown.insurance = this.convertCurrency(
             breakdown.insurance,
             sourceCurrency,
-            displayCurrency,
+            displayCurrency
           );
           breakdown.timeManagementPenalties = this.convertCurrency(
             breakdown.timeManagementPenalties,
             sourceCurrency,
-            displayCurrency,
+            displayCurrency
           );
           breakdown.unpaidLeavePenalties = this.convertCurrency(
             breakdown.unpaidLeavePenalties,
             sourceCurrency,
-            displayCurrency,
+            displayCurrency
           );
-          breakdown.total = this.convertCurrency(
-            breakdown.total,
-            sourceCurrency,
-            displayCurrency,
-          );
+          breakdown.total = this.convertCurrency(breakdown.total, sourceCurrency, displayCurrency);
         }
       }
 
@@ -4262,9 +4248,7 @@ export class PayrollExecutionService {
     });
 
     // Extract entity name and currency
-    const { entityName, currency } = this.extractEntityAndCurrency(
-      payrollRun.entity,
-    );
+    const { entityName, currency } = this.extractEntityAndCurrency(payrollRun.entity);
 
     return {
       payrollRun: {
@@ -4274,11 +4258,7 @@ export class PayrollExecutionService {
         employees: payrollRun.employees,
         exceptions: payrollRun.exceptions,
         totalnetpay: needsConversion
-          ? this.convertCurrency(
-              payrollRun.totalnetpay,
-              sourceCurrency,
-              displayCurrency,
-            )
+          ? this.convertCurrency(payrollRun.totalnetpay, sourceCurrency, displayCurrency)
           : payrollRun.totalnetpay,
         entity: entityName,
         currency: displayCurrency,
@@ -4298,7 +4278,7 @@ export class PayrollExecutionService {
   async generateAndDistributePayslips(
     payrollRunId: string,
     distributionMethod: 'PDF' | 'EMAIL' | 'PORTAL',
-    currentUserId: string,
+    currentUserId: string
   ): Promise<any> {
     const payrollRun = await this.payrollRunModel.findById(payrollRunId);
     if (!payrollRun) throw new Error('Payroll run not found');
@@ -4309,7 +4289,7 @@ export class PayrollExecutionService {
       payrollRun.paymentStatus !== PayRollPaymentStatus.PAID
     ) {
       throw new Error(
-        'Payroll run must be approved by Finance and locked before generating payslips',
+        'Payroll run must be approved by Finance and locked before generating payslips'
       );
     }
 
@@ -4320,13 +4300,15 @@ export class PayrollExecutionService {
       .populate('employeeId')
       .exec();
 
-    console.log(`[Generate Payslips] Found ${payrollDetails.length} employee payroll details for payroll run ${payrollRunId}`);
+    console.log(
+      `[Generate Payslips] Found ${payrollDetails.length} employee payroll details for payroll run ${payrollRunId}`
+    );
 
     if (payrollDetails.length === 0) {
       // Check payroll run status to provide more helpful error message
       const payrollRunStatus = payrollRun.status;
       const payrollRunPeriod = payrollRun.payrollPeriod;
-      
+
       let errorMessage = `No employee payroll details found for payroll run ${payrollRunId}.\n\n`;
       errorMessage += `Payroll Run Status: ${payrollRunStatus}\n`;
       errorMessage += `Payroll Period: ${new Date(payrollRunPeriod).toISOString().split('T')[0]}\n\n`;
@@ -4339,38 +4321,40 @@ export class PayrollExecutionService {
       errorMessage += `  Body: { "payrollPeriod": "${new Date(payrollRunPeriod).toISOString()}", "entity": "${payrollRun.entity}", ... }\n\n`;
       errorMessage += `After generating the draft, complete the approval workflow:\n`;
       errorMessage += `  1. Send for approval → 2. Manager approval → 3. Finance approval → 4. Lock → 5. Generate payslips`;
-      
+
       throw new Error(errorMessage);
     }
 
     const generatedPayslips: any[] = [];
 
     // Get all approved allowances, tax rules, and insurance brackets once (shared across employees)
-    const allowancesResult = await this.payrollConfigurationService.findAllAllowances({ 
+    const allowancesResult = await this.payrollConfigurationService.findAllAllowances({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved allowances
+      limit: 1000, // Get all approved allowances
     });
     const allAllowances = allowancesResult?.data || [];
 
-    const taxRulesResult = await this.payrollConfigurationService.findAllTaxRules({ 
+    const taxRulesResult = await this.payrollConfigurationService.findAllTaxRules({
       status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved tax rules
+      limit: 1000, // Get all approved tax rules
     });
     const allTaxRules = taxRulesResult?.data || [];
 
-    const insuranceBracketsResult = await this.payrollConfigurationService.findAllInsuranceBrackets({ 
-      status: ConfigStatus.APPROVED,
-      limit: 1000 // Get all approved insurance brackets
-    });
+    const insuranceBracketsResult = await this.payrollConfigurationService.findAllInsuranceBrackets(
+      {
+        status: ConfigStatus.APPROVED,
+        limit: 1000, // Get all approved insurance brackets
+      }
+    );
     const allInsuranceBrackets = insuranceBracketsResult?.data || [];
 
     for (const detail of payrollDetails) {
       // Handle employeeId whether it's populated (object with _id) or just ObjectId
-      const employeeIdString = 
+      const employeeIdString =
         (detail.employeeId as any)?._id?.toString() ||
         (detail.employeeId as any)?.toString() ||
         detail.employeeId?.toString();
-      
+
       if (!employeeIdString || !mongoose.Types.ObjectId.isValid(employeeIdString)) {
         const errorMsg = `Invalid employeeId in payroll detail: ${JSON.stringify(detail.employeeId)}`;
         console.error(`[Generate Payslips] ${errorMsg}`);
@@ -4379,11 +4363,11 @@ export class PayrollExecutionService {
           'INVALID_EMPLOYEE_ID',
           errorMsg,
           currentUserId,
-          'unknown',
+          'unknown'
         );
         continue;
       }
-      
+
       const employeeId = employeeIdString;
       const baseSalary = detail.baseSalary;
 
@@ -4402,7 +4386,7 @@ export class PayrollExecutionService {
           'EMPLOYEE_NOT_FOUND',
           `Employee ${employeeId} not found or invalid: ${errorMessage}`,
           currentUserId,
-          employeeId,
+          employeeId
         );
         continue;
       }
@@ -4410,14 +4394,12 @@ export class PayrollExecutionService {
       // Get applicable allowances for this employee (BR 20, BR 38, BR 39)
       const employeeAllowances = await this.getApplicableAllowancesForEmployee(
         employee,
-        allAllowances,
+        allAllowances
       );
       // Additional validation: Ensure only APPROVED allowances are included
       const applicableAllowances = employeeAllowances
         .filter((allowance: any) => {
-          const allowanceData = allowance.toObject
-            ? allowance.toObject()
-            : allowance;
+          const allowanceData = allowance.toObject ? allowance.toObject() : allowance;
           return allowanceData.status === ConfigStatus.APPROVED;
         })
         .map((allowance: any) => ({
@@ -4441,10 +4423,10 @@ export class PayrollExecutionService {
           try {
             // Use PayrollConfigurationService instead of direct model query
             const signingBonusId = (bonus as any).signingBonusId;
-            const configId = signingBonusId?._id 
-              ? signingBonusId._id.toString() 
+            const configId = signingBonusId?._id
+              ? signingBonusId._id.toString()
               : signingBonusId?.toString() || signingBonusId;
-            
+
             if (configId) {
               const config = await this.payrollConfigurationService.findOneSigningBonus(configId);
               const configData = config as any;
@@ -4453,20 +4435,17 @@ export class PayrollExecutionService {
                 signingBonusConfigs.push(configData);
               } else {
                 console.warn(
-                  `Signing bonus config ${configId} is not APPROVED (status: ${configData.status}). Skipping.`,
+                  `Signing bonus config ${configId} is not APPROVED (status: ${configData.status}). Skipping.`
                 );
               }
             }
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
             const signingBonusId = (bonus as any).signingBonusId;
-            const configId = signingBonusId?._id 
-              ? signingBonusId._id.toString() 
+            const configId = signingBonusId?._id
+              ? signingBonusId._id.toString()
               : signingBonusId?.toString() || signingBonusId;
-            console.warn(
-              `Error fetching signing bonus config ${configId}: ${errorMessage}`,
-            );
+            console.warn(`Error fetching signing bonus config ${configId}: ${errorMessage}`);
             // Continue with other bonuses even if one fails
           }
         }
@@ -4487,26 +4466,26 @@ export class PayrollExecutionService {
           try {
             // Convert ObjectId to string if needed
             const benefitId = (benefit as any).benefitId;
-            const configId = benefitId?._id 
-              ? benefitId._id.toString() 
+            const configId = benefitId?._id
+              ? benefitId._id.toString()
               : benefitId?.toString() || benefitId;
-            
+
             if (configId) {
-              const config = await this.payrollConfigurationService.findOneTerminationBenefit(configId);
+              const config =
+                await this.payrollConfigurationService.findOneTerminationBenefit(configId);
               // Only include APPROVED termination benefit configurations
               if (config.status === ConfigStatus.APPROVED) {
                 terminationBenefitConfigs.push(config);
               } else {
                 console.warn(
-                  `Termination benefit config ${configId} is not APPROVED (status: ${config.status}). Skipping.`,
+                  `Termination benefit config ${configId} is not APPROVED (status: ${config.status}). Skipping.`
                 );
               }
             }
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
             console.warn(
-              `Error fetching termination benefit config ${(benefit as any).benefitId}: ${errorMessage}`,
+              `Error fetching termination benefit config ${(benefit as any).benefitId}: ${errorMessage}`
             );
             // Continue with other benefits even if one fails
           }
@@ -4514,25 +4493,24 @@ export class PayrollExecutionService {
       }
 
       // Get refunds for this employee (pending refunds that were included in this payroll)
-      const allRefunds = await (
-        this.payrollTrackingService as any
-      ).getRefundsByEmployeeId(employeeId);
+      const allRefunds = await (this.payrollTrackingService as any).getRefundsByEmployeeId(
+        employeeId
+      );
       const refundDetailsList: any[] = [];
       const refundsToProcess: any[] = []; // Track refunds that need to be marked as PAID
       for (const refund of allRefunds) {
-        const refundData = refund as any;
+        const refundData = refund;
         // Include refunds that were paid in this payroll run or are pending
         // Use RefundStatus enum for proper type checking
         const isPending =
-          refundData.status === RefundStatus.PENDING ||
-          refundData.status === 'pending';
+          refundData.status === RefundStatus.PENDING || refundData.status === 'pending';
         const isPaidInThisRun =
           refundData.paidInPayrollRunId &&
           refundData.paidInPayrollRunId.toString() === payrollRunId;
 
         if (isPaidInThisRun || (isPending && !refundData.paidInPayrollRunId)) {
           if (refundData.refundDetails) {
-            refundDetailsList.push(refundData.refundDetails as any);
+            refundDetailsList.push(refundData.refundDetails);
             // Track pending refunds that need to be processed after payslip generation
             if (isPending && !refundData.paidInPayrollRunId) {
               refundsToProcess.push(refundData);
@@ -4544,19 +4522,19 @@ export class PayrollExecutionService {
       // Calculate total gross salary (needed for insurance calculations)
       const totalAllowancesAmount = applicableAllowances.reduce(
         (sum: number, allowance: any) => sum + (allowance.amount || 0),
-        0,
+        0
       );
       const totalBonusesAmount = approvedSigningBonuses.reduce(
         (sum: number, bonus: any) => sum + (bonus.givenAmount || 0),
-        0,
+        0
       );
       const totalBenefitsAmount = approvedBenefits.reduce(
         (sum: number, benefit: any) => sum + (benefit.givenAmount || 0),
-        0,
+        0
       );
       const totalRefundsAmount = refundDetailsList.reduce(
         (sum: number, refund: any) => sum + (refund.amount || 0),
-        0,
+        0
       );
       const totalGrossSalary =
         baseSalary +
@@ -4589,7 +4567,7 @@ export class PayrollExecutionService {
             taxBracketRate: ruleData.rate || 0,
           };
         });
-      
+
       // BR 5: Log identification of tax brackets for audit purposes
       if (applicableTaxRules.length > 0 && baseSalary > 0) {
         const taxBracketsInfo = applicableTaxRules.map((rule: any) => ({
@@ -4600,16 +4578,16 @@ export class PayrollExecutionService {
           appliedToSalary: baseSalary,
           calculatedTax: (baseSalary * rule.taxBracketRate) / 100,
         }));
-        
+
         console.log(
           `[Tax Brackets Identification] Employee ${employeeId} (${employee?.employeeNumber || 'N/A'}), Base Salary: ${baseSalary}. ` +
-          `Identified ${taxBracketsInfo.length} tax bracket(s) enforced through Egyptian Tax Law 2025: ` +
-          `${taxBracketsInfo.map(tb => `${tb.name} (${tb.rate}%)`).join(', ')}`
+            `Identified ${taxBracketsInfo.length} tax bracket(s) enforced through Egyptian Tax Law 2025: ` +
+            taxBracketsInfo.map((tb) => `${tb.name} (${tb.rate}%)`).join(', ')
         );
       } else if (applicableTaxRules.length === 0) {
         console.warn(
           `[Tax Brackets Identification] No approved tax brackets found for employee ${employeeId} (${employee?.employeeNumber || 'N/A'}). ` +
-          `Egyptian Tax Law 2025 requires payroll income tax brackets to be identified and enforced.`
+            `Egyptian Tax Law 2025 requires payroll income tax brackets to be identified and enforced.`
         );
       }
 
@@ -4647,7 +4625,7 @@ export class PayrollExecutionService {
             insuranceBracketEmployerRate: ruleData.employerRate || 0,
           };
         });
-      
+
       // BR 7: Log identification of social insurance brackets for audit purposes
       if (applicableInsuranceBrackets.length > 0 && baseSalary > 0) {
         const insuranceBracketsInfo = applicableInsuranceBrackets.map((rule: any) => ({
@@ -4661,21 +4639,26 @@ export class PayrollExecutionService {
           calculatedFromGrossSalary: totalGrossSalary, // But calculated from grossSalary per Social Insurance and Pensions Law
           calculatedInsurance: (totalGrossSalary * rule.insuranceBracketEmployeeRate) / 100,
         }));
-        
+
         console.log(
           `[Social Insurance Brackets Identification] Employee ${employeeId} (${employee?.employeeNumber || 'N/A'}), Base Salary: ${baseSalary}, Gross Salary: ${totalGrossSalary}. ` +
-          `Identified ${insuranceBracketsInfo.length} social insurance bracket(s) enforced through Social Insurance and Pensions Law: ` +
-          `${insuranceBracketsInfo.map(ib => `${ib.name} (${ib.minSalary}-${ib.maxSalary || '∞'}, Employee: ${ib.employeeRate}%, Employer: ${ib.employerRate}%)`).join(', ')}`
+            `Identified ${insuranceBracketsInfo.length} social insurance bracket(s) enforced through Social Insurance and Pensions Law: ` +
+            insuranceBracketsInfo
+              .map(
+                (ib) =>
+                  `${ib.name} (${ib.minSalary}-${ib.maxSalary || '∞'}, Employee: ${ib.employeeRate}%, Employer: ${ib.employerRate}%)`
+              )
+              .join(', ')
         );
       } else if (applicableInsuranceBrackets.length === 0 && allInsuranceBrackets.length > 0) {
         console.warn(
           `[Social Insurance Brackets Identification] No applicable insurance brackets found for employee ${employeeId} (${employee?.employeeNumber || 'N/A'}) with base salary ${baseSalary}. ` +
-          `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced.`
+            `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced.`
         );
       } else if (allInsuranceBrackets.length === 0) {
         console.warn(
           `[Social Insurance Brackets Identification] No approved insurance brackets found for employee ${employeeId} (${employee?.employeeNumber || 'N/A'}). ` +
-          `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced.`
+            `Social Insurance and Pensions Law requires social insurance brackets to be identified and enforced.`
         );
       }
 
@@ -4690,30 +4673,23 @@ export class PayrollExecutionService {
         .exec();
 
       // Calculate total deductions
-      const totalTaxAmount = applicableTaxRules.reduce(
-        (sum: number, rule: any) => {
-          // Tax rules use 'rate' field (percentage), not 'percentage'
-          return sum + (baseSalary * (rule.rate || 0)) / 100;
-        },
-        0,
-      );
-      const totalInsuranceAmount = applicableInsuranceBrackets.reduce(
-        (sum: number, rule: any) => {
-          // Social Insurance and Pensions Law: Employee Insurance = GrossSalary * employee_percentage
-          // Insurance brackets use 'employeeRate' field (percentage)
-          return sum + (totalGrossSalary * (rule.employeeRate || 0)) / 100;
-        },
-        0,
-      );
-      const totalPenaltiesAmount = penalties
-        ? (penalties as any).amount || 0
-        : 0;
-      let totaDeductions =
-        totalTaxAmount + totalInsuranceAmount + totalPenaltiesAmount;
+      const totalTaxAmount = applicableTaxRules.reduce((sum: number, rule: any) => {
+        // Tax rules use 'rate' field (percentage), not 'percentage'
+        return sum + (baseSalary * (rule.rate || 0)) / 100;
+      }, 0);
+      const totalInsuranceAmount = applicableInsuranceBrackets.reduce((sum: number, rule: any) => {
+        // Social Insurance and Pensions Law: Employee Insurance = GrossSalary * employee_percentage
+        // Insurance brackets use 'employeeRate' field (percentage)
+        return sum + (totalGrossSalary * (rule.employeeRate || 0)) / 100;
+      }, 0);
+      const totalPenaltiesAmount = penalties ? (penalties as any).amount || 0 : 0;
+      let totaDeductions = totalTaxAmount + totalInsuranceAmount + totalPenaltiesAmount;
 
       // Validate and fix totaDeductions if needed
       if (totaDeductions === undefined || totaDeductions === null || totaDeductions < 0) {
-        console.warn(`[Generate Payslips] Warning: totaDeductions is ${totaDeductions} for employee ${employeeId}, setting to 0`);
+        console.warn(
+          `[Generate Payslips] Warning: totaDeductions is ${totaDeductions} for employee ${employeeId}, setting to 0`
+        );
         totaDeductions = 0;
       }
 
@@ -4724,11 +4700,15 @@ export class PayrollExecutionService {
       });
 
       if (existingPayslip) {
-        console.log(`[Generate Payslips] Payslip already exists for employee ${employeeId} in payroll run ${payrollRunId} (ID: ${existingPayslip._id}). Skipping creation.`);
+        console.log(
+          `[Generate Payslips] Payslip already exists for employee ${employeeId} in payroll run ${payrollRunId} (ID: ${existingPayslip._id}). Skipping creation.`
+        );
         // Verify the existing payslip is actually in the database
         const verifiedExisting = await this.paySlipModel.findById(existingPayslip._id);
         if (!verifiedExisting) {
-          console.warn(`[Generate Payslips] WARNING: Existing payslip ${existingPayslip._id} was not found in database. Will create new one.`);
+          console.warn(
+            `[Generate Payslips] WARNING: Existing payslip ${existingPayslip._id} was not found in database. Will create new one.`
+          );
           // Don't skip - continue to create a new payslip
         } else {
           generatedPayslips.push(existingPayslip as any);
@@ -4740,42 +4720,47 @@ export class PayrollExecutionService {
       let payslip: any = null;
       try {
         console.log(`[Generate Payslips] Creating payslip for employee ${employeeId}...`);
-        
+
         const payrollRunObjectId = new mongoose.Types.ObjectId(payrollRunId);
-        
+
         // Validate required fields before creating payslip
         if (!baseSalary || baseSalary < 0) {
           throw new Error(`Invalid baseSalary: ${baseSalary} for employee ${employeeId}`);
         }
         if (!totalGrossSalary || totalGrossSalary < 0) {
-          throw new Error(`Invalid totalGrossSalary: ${totalGrossSalary} for employee ${employeeId}`);
+          throw new Error(
+            `Invalid totalGrossSalary: ${totalGrossSalary} for employee ${employeeId}`
+          );
         }
         if (detail.netPay === undefined || detail.netPay === null) {
           throw new Error(`Invalid netPay: ${detail.netPay} for employee ${employeeId}`);
         }
-        
+
         // Ensure arrays are always arrays (not undefined) to match schema requirements
         // Convert nested objects to plain objects to ensure schema compatibility
         const earningsDetails = {
           baseSalary: baseSalary,
-          allowances: Array.isArray(applicableAllowances) 
-            ? applicableAllowances.map((a: any) => a.toObject ? a.toObject() : a)
+          allowances: Array.isArray(applicableAllowances)
+            ? applicableAllowances.map((a: any) => (a.toObject ? a.toObject() : a))
             : [],
-          ...(Array.isArray(signingBonusConfigs) && signingBonusConfigs.length > 0 && {
-            bonuses: signingBonusConfigs.map((b: any) => b.toObject ? b.toObject() : b)
-          }),
-          ...(Array.isArray(terminationBenefitConfigs) && terminationBenefitConfigs.length > 0 && {
-            benefits: terminationBenefitConfigs.map((b: any) => b.toObject ? b.toObject() : b)
-          }),
-          ...(Array.isArray(refundDetailsList) && refundDetailsList.length > 0 && {
-            refunds: refundDetailsList.map((r: any) => r.toObject ? r.toObject() : r)
-          }),
+          ...(Array.isArray(signingBonusConfigs) &&
+            signingBonusConfigs.length > 0 && {
+              bonuses: signingBonusConfigs.map((b: any) => (b.toObject ? b.toObject() : b)),
+            }),
+          ...(Array.isArray(terminationBenefitConfigs) &&
+            terminationBenefitConfigs.length > 0 && {
+              benefits: terminationBenefitConfigs.map((b: any) => (b.toObject ? b.toObject() : b)),
+            }),
+          ...(Array.isArray(refundDetailsList) &&
+            refundDetailsList.length > 0 && {
+              refunds: refundDetailsList.map((r: any) => (r.toObject ? r.toObject() : r)),
+            }),
         };
 
         // BR 5: Store tax brackets (tax rules) with identification that they are enforced through Egyptian Tax Law 2025
         // Each tax rule in applicableTaxRules represents a tax bracket identified and enforced through local tax law
         const deductionsDetails = {
-          taxes: Array.isArray(applicableTaxRules) 
+          taxes: Array.isArray(applicableTaxRules)
             ? applicableTaxRules.map((t: any) => {
                 const taxRule = t.toObject ? t.toObject() : t;
                 // BR 5: Ensure tax bracket is identified with enforcement source
@@ -4792,26 +4777,43 @@ export class PayrollExecutionService {
             : [],
           // BR 7: Store social insurance brackets with identification that they are enforced through Social Insurance and Pensions Law
           // Each insurance bracket in applicableInsuranceBrackets represents a social insurance bracket identified and enforced through local law
-          ...(Array.isArray(applicableInsuranceBrackets) && applicableInsuranceBrackets.length > 0 && {
-            insurances: applicableInsuranceBrackets.map((i: any) => {
-              const insuranceBracket = i.toObject ? i.toObject() : i;
-              // BR 7: Ensure social insurance bracket is identified with enforcement source
-              // The insurance bracket name, minSalary, maxSalary, employeeRate, and employerRate identify it as a bracket enforced through Social Insurance and Pensions Law
-              return {
-                ...insuranceBracket,
-                // Social insurance bracket identification: name identifies the bracket, salary range and rates define the bracket
-                // These social insurance brackets are enforced through Social Insurance and Pensions Law
-                insuranceBracketName: insuranceBracket.name || insuranceBracket.insuranceBracketName || 'Unnamed Insurance Bracket',
-                insuranceBracketMinSalary: insuranceBracket.minSalary || insuranceBracket.insuranceBracketMinSalary || 0,
-                insuranceBracketMaxSalary: insuranceBracket.maxSalary !== undefined ? insuranceBracket.maxSalary : (insuranceBracket.insuranceBracketMaxSalary !== undefined ? insuranceBracket.insuranceBracketMaxSalary : null),
-                insuranceBracketEmployeeRate: insuranceBracket.employeeRate || insuranceBracket.insuranceBracketEmployeeRate || 0,
-                insuranceBracketEmployerRate: insuranceBracket.employerRate || insuranceBracket.insuranceBracketEmployerRate || 0,
-                enforcedThrough: insuranceBracket.enforcedThrough || 'Social Insurance and Pensions Law',
-              };
-            })
-          }),
+          ...(Array.isArray(applicableInsuranceBrackets) &&
+            applicableInsuranceBrackets.length > 0 && {
+              insurances: applicableInsuranceBrackets.map((i: any) => {
+                const insuranceBracket = i.toObject ? i.toObject() : i;
+                // BR 7: Ensure social insurance bracket is identified with enforcement source
+                // The insurance bracket name, minSalary, maxSalary, employeeRate, and employerRate identify it as a bracket enforced through Social Insurance and Pensions Law
+                return {
+                  ...insuranceBracket,
+                  // Social insurance bracket identification: name identifies the bracket, salary range and rates define the bracket
+                  // These social insurance brackets are enforced through Social Insurance and Pensions Law
+                  insuranceBracketName:
+                    insuranceBracket.name ||
+                    insuranceBracket.insuranceBracketName ||
+                    'Unnamed Insurance Bracket',
+                  insuranceBracketMinSalary:
+                    insuranceBracket.minSalary || insuranceBracket.insuranceBracketMinSalary || 0,
+                  insuranceBracketMaxSalary:
+                    insuranceBracket.maxSalary !== undefined
+                      ? insuranceBracket.maxSalary
+                      : insuranceBracket.insuranceBracketMaxSalary !== undefined
+                        ? insuranceBracket.insuranceBracketMaxSalary
+                        : null,
+                  insuranceBracketEmployeeRate:
+                    insuranceBracket.employeeRate ||
+                    insuranceBracket.insuranceBracketEmployeeRate ||
+                    0,
+                  insuranceBracketEmployerRate:
+                    insuranceBracket.employerRate ||
+                    insuranceBracket.insuranceBracketEmployerRate ||
+                    0,
+                  enforcedThrough:
+                    insuranceBracket.enforcedThrough || 'Social Insurance and Pensions Law',
+                };
+              }),
+            }),
           ...(penalties && {
-            penalties: penalties.toObject ? penalties.toObject() : penalties
+            penalties: penalties.toObject ? penalties.toObject() : penalties,
           }),
         };
 
@@ -4835,49 +4837,65 @@ export class PayrollExecutionService {
         }
 
         payslip = new this.paySlipModel(payslipData);
-        
+
         // Validate the document before saving
         const validationError = payslip.validateSync();
         if (validationError) {
-          console.error(`[Generate Payslips] Validation error for employee ${employeeId}:`, validationError);
+          console.error(
+            `[Generate Payslips] Validation error for employee ${employeeId}:`,
+            validationError
+          );
           throw new Error(`Payslip validation failed: ${validationError.message}`);
         }
 
         console.log(`[Generate Payslips] Saving payslip for employee ${employeeId}...`);
-        console.log(`[Generate Payslips] Payslip data before save:`, JSON.stringify({
-          employeeId: employeeObjectId.toString(),
-          payrollRunId: payrollRunObjectId.toString(),
-          totalGrossSalary,
-          totaDeductions,
-          netPay: detail.netPay,
-          hasEarningsDetails: !!payslipData.earningsDetails,
-          hasDeductionsDetails: !!payslipData.deductionsDetails,
-          allowancesCount: payslipData.earningsDetails.allowances?.length || 0,
-          taxesCount: payslipData.deductionsDetails.taxes?.length || 0,
-        }, null, 2));
-        
+        console.log(
+          `[Generate Payslips] Payslip data before save:`,
+          JSON.stringify(
+            {
+              employeeId: employeeObjectId.toString(),
+              payrollRunId: payrollRunObjectId.toString(),
+              totalGrossSalary,
+              totaDeductions,
+              netPay: detail.netPay,
+              hasEarningsDetails: !!payslipData.earningsDetails,
+              hasDeductionsDetails: !!payslipData.deductionsDetails,
+              allowancesCount: payslipData.earningsDetails.allowances?.length || 0,
+              taxesCount: payslipData.deductionsDetails.taxes?.length || 0,
+            },
+            null,
+            2
+          )
+        );
+
         let savedPayslip;
         try {
           // Explicitly save the payslip with error handling
           savedPayslip = await payslip.save();
-          
+
           if (!savedPayslip || !savedPayslip._id) {
             throw new Error('Payslip save returned null or missing _id');
           }
-          
-          console.log(`[Generate Payslips] Successfully saved payslip ${savedPayslip._id} for employee ${employeeId} in MongoDB`);
-          
+
+          console.log(
+            `[Generate Payslips] Successfully saved payslip ${savedPayslip._id} for employee ${employeeId} in MongoDB`
+          );
+
           // Immediately verify the save by checking if the document exists
           const immediateCheck = await this.paySlipModel.findById(savedPayslip._id);
           if (!immediateCheck) {
-            console.error(`[Generate Payslips] CRITICAL: Payslip ${savedPayslip._id} was not found immediately after save!`);
+            console.error(
+              `[Generate Payslips] CRITICAL: Payslip ${savedPayslip._id} was not found immediately after save!`
+            );
             // Try to save again as a last resort
             try {
               // Create a fresh instance to avoid any state issues
               const retryPayslip = new this.paySlipModel(payslipData);
               savedPayslip = await retryPayslip.save();
-              console.log(`[Generate Payslips] Re-saved payslip ${savedPayslip._id} for employee ${employeeId}`);
-              
+              console.log(
+                `[Generate Payslips] Re-saved payslip ${savedPayslip._id} for employee ${employeeId}`
+              );
+
               // Verify again
               const retryCheck = await this.paySlipModel.findById(savedPayslip._id);
               if (!retryCheck) {
@@ -4885,18 +4903,28 @@ export class PayrollExecutionService {
               }
             } catch (retryError: any) {
               console.error(`[Generate Payslips] Re-save also failed:`, retryError);
-              throw new Error(`Payslip save failed and could not be recovered: ${retryError.message || String(retryError)}`);
+              throw new Error(
+                `Payslip save failed and could not be recovered: ${retryError.message || String(retryError)}`
+              );
             }
           } else {
-            console.log(`[Generate Payslips] Verified payslip ${savedPayslip._id} exists immediately after save for employee ${employeeId}`);
+            console.log(
+              `[Generate Payslips] Verified payslip ${savedPayslip._id} exists immediately after save for employee ${employeeId}`
+            );
           }
         } catch (saveError: any) {
           console.error(`[Generate Payslips] Save error for employee ${employeeId}:`, saveError);
           if (saveError.errors) {
-            console.error(`[Generate Payslips] Validation errors:`, JSON.stringify(saveError.errors, null, 2));
+            console.error(
+              `[Generate Payslips] Validation errors:`,
+              JSON.stringify(saveError.errors, null, 2)
+            );
             // Log each validation error
             Object.keys(saveError.errors).forEach((key) => {
-              console.error(`[Generate Payslips] Validation error for ${key}:`, saveError.errors[key].message);
+              console.error(
+                `[Generate Payslips] Validation error for ${key}:`,
+                saveError.errors[key].message
+              );
             });
           }
           if (saveError.message) {
@@ -4905,7 +4933,7 @@ export class PayrollExecutionService {
           if (saveError.stack) {
             console.error(`[Generate Payslips] Error stack:`, saveError.stack);
           }
-          
+
           // Provide more detailed error message
           let errorMessage = `Failed to save payslip for employee ${employeeId}`;
           if (saveError.errors) {
@@ -4916,33 +4944,41 @@ export class PayrollExecutionService {
           } else {
             errorMessage += `: ${saveError.message || String(saveError)}`;
           }
-          
+
           throw new Error(errorMessage);
         }
-        
+
         // Additional verification: Query by employeeId and payrollRunId to ensure it's findable
         try {
           // Wait a brief moment to ensure database write is committed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
           const queryCheck = await this.paySlipModel.findOne({
             employeeId: employeeObjectId,
             payrollRunId: new mongoose.Types.ObjectId(payrollRunId) as any,
           });
-          
+
           if (!queryCheck) {
-            console.error(`[Generate Payslips] WARNING: Payslip not found by query for employee ${employeeId} and payroll run ${payrollRunId}`);
+            console.error(
+              `[Generate Payslips] WARNING: Payslip not found by query for employee ${employeeId} and payroll run ${payrollRunId}`
+            );
             console.error(`[Generate Payslips] Attempting to find by ID: ${savedPayslip._id}`);
-            
+
             // Try finding by ID as fallback
             const idCheck = await this.paySlipModel.findById(savedPayslip._id);
             if (!idCheck) {
-              throw new Error(`Payslip ${savedPayslip._id} was saved but cannot be queried from database`);
+              throw new Error(
+                `Payslip ${savedPayslip._id} was saved but cannot be queried from database`
+              );
             } else {
-              console.log(`[Generate Payslips] Payslip found by ID but not by query - possible indexing issue`);
+              console.log(
+                `[Generate Payslips] Payslip found by ID but not by query - possible indexing issue`
+              );
             }
           } else {
-            console.log(`[Generate Payslips] Confirmed payslip ${queryCheck._id} is queryable in database`);
+            console.log(
+              `[Generate Payslips] Confirmed payslip ${queryCheck._id} is queryable in database`
+            );
             // Update savedPayslip to use the queried version to ensure it's the latest
             savedPayslip = queryCheck;
           }
@@ -4950,17 +4986,24 @@ export class PayrollExecutionService {
           console.error(`[Generate Payslips] Error querying payslip:`, queryError);
           // If query fails but save succeeded, log warning but continue
           // The payslip might still be saved but not immediately queryable (eventual consistency)
-          console.warn(`[Generate Payslips] Payslip may be saved but not immediately queryable - this could be a database consistency issue`);
+          console.warn(
+            `[Generate Payslips] Payslip may be saved but not immediately queryable - this could be a database consistency issue`
+          );
         }
-        
+
         // Update payslip variable to the saved document for use in distribution
         payslip = savedPayslip;
-        generatedPayslips.push(savedPayslip as any);
+        generatedPayslips.push(savedPayslip);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[Generate Payslips] Error creating/saving payslip for employee ${employeeId}: ${errorMessage}`);
+        console.error(
+          `[Generate Payslips] Error creating/saving payslip for employee ${employeeId}: ${errorMessage}`
+        );
         if (error instanceof Error && (error as any).errors) {
-          console.error(`[Generate Payslips] Validation errors:`, JSON.stringify((error as any).errors, null, 2));
+          console.error(
+            `[Generate Payslips] Validation errors:`,
+            JSON.stringify((error as any).errors, null, 2)
+          );
         }
         // Flag as exception but continue with other employees
         await this.flagPayrollException(
@@ -4968,7 +5011,7 @@ export class PayrollExecutionService {
           'PAYSLIP_GENERATION_ERROR',
           `Failed to generate payslip for employee ${employeeId}: ${errorMessage}`,
           currentUserId,
-          employeeId.toString(),
+          employeeId.toString()
         );
         // Continue with next employee instead of failing entire process
         continue;
@@ -4976,7 +5019,9 @@ export class PayrollExecutionService {
 
       // Only process refunds and distribute if payslip was successfully created and saved
       if (!payslip || !payslip._id) {
-        console.warn(`[Generate Payslips] Skipping refund processing and distribution for employee ${employeeId} - payslip creation failed`);
+        console.warn(
+          `[Generate Payslips] Skipping refund processing and distribution for employee ${employeeId} - payslip creation failed`
+        );
         continue;
       }
 
@@ -4984,18 +5029,14 @@ export class PayrollExecutionService {
       // Integration with PayrollTrackingService: Mark refunds as paid after payslip generation
       for (const refundToProcess of refundsToProcess) {
         try {
-          await (this.payrollTrackingService as any).processRefund(
-            refundToProcess._id.toString(),
-            {
-              paidInPayrollRunId: payrollRunId,
-            },
-          );
+          await (this.payrollTrackingService as any).processRefund(refundToProcess._id.toString(), {
+            paidInPayrollRunId: payrollRunId,
+          });
         } catch (error) {
           // Log error but don't fail the entire process
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(
-            `Error processing refund ${refundToProcess._id} for employee ${employeeId}: ${errorMessage}`,
+            `Error processing refund ${refundToProcess._id} for employee ${employeeId}: ${errorMessage}`
           );
           // Flag as exception but continue with other refunds
           await this.flagPayrollException(
@@ -5003,7 +5044,7 @@ export class PayrollExecutionService {
             'REFUND_PROCESSING_ERROR',
             `Failed to process refund ${refundToProcess._id} for employee ${employeeId}: ${errorMessage}`,
             currentUserId,
-            employeeId.toString(),
+            employeeId.toString()
           );
         }
       }
@@ -5019,10 +5060,9 @@ export class PayrollExecutionService {
         }
       } catch (error) {
         // Log error but don't fail the entire process
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(
-          `Error distributing payslip ${payslip._id} via ${distributionMethod}: ${errorMessage}`,
+          `Error distributing payslip ${payslip._id} via ${distributionMethod}: ${errorMessage}`
         );
         // Flag as exception but continue with other payslips
         await this.flagPayrollException(
@@ -5030,18 +5070,20 @@ export class PayrollExecutionService {
           'PAYSLIP_DISTRIBUTION_ERROR',
           `Failed to distribute payslip for employee ${employeeId} via ${distributionMethod}: ${errorMessage}`,
           currentUserId,
-          employeeId.toString(),
+          employeeId.toString()
         );
       }
     }
 
-    console.log(`[Generate Payslips] Completed. Generated ${generatedPayslips.length} payslips out of ${payrollDetails.length} employees via ${distributionMethod}`);
+    console.log(
+      `[Generate Payslips] Completed. Generated ${generatedPayslips.length} payslips out of ${payrollDetails.length} employees via ${distributionMethod}`
+    );
 
     // Verify payslips were actually saved to database and re-fetch them to ensure they're persisted
     const verifiedPayslipIds = [];
     const failedVerificationIds = [];
     const verifiedPayslips: any[] = [];
-    
+
     try {
       for (const payslip of generatedPayslips) {
         try {
@@ -5049,13 +5091,13 @@ export class PayrollExecutionService {
             console.error(`[Generate Payslips] Invalid payslip object in generatedPayslips array`);
             continue;
           }
-          
+
           const payslipId = payslip._id?.toString() || payslip.toString();
           if (!payslipId || payslipId === 'unknown') {
             console.error(`[Generate Payslips] Invalid payslip ID: ${payslipId}`);
             continue;
           }
-          
+
           // Re-fetch from database to ensure it's actually persisted
           const verified = await this.paySlipModel.findById(payslipId);
           if (verified) {
@@ -5063,7 +5105,9 @@ export class PayrollExecutionService {
             verifiedPayslips.push(verified);
             console.log(`[Generate Payslips] Verified payslip ${payslipId} exists in database`);
           } else {
-            console.error(`[Generate Payslips] WARNING: Payslip ${payslipId} was not found in database after generation`);
+            console.error(
+              `[Generate Payslips] WARNING: Payslip ${payslipId} was not found in database after generation`
+            );
             failedVerificationIds.push(payslipId);
             // Still add the original payslip to verifiedPayslips if it has an _id
             // This ensures we return what was generated even if verification fails
@@ -5085,13 +5129,18 @@ export class PayrollExecutionService {
       console.error(`[Generate Payslips] Error during verification loop:`, verificationError);
       // If verification fails entirely, use the generated payslips
       if (verifiedPayslips.length === 0 && generatedPayslips.length > 0) {
-        console.warn(`[Generate Payslips] Verification failed, using generated payslips as fallback`);
+        console.warn(
+          `[Generate Payslips] Verification failed, using generated payslips as fallback`
+        );
         verifiedPayslips.push(...generatedPayslips);
       }
     }
-    
+
     if (failedVerificationIds.length > 0) {
-      console.warn(`[Generate Payslips] ${failedVerificationIds.length} payslips failed verification:`, failedVerificationIds);
+      console.warn(
+        `[Generate Payslips] ${failedVerificationIds.length} payslips failed verification:`,
+        failedVerificationIds
+      );
     }
 
     // Final verification: Count actual payslips in database for this payroll run
@@ -5100,7 +5149,9 @@ export class PayrollExecutionService {
       actualPayslipCount = await this.paySlipModel.countDocuments({
         payrollRunId: new mongoose.Types.ObjectId(payrollRunId),
       });
-      console.log(`[Generate Payslips] Final database count for payroll run ${payrollRunId}: ${actualPayslipCount} payslips`);
+      console.log(
+        `[Generate Payslips] Final database count for payroll run ${payrollRunId}: ${actualPayslipCount} payslips`
+      );
     } catch (countError) {
       console.error(`[Generate Payslips] Error counting payslips in database:`, countError);
       // Don't fail the entire operation if count fails
@@ -5109,15 +5160,14 @@ export class PayrollExecutionService {
     // If no payslips were generated at all, throw an error
     // But allow partial success if some were generated
     if (generatedPayslips.length === 0 && verifiedPayslips.length === 0) {
-      throw new Error(
-        `Failed to generate any payslips. Check the logs for validation errors.`,
-      );
+      throw new Error(`Failed to generate any payslips. Check the logs for validation errors.`);
     }
 
     // If no payslips were verified but some were generated, use the generated ones
     // This handles cases where verification fails but payslips are actually saved
     const payslipsToReturn = verifiedPayslips.length > 0 ? verifiedPayslips : generatedPayslips;
-    const successfulCount = verifiedPayslips.length > 0 ? verifiedPayslips.length : generatedPayslips.length;
+    const successfulCount =
+      verifiedPayslips.length > 0 ? verifiedPayslips.length : generatedPayslips.length;
 
     // Warn if some payslips weren't verified in database
     if (verifiedPayslipIds.length < generatedPayslips.length) {
@@ -5143,21 +5193,21 @@ export class PayrollExecutionService {
       totalEmployees: payrollDetails.length,
       successful: successfulCount,
       failed: payrollDetails.length - successfulCount,
-      warnings: verifiedPayslipIds.length < generatedPayslips.length 
-        ? [`Only ${verifiedPayslipIds.length} out of ${generatedPayslips.length} payslips were verified in database`]
-        : [],
+      warnings:
+        verifiedPayslipIds.length < generatedPayslips.length
+          ? [
+              `Only ${verifiedPayslipIds.length} out of ${generatedPayslips.length} payslips were verified in database`,
+            ]
+          : [],
     };
   }
 
   // ====================================================================================
   // PAYSLIP VIEWING - For Payroll Specialists
   // ====================================================================================
-  
+
   // Get all payslips for a payroll run (for Payroll Specialists to view)
-  async getPayslipsByPayrollRun(
-    payrollRunId: string,
-    currentUserId: string,
-  ): Promise<any[]> {
+  async getPayslipsByPayrollRun(payrollRunId: string, currentUserId: string): Promise<any[]> {
     const payslips = await this.paySlipModel
       .find({
         payrollRunId: new mongoose.Types.ObjectId(payrollRunId),
@@ -5183,10 +5233,7 @@ export class PayrollExecutionService {
   }
 
   // Get a specific payslip by ID (for Payroll Specialists to view)
-  async getPayslipById(
-    payslipId: string,
-    currentUserId: string,
-  ): Promise<any> {
+  async getPayslipById(payslipId: string, currentUserId: string): Promise<any> {
     const payslip = await this.paySlipModel
       .findById(payslipId)
       .populate('employeeId', 'firstName lastName employeeId email')
@@ -5221,7 +5268,7 @@ export class PayrollExecutionService {
       paymentStatus?: string;
       page?: number;
       limit?: number;
-    },
+    }
   ): Promise<{
     data: any[];
     total: number;
@@ -5255,7 +5302,7 @@ export class PayrollExecutionService {
     // First, check total count without filters to see if any payslips exist
     const totalCountAll = await this.paySlipModel.countDocuments({});
     console.log(`[Get All Payslips] Total payslips in database (no filters): ${totalCountAll}`);
-    
+
     // Also try a direct find to see what's actually there
     if (totalCountAll === 0) {
       const samplePayslips = await this.paySlipModel.find({}).limit(5).lean().exec();
@@ -5281,7 +5328,9 @@ export class PayrollExecutionService {
       this.paySlipModel.countDocuments(query),
     ]);
 
-    console.log(`[Get All Payslips] Found ${payslips.length} payslips matching query, total: ${total}`);
+    console.log(
+      `[Get All Payslips] Found ${payslips.length} payslips matching query, total: ${total}`
+    );
     if (payslips.length > 0) {
       console.log(`[Get All Payslips] First payslip sample:`, {
         _id: payslips[0]._id,
@@ -5314,26 +5363,17 @@ export class PayrollExecutionService {
   // Helper: Distribute payslip as PDF
   // REQ-PY-8: PDF distribution method
   // Note: Requires pdfkit library: npm install pdfkit @types/pdfkit
-  private async distributePayslipAsPDF(
-    payslip: any,
-    employeeId: any,
-  ): Promise<void> {
+  private async distributePayslipAsPDF(payslip: any, employeeId: any): Promise<void> {
     try {
       // Get employee details for PDF
-      const employee = await this.employeeProfileService.findOne(
-        employeeId.toString(),
-      );
+      const employee = await this.employeeProfileService.findOne(employeeId.toString());
       if (!employee) {
         throw new Error('Employee not found for PDF generation');
       }
 
       // Get payroll run for period information
-      const payrollRun = await this.payrollRunModel.findById(
-        payslip.payrollRunId,
-      );
-      const periodDate = payrollRun
-        ? new Date(payrollRun.payrollPeriod)
-        : new Date();
+      const payrollRun = await this.payrollRunModel.findById(payslip.payrollRunId);
+      const periodDate = payrollRun ? new Date(payrollRun.payrollPeriod) : new Date();
       const periodMonth = periodDate.toLocaleString('default', {
         month: 'long',
         year: 'numeric',
@@ -5351,10 +5391,10 @@ export class PayrollExecutionService {
       } catch (e) {
         // pdfkit not installed - log and continue (payslip is still saved)
         console.warn(
-          `PDF generation skipped: pdfkit library not installed. Install with: npm install pdfkit @types/pdfkit`,
+          `PDF generation skipped: pdfkit library not installed. Install with: npm install pdfkit @types/pdfkit`
         );
         console.log(
-          `Payslip ${payslip._id} generated successfully. PDF generation requires pdfkit library.`,
+          `Payslip ${payslip._id} generated successfully. PDF generation requires pdfkit library.`
         );
         return; // Exit gracefully if library not available
       }
@@ -5379,9 +5419,7 @@ export class PayrollExecutionService {
       doc.moveDown(0.5);
       doc
         .fontSize(12)
-        .text(
-          `Employee: ${employee.fullName || `${employee.firstName} ${employee.lastName}`}`,
-        );
+        .text(`Employee: ${employee.fullName || `${employee.firstName} ${employee.lastName}`}`);
       doc.text(`Employee Number: ${employee.employeeNumber}`);
       doc.text(`Period: ${periodMonth}`);
       doc.moveDown();
@@ -5391,106 +5429,73 @@ export class PayrollExecutionService {
       doc.fontSize(10);
       doc.text(`Base Salary: ${payslip.earningsDetails.baseSalary.toFixed(2)}`);
 
-      if (
-        payslip.earningsDetails.allowances &&
-        payslip.earningsDetails.allowances.length > 0
-      ) {
+      if (payslip.earningsDetails.allowances && payslip.earningsDetails.allowances.length > 0) {
         payslip.earningsDetails.allowances.forEach((allowance: any) => {
-          doc.text(
-            `  ${allowance.name || 'Allowance'}: ${(allowance.amount || 0).toFixed(2)}`,
-          );
+          doc.text(`  ${allowance.name || 'Allowance'}: ${(allowance.amount || 0).toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.earningsDetails.bonuses &&
-        payslip.earningsDetails.bonuses.length > 0
-      ) {
+      if (payslip.earningsDetails.bonuses && payslip.earningsDetails.bonuses.length > 0) {
         payslip.earningsDetails.bonuses.forEach((bonus: any) => {
           doc.text(`  Bonus: ${(bonus.amount || 0).toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.earningsDetails.benefits &&
-        payslip.earningsDetails.benefits.length > 0
-      ) {
+      if (payslip.earningsDetails.benefits && payslip.earningsDetails.benefits.length > 0) {
         payslip.earningsDetails.benefits.forEach((benefit: any) => {
           doc.text(`  Benefit: ${(benefit.amount || 0).toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.earningsDetails.refunds &&
-        payslip.earningsDetails.refunds.length > 0
-      ) {
+      if (payslip.earningsDetails.refunds && payslip.earningsDetails.refunds.length > 0) {
         payslip.earningsDetails.refunds.forEach((refund: any) => {
-          doc.text(
-            `  Refund: ${(refund.amount || 0).toFixed(2)} - ${refund.description || ''}`,
-          );
+          doc.text(`  Refund: ${(refund.amount || 0).toFixed(2)} - ${refund.description || ''}`);
         });
       }
 
       doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(`Total Gross Salary: ${payslip.totalGrossSalary.toFixed(2)}`, {
-          underline: true,
-        });
+      doc.fontSize(12).text(`Total Gross Salary: ${payslip.totalGrossSalary.toFixed(2)}`, {
+        underline: true,
+      });
 
       // Deductions section
       doc.moveDown();
       doc.fontSize(14).text('DEDUCTIONS', { underline: true });
       doc.fontSize(10);
 
-      if (
-        payslip.deductionsDetails.taxes &&
-        payslip.deductionsDetails.taxes.length > 0
-      ) {
+      if (payslip.deductionsDetails.taxes && payslip.deductionsDetails.taxes.length > 0) {
         payslip.deductionsDetails.taxes.forEach((tax: any) => {
-          const taxAmount =
-            (payslip.earningsDetails.baseSalary * (tax.percentage || 0)) / 100;
-          doc.text(
-            `  ${tax.name || 'Tax'} (${tax.percentage || 0}%): ${taxAmount.toFixed(2)}`,
-          );
+          const taxAmount = (payslip.earningsDetails.baseSalary * (tax.percentage || 0)) / 100;
+          doc.text(`  ${tax.name || 'Tax'} (${tax.percentage || 0}%): ${taxAmount.toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.deductionsDetails.insurances &&
-        payslip.deductionsDetails.insurances.length > 0
-      ) {
+      if (payslip.deductionsDetails.insurances && payslip.deductionsDetails.insurances.length > 0) {
         payslip.deductionsDetails.insurances.forEach((insurance: any) => {
           const insuranceAmount =
-            (payslip.earningsDetails.baseSalary * (insurance.percentage || 0)) /
-            100;
+            (payslip.earningsDetails.baseSalary * (insurance.percentage || 0)) / 100;
           doc.text(
-            `  ${insurance.name || 'Insurance'} (${insurance.percentage || 0}%): ${insuranceAmount.toFixed(2)}`,
+            `  ${insurance.name || 'Insurance'} (${insurance.percentage || 0}%): ${insuranceAmount.toFixed(2)}`
           );
         });
       }
 
       if (payslip.deductionsDetails.penalties) {
-        const penaltyAmount =
-          (payslip.deductionsDetails.penalties as any).amount || 0;
+        const penaltyAmount = payslip.deductionsDetails.penalties.amount || 0;
         if (penaltyAmount > 0) {
           doc.text(`  Penalties: ${penaltyAmount.toFixed(2)}`);
         }
       }
 
       doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(`Total Deductions: ${payslip.totaDeductions.toFixed(2)}`, {
-          underline: true,
-        });
+      doc.fontSize(12).text(`Total Deductions: ${payslip.totaDeductions.toFixed(2)}`, {
+        underline: true,
+      });
 
       // Summary
       doc.moveDown();
       doc.fontSize(16).text('NET PAY', { align: 'center', underline: true });
-      doc
-        .fontSize(18)
-        .text(`${payslip.netPay.toFixed(2)}`, { align: 'center' });
+      doc.fontSize(18).text(`${payslip.netPay.toFixed(2)}`, { align: 'center' });
 
       doc.end();
 
@@ -5503,11 +5508,8 @@ export class PayrollExecutionService {
         stream.on('error', reject);
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        `Error generating PDF for payslip ${payslip._id}: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error generating PDF for payslip ${payslip._id}: ${errorMessage}`);
       throw error;
     }
   }
@@ -5516,35 +5518,23 @@ export class PayrollExecutionService {
   // REQ-PY-8: Email distribution method
   // Note: Requires nodemailer library: npm install nodemailer @types/nodemailer
   // Or @nestjs/mailer: npm install @nestjs/mailer nodemailer
-  private async distributePayslipViaEmail(
-    payslip: any,
-    employeeId: any,
-  ): Promise<void> {
+  private async distributePayslipViaEmail(payslip: any, employeeId: any): Promise<void> {
     try {
       // Get employee details for email
-      const employee = await this.employeeProfileService.findOne(
-        employeeId.toString(),
-      );
+      const employee = await this.employeeProfileService.findOne(employeeId.toString());
       if (!employee) {
         throw new Error('Employee not found for email distribution');
       }
 
       // Check if employee has work email
-      const emailAddress =
-        (employee as any).workEmail || (employee as any).personalEmail;
+      const emailAddress = (employee as any).workEmail || (employee as any).personalEmail;
       if (!emailAddress) {
-        throw new Error(
-          `No email address found for employee ${employee.employeeNumber}`,
-        );
+        throw new Error(`No email address found for employee ${employee.employeeNumber}`);
       }
 
       // Get payroll run for period information
-      const payrollRun = await this.payrollRunModel.findById(
-        payslip.payrollRunId,
-      );
-      const periodDate = payrollRun
-        ? new Date(payrollRun.payrollPeriod)
-        : new Date();
+      const payrollRun = await this.payrollRunModel.findById(payslip.payrollRunId);
+      const periodDate = payrollRun ? new Date(payrollRun.payrollPeriod) : new Date();
       const periodMonth = periodDate.toLocaleString('default', {
         month: 'long',
         year: 'numeric',
@@ -5558,10 +5548,10 @@ export class PayrollExecutionService {
       } catch (e) {
         // nodemailer not installed - log and continue (payslip is still saved)
         console.warn(
-          `Email sending skipped: nodemailer library not installed. Install with: npm install nodemailer @types/nodemailer`,
+          `Email sending skipped: nodemailer library not installed. Install with: npm install nodemailer @types/nodemailer`
         );
         console.log(
-          `Payslip ${payslip._id} generated successfully. Email sending requires nodemailer library.`,
+          `Payslip ${payslip._id} generated successfully. Email sending requires nodemailer library.`
         );
         return; // Exit gracefully if library not available
       }
@@ -5579,30 +5569,21 @@ export class PayrollExecutionService {
 
       // Build earnings HTML
       let earningsHtml = `<p>Base Salary: ${payslip.earningsDetails.baseSalary.toFixed(2)}</p>`;
-      if (
-        payslip.earningsDetails.allowances &&
-        payslip.earningsDetails.allowances.length > 0
-      ) {
+      if (payslip.earningsDetails.allowances && payslip.earningsDetails.allowances.length > 0) {
         earningsHtml += '<p>Allowances:</p><ul>';
         payslip.earningsDetails.allowances.forEach((allowance: any) => {
           earningsHtml += `<li>${allowance.name || 'Allowance'}: ${(allowance.amount || 0).toFixed(2)}</li>`;
         });
         earningsHtml += '</ul>';
       }
-      if (
-        payslip.earningsDetails.bonuses &&
-        payslip.earningsDetails.bonuses.length > 0
-      ) {
+      if (payslip.earningsDetails.bonuses && payslip.earningsDetails.bonuses.length > 0) {
         earningsHtml += '<p>Bonuses:</p><ul>';
         payslip.earningsDetails.bonuses.forEach((bonus: any) => {
           earningsHtml += `<li>Bonus: ${(bonus.amount || 0).toFixed(2)}</li>`;
         });
         earningsHtml += '</ul>';
       }
-      if (
-        payslip.earningsDetails.refunds &&
-        payslip.earningsDetails.refunds.length > 0
-      ) {
+      if (payslip.earningsDetails.refunds && payslip.earningsDetails.refunds.length > 0) {
         earningsHtml += '<p>Refunds:</p><ul>';
         payslip.earningsDetails.refunds.forEach((refund: any) => {
           earningsHtml += `<li>${refund.description || 'Refund'}: ${(refund.amount || 0).toFixed(2)}</li>`;
@@ -5613,34 +5594,25 @@ export class PayrollExecutionService {
 
       // Build deductions HTML
       let deductionsHtml = '';
-      if (
-        payslip.deductionsDetails.taxes &&
-        payslip.deductionsDetails.taxes.length > 0
-      ) {
+      if (payslip.deductionsDetails.taxes && payslip.deductionsDetails.taxes.length > 0) {
         deductionsHtml += '<p>Taxes:</p><ul>';
         payslip.deductionsDetails.taxes.forEach((tax: any) => {
-          const taxAmount =
-            (payslip.earningsDetails.baseSalary * (tax.percentage || 0)) / 100;
+          const taxAmount = (payslip.earningsDetails.baseSalary * (tax.percentage || 0)) / 100;
           deductionsHtml += `<li>${tax.name || 'Tax'} (${tax.percentage || 0}%): ${taxAmount.toFixed(2)}</li>`;
         });
         deductionsHtml += '</ul>';
       }
-      if (
-        payslip.deductionsDetails.insurances &&
-        payslip.deductionsDetails.insurances.length > 0
-      ) {
+      if (payslip.deductionsDetails.insurances && payslip.deductionsDetails.insurances.length > 0) {
         deductionsHtml += '<p>Insurance:</p><ul>';
         payslip.deductionsDetails.insurances.forEach((insurance: any) => {
           const insuranceAmount =
-            (payslip.earningsDetails.baseSalary * (insurance.percentage || 0)) /
-            100;
+            (payslip.earningsDetails.baseSalary * (insurance.percentage || 0)) / 100;
           deductionsHtml += `<li>${insurance.name || 'Insurance'} (${insurance.percentage || 0}%): ${insuranceAmount.toFixed(2)}</li>`;
         });
         deductionsHtml += '</ul>';
       }
       if (payslip.deductionsDetails.penalties) {
-        const penaltyAmount =
-          (payslip.deductionsDetails.penalties as any).amount || 0;
+        const penaltyAmount = payslip.deductionsDetails.penalties.amount || 0;
         if (penaltyAmount > 0) {
           deductionsHtml += `<p>Penalties: ${penaltyAmount.toFixed(2)}</p>`;
         }
@@ -5649,10 +5621,7 @@ export class PayrollExecutionService {
 
       // Send email
       await transporter.sendMail({
-        from:
-          process.env.SMTP_FROM ||
-          process.env.SMTP_USER ||
-          'payroll@company.com',
+        from: process.env.SMTP_FROM || process.env.SMTP_USER || 'payroll@company.com',
         to: emailAddress,
         subject: `Your Payslip for ${periodMonth}`,
         html: `
@@ -5681,15 +5650,10 @@ export class PayrollExecutionService {
         `,
       });
 
-      console.log(
-        `Email sent successfully for payslip ${payslip._id} to ${emailAddress}`,
-      );
+      console.log(`Email sent successfully for payslip ${payslip._id} to ${emailAddress}`);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        `Error sending email for payslip ${payslip._id}: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error sending email for payslip ${payslip._id}: ${errorMessage}`);
       throw error;
     }
   }
@@ -5715,11 +5679,8 @@ export class PayrollExecutionService {
       // The payslip is already saved and accessible, so portal distribution is complete
       // No additional database operations needed
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        `Error distributing payslip ${payslip._id} via portal: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error distributing payslip ${payslip._id} via portal: ${errorMessage}`);
       throw error;
     }
   }
@@ -5736,7 +5697,7 @@ export class PayrollExecutionService {
     payrollRunId: string,
     managerId: string,
     financeStaffId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
     const payrollRun = await this.payrollRunModel.findById(payrollRunId);
     if (!payrollRun) {
@@ -5746,43 +5707,28 @@ export class PayrollExecutionService {
     // Validate that payroll run is in DRAFT status (cannot send for approval if already approved/rejected)
     if (payrollRun.status !== PayRollStatus.DRAFT) {
       throw new Error(
-        `Cannot send payroll run for approval. Current status is '${payrollRun.status}'. Only payroll runs with 'DRAFT' status can be sent for approval.`,
+        `Cannot send payroll run for approval. Current status is '${payrollRun.status}'. Only payroll runs with 'DRAFT' status can be sent for approval.`
       );
     }
 
     // Validate status transition (DRAFT → UNDER_REVIEW)
-    this.validateStatusTransition(
-      payrollRun.status,
-      PayRollStatus.UNDER_REVIEW,
-    );
+    this.validateStatusTransition(payrollRun.status, PayRollStatus.UNDER_REVIEW);
 
     // Validate that managerId has PAYROLL_MANAGER role
-    await this.validateEmployeeHasRole(
-      managerId,
-      SystemRole.PAYROLL_MANAGER,
-      'Payroll Manager',
-    );
+    await this.validateEmployeeHasRole(managerId, SystemRole.PAYROLL_MANAGER, 'Payroll Manager');
 
     // Validate that financeStaffId has FINANCE_STAFF role
-    await this.validateEmployeeHasRole(
-      financeStaffId,
-      SystemRole.FINANCE_STAFF,
-      'Finance Staff',
-    );
+    await this.validateEmployeeHasRole(financeStaffId, SystemRole.FINANCE_STAFF, 'Finance Staff');
 
     // Ensure manager and finance staff are different people
     if (managerId === financeStaffId) {
-      throw new Error(
-        'Payroll Manager and Finance Staff must be different employees.',
-      );
+      throw new Error('Payroll Manager and Finance Staff must be different employees.');
     }
 
     // Update payroll run: change status to UNDER_REVIEW and assign approvers
     payrollRun.status = PayRollStatus.UNDER_REVIEW;
     payrollRun.payrollManagerId = new mongoose.Types.ObjectId(managerId) as any;
-    payrollRun.financeStaffId = new mongoose.Types.ObjectId(
-      financeStaffId,
-    ) as any;
+    payrollRun.financeStaffId = new mongoose.Types.ObjectId(financeStaffId) as any;
     (payrollRun as any).updatedBy = currentUserId;
 
     return await payrollRun.save();
@@ -5792,14 +5738,14 @@ export class PayrollExecutionService {
   private async validateEmployeeHasRole(
     employeeId: string,
     requiredRole: SystemRole,
-    roleDisplayName: string,
+    roleDisplayName: string
   ): Promise<void> {
     try {
       // Check if employee exists
       const employee = await this.employeeProfileModel.findById(employeeId);
       if (!employee) {
         throw new Error(
-          `Employee with ID ${employeeId} not found. Please provide a valid employee ID.`,
+          `Employee with ID ${employeeId} not found. Please provide a valid employee ID.`
         );
       }
 
@@ -5814,7 +5760,7 @@ export class PayrollExecutionService {
 
       if (!systemRole) {
         throw new Error(
-          `Employee ${employee.firstName} ${employee.lastName} (ID: ${employeeId}) does not have the ${roleDisplayName} role. Please select an employee with the ${roleDisplayName} role.`,
+          `Employee ${employee.firstName} ${employee.lastName} (ID: ${employeeId}) does not have the ${roleDisplayName} role. Please select an employee with the ${roleDisplayName} role.`
         );
       }
     } catch (error) {
@@ -5826,11 +5772,8 @@ export class PayrollExecutionService {
         throw error;
       }
       // For other errors, wrap in a more descriptive error
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to validate ${roleDisplayName} role: ${errorMessage}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to validate ${roleDisplayName} role: ${errorMessage}`);
     }
   }
 
@@ -5840,17 +5783,15 @@ export class PayrollExecutionService {
   // BR: Ensure no incorrect payments are made (validation before approval)
   async approvePayrollDisbursement(
     financeDecisionDto: FinanceDecisionDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
-    const payrollRun = await this.payrollRunModel.findById(
-      financeDecisionDto.payrollRunId,
-    );
+    const payrollRun = await this.payrollRunModel.findById(financeDecisionDto.payrollRunId);
     if (!payrollRun) throw new Error('Payroll run not found');
 
     // Validate that payroll run is in PENDING_FINANCE_APPROVAL status
     if (payrollRun.status !== PayRollStatus.PENDING_FINANCE_APPROVAL) {
       throw new Error(
-        `Cannot process finance approval. Current status is '${payrollRun.status}'. Only payroll runs with 'PENDING_FINANCE_APPROVAL' status can be approved by Finance.`,
+        `Cannot process finance approval. Current status is '${payrollRun.status}'. Only payroll runs with 'PENDING_FINANCE_APPROVAL' status can be approved by Finance.`
       );
     }
 
@@ -5859,16 +5800,12 @@ export class PayrollExecutionService {
       const assignedFinanceStaffId = payrollRun.financeStaffId.toString();
       if (assignedFinanceStaffId !== currentUserId) {
         throw new Error(
-          'Only the assigned Finance Staff member can approve this payroll run. Please contact the assigned Finance Staff member.',
+          'Only the assigned Finance Staff member can approve this payroll run. Please contact the assigned Finance Staff member.'
         );
       }
     } else {
       // If no finance staff was assigned, validate that current user has FINANCE_STAFF role
-      await this.validateEmployeeHasRole(
-        currentUserId,
-        SystemRole.FINANCE_STAFF,
-        'Finance Staff',
-      );
+      await this.validateEmployeeHasRole(currentUserId, SystemRole.FINANCE_STAFF, 'Finance Staff');
     }
 
     if (financeDecisionDto.decision === 'approve') {
@@ -5894,7 +5831,7 @@ export class PayrollExecutionService {
       // Update finance staff assignment if provided
       if (financeDecisionDto.financeStaffId) {
         payrollRun.financeStaffId = new mongoose.Types.ObjectId(
-          financeDecisionDto.financeStaffId,
+          financeDecisionDto.financeStaffId
         ) as any;
       }
 
@@ -5905,22 +5842,30 @@ export class PayrollExecutionService {
       // REQ-PY-8: Automatically generate and distribute payslips after Finance approval (REQ-PY-15)
       // Check if payroll is already locked - if yes, auto-generate payslips
       if (savedPayrollRun.status === PayRollStatus.LOCKED) {
-        console.log(`[Auto-Generate Payslips] Finance approved payroll run ${savedPayrollRun._id}. Payroll is locked. Auto-generating payslips...`);
+        console.log(
+          `[Auto-Generate Payslips] Finance approved payroll run ${savedPayrollRun._id}. Payroll is locked. Auto-generating payslips...`
+        );
         try {
           // Auto-generate payslips via Portal (default distribution method)
           await this.generateAndDistributePayslips(
             savedPayrollRun._id.toString(),
             'PORTAL',
-            currentUserId,
+            currentUserId
           );
-          console.log(`[Auto-Generate Payslips] Successfully auto-generated payslips for payroll run ${savedPayrollRun._id}`);
+          console.log(
+            `[Auto-Generate Payslips] Successfully auto-generated payslips for payroll run ${savedPayrollRun._id}`
+          );
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`[Auto-Generate Payslips] Failed to auto-generate payslips for payroll run ${savedPayrollRun._id}: ${errorMessage}`);
+          console.error(
+            `[Auto-Generate Payslips] Failed to auto-generate payslips for payroll run ${savedPayrollRun._id}: ${errorMessage}`
+          );
           // Don't fail the approval if payslip generation fails - log and continue
         }
       } else {
-        console.log(`[Auto-Generate Payslips] Finance approved payroll run ${savedPayrollRun._id}. Payroll is not locked yet. Payslips will be auto-generated when payroll is locked.`);
+        console.log(
+          `[Auto-Generate Payslips] Finance approved payroll run ${savedPayrollRun._id}. Payroll is not locked yet. Payslips will be auto-generated when payroll is locked.`
+        );
       }
 
       return savedPayrollRun;
@@ -5929,9 +5874,8 @@ export class PayrollExecutionService {
       this.validateStatusTransition(payrollRun.status, PayRollStatus.REJECTED);
 
       payrollRun.status = PayRollStatus.REJECTED;
-      payrollRun.rejectionReason =
-        financeDecisionDto.reason || 'Rejected by Finance';
-      
+      payrollRun.rejectionReason = financeDecisionDto.reason || 'Rejected by Finance';
+
       (payrollRun as any).updatedBy = currentUserId;
       return await payrollRun.save();
     }
@@ -5945,7 +5889,7 @@ export class PayrollExecutionService {
     exceptionCode: string,
     resolution: string,
     managerId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<{
     payrollRun: payrollRuns;
     employeePayrollDetails: employeePayrollDetails;
@@ -5961,7 +5905,7 @@ export class PayrollExecutionService {
 
     if (!payrollDetails) {
       throw new Error(
-        `Payroll details not found for employee ${employeeId} in run ${payrollRunId}`,
+        `Payroll details not found for employee ${employeeId} in run ${payrollRunId}`
       );
     }
 
@@ -5971,9 +5915,7 @@ export class PayrollExecutionService {
       try {
         exceptionsData = JSON.parse(payrollDetails.exceptions);
       } catch (error) {
-        throw new Error(
-          `Invalid exceptions data format for employee ${employeeId}`,
-        );
+        throw new Error(`Invalid exceptions data format for employee ${employeeId}`);
       }
     }
 
@@ -6006,7 +5948,7 @@ export class PayrollExecutionService {
 
     if (!exceptionFound) {
       throw new Error(
-        `Active exception with code ${exceptionCode} not found for employee ${employeeId}`,
+        `Active exception with code ${exceptionCode} not found for employee ${employeeId}`
       );
     }
 
@@ -6017,7 +5959,7 @@ export class PayrollExecutionService {
 
     // Decrement exceptions count when resolved (only if there are no more active exceptions for this employee)
     const activeExceptions = exceptionsData.exceptionMessages.filter(
-      (e: any) => e.status === 'active',
+      (e: any) => e.status === 'active'
     );
     if (activeExceptions.length === 0 && payrollRun.exceptions > 0) {
       // Check if this was the last exception for this employee
@@ -6039,7 +5981,7 @@ export class PayrollExecutionService {
   async getEmployeeExceptions(
     employeeId: string,
     payrollRunId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<{
     activeExceptions: any[];
     resolvedExceptions: any[];
@@ -6065,10 +6007,10 @@ export class PayrollExecutionService {
 
       return {
         activeExceptions: (exceptionsData.exceptionMessages || []).filter(
-          (e: any) => e.status === 'active',
+          (e: any) => e.status === 'active'
         ),
         resolvedExceptions: (exceptionsData.exceptionMessages || []).filter(
-          (e: any) => e.status === 'resolved',
+          (e: any) => e.status === 'resolved'
         ),
         exceptionHistory: exceptionsData.exceptionHistory || [],
         deductionsBreakdown: this.getDeductionsBreakdown(payrollDetails),
@@ -6087,7 +6029,7 @@ export class PayrollExecutionService {
   // BR 9: Historical payroll data comparison for salary spike detection
   private async getEmployeeHistoricalPayrollData(
     employeeId: string,
-    currentPayrollPeriod: Date,
+    currentPayrollPeriod: Date
   ): Promise<{
     averageBaseSalary: number;
     previousRunsCount: number;
@@ -6100,7 +6042,7 @@ export class PayrollExecutionService {
       const currentPeriodStart = new Date(
         currentPayrollPeriod.getFullYear(),
         currentPayrollPeriod.getMonth(),
-        1,
+        1
       );
 
       const previousPayrollRuns = await this.payrollRunModel
@@ -6169,10 +6111,9 @@ export class PayrollExecutionService {
         lastSalary,
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
-        `Error getting historical payroll data for employee ${employeeId}: ${errorMessage}`,
+        `Error getting historical payroll data for employee ${employeeId}: ${errorMessage}`
       );
       return null;
     }
@@ -6182,7 +6123,7 @@ export class PayrollExecutionService {
   // BR 9: Exception tracking and reporting
   async getAllPayrollExceptions(
     payrollRunId: string,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<{
     totalExceptions: number;
     activeExceptions: number;
@@ -6214,18 +6155,17 @@ export class PayrollExecutionService {
       try {
         const exceptionsData = JSON.parse(detail.exceptions);
         const active = (exceptionsData.exceptionMessages || []).filter(
-          (e: any) => e.status === 'active',
+          (e: any) => e.status === 'active'
         );
         const resolved = (exceptionsData.exceptionMessages || []).filter(
-          (e: any) => e.status === 'resolved',
+          (e: any) => e.status === 'resolved'
         );
 
         totalActive += active.length;
         totalResolved += resolved.length;
 
         const employeeId =
-          (detail.employeeId as any)._id?.toString() ||
-          (detail.employeeId as any).toString();
+          (detail.employeeId as any)._id?.toString() || (detail.employeeId as any).toString();
         employeeExceptions.push({
           employeeId,
           activeExceptions: active,
@@ -6249,19 +6189,14 @@ export class PayrollExecutionService {
   // BR: Enforce proper workflow sequence
   async approvePayrollRun(
     managerApprovalDto: ManagerApprovalReviewDto,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<payrollRuns> {
-    const payrollRun = await this.payrollRunModel.findById(
-      managerApprovalDto.payrollRunId,
-    );
+    const payrollRun = await this.payrollRunModel.findById(managerApprovalDto.payrollRunId);
     if (!payrollRun) throw new Error('Payroll run not found');
 
     if (managerApprovalDto.managerDecision === PayRollStatus.APPROVED) {
       // Validate status transition (UNDER_REVIEW → PENDING_FINANCE_APPROVAL)
-      this.validateStatusTransition(
-        payrollRun.status,
-        PayRollStatus.PENDING_FINANCE_APPROVAL,
-      );
+      this.validateStatusTransition(payrollRun.status, PayRollStatus.PENDING_FINANCE_APPROVAL);
 
       payrollRun.status = PayRollStatus.PENDING_FINANCE_APPROVAL;
 
@@ -6281,7 +6216,7 @@ export class PayrollExecutionService {
       // Update manager assignment if provided
       if (managerApprovalDto.payrollManagerId) {
         payrollRun.payrollManagerId = new mongoose.Types.ObjectId(
-          managerApprovalDto.payrollManagerId,
+          managerApprovalDto.payrollManagerId
         ) as any;
       }
     } else if (managerApprovalDto.managerDecision === PayRollStatus.REJECTED) {
@@ -6289,11 +6224,10 @@ export class PayrollExecutionService {
       this.validateStatusTransition(payrollRun.status, PayRollStatus.REJECTED);
 
       payrollRun.status = PayRollStatus.REJECTED;
-      payrollRun.rejectionReason =
-        managerApprovalDto.managerComments || 'Rejected by Manager';
+      payrollRun.rejectionReason = managerApprovalDto.managerComments || 'Rejected by Manager';
     } else {
       throw new Error(
-        `Invalid manager decision: ${managerApprovalDto.managerDecision}. Must be '${PayRollStatus.APPROVED}' or '${PayRollStatus.REJECTED}'`,
+        `Invalid manager decision: ${managerApprovalDto.managerDecision}. Must be '${PayRollStatus.APPROVED}' or '${PayRollStatus.REJECTED}'`
       );
     }
 
@@ -6306,17 +6240,17 @@ export class PayrollExecutionService {
     status: string | undefined,
     page: number,
     limit: number,
-    currentUserId: string,
+    currentUserId: string
   ): Promise<{ data: payrollRuns[]; total: number; page: number; limit: number }> {
     try {
       const query: any = {};
-      
+
       if (status) {
         query.status = status;
       }
 
       const skip = (page - 1) * limit;
-      
+
       const [payrollRuns, total] = await Promise.all([
         this.payrollRunModel
           .find(query)
@@ -6337,9 +6271,7 @@ export class PayrollExecutionService {
         limit,
       };
     } catch (error: any) {
-      throw new Error(
-        `Failed to retrieve payroll runs: ${error?.message || 'Unknown error'}`,
-      );
+      throw new Error(`Failed to retrieve payroll runs: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -6362,9 +6294,7 @@ export class PayrollExecutionService {
       if (error.message && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(
-        `Failed to retrieve payroll run: ${error?.message || 'Unknown error'}`,
-      );
+      throw new Error(`Failed to retrieve payroll run: ${error?.message || 'Unknown error'}`);
     }
   }
 }

@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Param,
-  UseGuards,
-  Query,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Query, Req } from '@nestjs/common';
 import { NotificationService } from '../services/notification.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -33,16 +24,13 @@ export class NotificationAndSyncController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async sendNotification(
     @Body() sendNotificationDto: SendNotificationDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.notificationService.sendNotification(
-      sendNotificationDto,
-      user.userId,
-    );
+    return this.notificationService.sendNotification(sendNotificationDto, user.userId);
   }
 
   @Get('notification/employee/:employeeId')
@@ -52,114 +40,88 @@ export class NotificationAndSyncController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getNotificationLogsByEmployee(
     @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check: employees can only view their own notifications
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
     return this.notificationService.getNotificationLogsByEmployee(
       {
         employeeId,
       },
-      user.userId,
+      user.userId
     );
   }
 
   @Post('sync/attendance')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async syncAttendanceWithPayroll(
     @Body() syncAttendanceWithPayrollDto: SyncAttendanceWithPayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.syncAttendanceWithPayroll(
       syncAttendanceWithPayrollDto,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('sync/leave')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async syncLeaveWithPayroll(
     @Body() syncLeaveWithPayrollDto: SyncLeaveWithPayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.notificationService.syncLeaveWithPayroll(
-      syncLeaveWithPayrollDto,
-      user.userId,
-    );
+    return this.notificationService.syncLeaveWithPayroll(syncLeaveWithPayrollDto, user.userId);
   }
 
   @Post('sync/attendance-leave')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async synchronizeAttendanceAndPayroll(
     @Body()
     synchronizeAttendanceAndPayrollDto: SynchronizeAttendanceAndPayrollDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.synchronizeAttendanceAndPayroll(
       synchronizeAttendanceAndPayrollDto,
-      user.userId,
+      user.userId
     );
   }
 
   // ===== GET ENDPOINTS FOR PAYROLL/LEAVES TO CONSUME DATA =====
   @Get('sync/attendance/:employeeId')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async getAttendanceDataForSync(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.notificationService.getAttendanceDataForSync(
       employeeId,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
-      user.userId,
+      user.userId
     );
   }
 
   @Get('sync/overtime/:employeeId')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async getOvertimeDataForSync(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.notificationService.getOvertimeDataForSync(
       employeeId,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
-      user.userId,
+      user.userId
     );
   }
 
@@ -168,14 +130,8 @@ export class NotificationAndSyncController {
 
   @Post('sync/daily-batch')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
-  async runDailyPayrollSync(
-    @Body() body: { syncDate: Date },
-    @CurrentUser() user: any,
-  ) {
-    return this.notificationService.runDailyPayrollSync(
-      new Date(body.syncDate),
-      user.userId,
-    );
+  async runDailyPayrollSync(@Body() body: { syncDate: Date }, @CurrentUser() user: any) {
+    return this.notificationService.runDailyPayrollSync(new Date(body.syncDate), user.userId);
   }
 
   @Get('sync/pending')
@@ -184,7 +140,7 @@ export class NotificationAndSyncController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     const filters: { startDate?: Date; endDate?: Date; departmentId?: string } = {};
     if (startDate) filters.startDate = new Date(startDate);
@@ -195,28 +151,22 @@ export class NotificationAndSyncController {
 
   @Post('sync/finalize')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
-  async finalizeRecordsForPayroll(
-    @Body() body: { recordIds: string[] },
-    @CurrentUser() user: any,
-  ) {
-    return this.notificationService.finalizeRecordsForPayroll(
-      body.recordIds,
-      user.userId,
-    );
+  async finalizeRecordsForPayroll(@Body() body: { recordIds: string[] }, @CurrentUser() user: any) {
+    return this.notificationService.finalizeRecordsForPayroll(body.recordIds, user.userId);
   }
 
   @Post('sync/validate')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async validateDataForPayrollSync(
     @Body() body: { startDate: Date; endDate: Date },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.validateDataForPayrollSync(
       {
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -226,7 +176,7 @@ export class NotificationAndSyncController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('employeeId') employeeId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     const filters: { startDate?: Date; endDate?: Date; employeeId?: string } = {};
     if (startDate) filters.startDate = new Date(startDate);
@@ -241,7 +191,7 @@ export class NotificationAndSyncController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     const filters: { startDate?: Date; endDate?: Date; limit?: number } = {};
     if (startDate) filters.startDate = new Date(startDate);
@@ -254,7 +204,7 @@ export class NotificationAndSyncController {
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async getComprehensivePayrollData(
     @Body() body: { startDate: Date; endDate: Date; departmentId?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.getComprehensivePayrollData(
       {
@@ -262,7 +212,7 @@ export class NotificationAndSyncController {
         endDate: new Date(body.endDate),
         departmentId: body.departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -272,14 +222,15 @@ export class NotificationAndSyncController {
   @Post('shift-expiry/notify')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async sendShiftExpiryNotification(
-    @Body() body: {
+    @Body()
+    body: {
       recipientId: string;
       shiftAssignmentId: string;
       employeeId: string;
       endDate: Date;
       daysRemaining: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendShiftExpiryNotification(
       body.recipientId,
@@ -287,14 +238,15 @@ export class NotificationAndSyncController {
       body.employeeId,
       new Date(body.endDate),
       body.daysRemaining,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('shift-expiry/notify-bulk')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async sendBulkShiftExpiryNotifications(
-    @Body() body: {
+    @Body()
+    body: {
       hrAdminIds: string[];
       expiringAssignments: Array<{
         assignmentId: string;
@@ -305,15 +257,15 @@ export class NotificationAndSyncController {
         daysRemaining: number;
       }>;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendBulkShiftExpiryNotifications(
       body.hrAdminIds,
-      body.expiringAssignments.map(a => ({
+      body.expiringAssignments.map((a) => ({
         ...a,
         endDate: new Date(a.endDate),
       })),
-      user.userId,
+      user.userId
     );
   }
 
@@ -321,60 +273,53 @@ export class NotificationAndSyncController {
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
   async getShiftExpiryNotifications(
     @Param('hrAdminId') hrAdminId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.notificationService.getShiftExpiryNotifications(
-      hrAdminId,
-      user.userId,
-    );
+    return this.notificationService.getShiftExpiryNotifications(hrAdminId, user.userId);
   }
 
   @Post('shift-renewal/confirm')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
   async sendShiftRenewalConfirmation(
-    @Body() body: {
+    @Body()
+    body: {
       recipientId: string;
       shiftAssignmentId: string;
       newEndDate: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendShiftRenewalConfirmation(
       body.recipientId,
       body.shiftAssignmentId,
       new Date(body.newEndDate),
-      user.userId,
+      user.userId
     );
   }
 
   @Post('shift-archive/notify')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async sendShiftArchiveNotification(
-    @Body() body: {
+    @Body()
+    body: {
       recipientId: string;
       shiftAssignmentId: string;
       employeeId: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendShiftArchiveNotification(
       body.recipientId,
       body.shiftAssignmentId,
       body.employeeId,
-      user.userId,
+      user.userId
     );
   }
 
   @Get('shift-notifications/:hrAdminId')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
-  async getAllShiftNotifications(
-    @Param('hrAdminId') hrAdminId: string,
-    @CurrentUser() user: any,
-  ) {
-    return this.notificationService.getAllShiftNotifications(
-      hrAdminId,
-      user.userId,
-    );
+  async getAllShiftNotifications(@Param('hrAdminId') hrAdminId: string, @CurrentUser() user: any) {
+    return this.notificationService.getAllShiftNotifications(hrAdminId, user.userId);
   }
 
   // ===== US8: MISSED PUNCH MANAGEMENT & ALERTS =====
@@ -385,34 +330,32 @@ export class NotificationAndSyncController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async sendMissedPunchAlertToEmployee(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       attendanceRecordId: string;
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendMissedPunchAlertToEmployee(
       body.employeeId,
       body.attendanceRecordId,
       body.missedPunchType,
       new Date(body.date),
-      user.userId,
+      user.userId
     );
   }
 
   @Post('missed-punch/alert/manager')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
   async sendMissedPunchAlertToManager(
-    @Body() body: {
+    @Body()
+    body: {
       managerId: string;
       employeeId: string;
       employeeName: string;
@@ -420,7 +363,7 @@ export class NotificationAndSyncController {
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendMissedPunchAlertToManager(
       body.managerId,
@@ -429,14 +372,15 @@ export class NotificationAndSyncController {
       body.attendanceRecordId,
       body.missedPunchType,
       new Date(body.date),
-      user.userId,
+      user.userId
     );
   }
 
   @Post('missed-punch/alert/bulk')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async sendBulkMissedPunchAlerts(
-    @Body() body: {
+    @Body()
+    body: {
       alerts: Array<{
         employeeId: string;
         managerId?: string;
@@ -446,16 +390,13 @@ export class NotificationAndSyncController {
         date: Date;
       }>;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    const alerts = body.alerts.map(a => ({
+    const alerts = body.alerts.map((a) => ({
       ...a,
       date: new Date(a.date),
     }));
-    return this.notificationService.sendBulkMissedPunchAlerts(
-      alerts,
-      user.userId,
-    );
+    return this.notificationService.sendBulkMissedPunchAlerts(alerts, user.userId);
   }
 
   @Get('missed-punch/employee/:employeeId')
@@ -464,23 +405,17 @@ export class NotificationAndSyncController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getMissedPunchNotificationsByEmployee(
     @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
-    if (
-      user.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
-    return this.notificationService.getMissedPunchNotificationsByEmployee(
-      employeeId,
-      user.userId,
-    );
+    return this.notificationService.getMissedPunchNotificationsByEmployee(employeeId, user.userId);
   }
 
   @Get('missed-punch/manager/:managerId')
@@ -488,23 +423,17 @@ export class NotificationAndSyncController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getMissedPunchNotificationsByManager(
     @Param('managerId') managerId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for managers
-    if (
-      user.roles?.includes(SystemRole.DEPARTMENT_HEAD) &&
-      user.userId !== managerId
-    ) {
+    if (user.roles?.includes(SystemRole.DEPARTMENT_HEAD) && user.userId !== managerId) {
       throw new Error('Access denied');
     }
-    return this.notificationService.getMissedPunchNotificationsByManager(
-      managerId,
-      user.userId,
-    );
+    return this.notificationService.getMissedPunchNotificationsByManager(managerId, user.userId);
   }
 
   @Get('missed-punch/all')
@@ -512,15 +441,12 @@ export class NotificationAndSyncController {
   async getAllMissedPunchNotifications(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     const filters: { startDate?: Date; endDate?: Date } = {};
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
-    return this.notificationService.getAllMissedPunchNotifications(
-      filters,
-      user.userId,
-    );
+    return this.notificationService.getAllMissedPunchNotifications(filters, user.userId);
   }
 
   @Post('missed-punch/flag-with-notification')
@@ -528,17 +454,18 @@ export class NotificationAndSyncController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async flagMissedPunchWithNotification(
-    @Body() body: {
+    @Body()
+    body: {
       attendanceRecordId: string;
       employeeId: string;
       managerId: string;
       employeeName: string;
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.flagMissedPunchWithNotification(
       body.attendanceRecordId,
@@ -546,7 +473,7 @@ export class NotificationAndSyncController {
       body.managerId,
       body.employeeName,
       body.missedPunchType,
-      user.userId,
+      user.userId
     );
   }
 
@@ -555,22 +482,19 @@ export class NotificationAndSyncController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getMissedPunchStatistics(
     @Query('employeeId') employeeId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     const filters: { employeeId?: string; startDate?: Date; endDate?: Date } = {};
     if (employeeId) filters.employeeId = employeeId;
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
-    return this.notificationService.getMissedPunchStatistics(
-      filters,
-      user.userId,
-    );
+    return this.notificationService.getMissedPunchStatistics(filters, user.userId);
   }
 
   // ===== US16: VACATION PACKAGE INTEGRATION (BR-TM-19) =====
@@ -580,13 +504,10 @@ export class NotificationAndSyncController {
    * BR-TM-19: Vacation packages must be linked to shift schedules
    */
   @Post('vacation/link-to-attendance')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async linkVacationToAttendanceSchedule(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       vacationPackageId: string;
       startDate: Date;
@@ -594,7 +515,7 @@ export class NotificationAndSyncController {
       vacationType: string;
       autoReflect?: boolean;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.linkVacationToAttendanceSchedule(
       {
@@ -605,7 +526,7 @@ export class NotificationAndSyncController {
         vacationType: body.vacationType,
         autoReflect: body.autoReflect,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -618,13 +539,13 @@ export class NotificationAndSyncController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getEmployeeVacationAttendanceStatus(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.getEmployeeVacationAttendanceStatus(
       {
@@ -632,7 +553,7 @@ export class NotificationAndSyncController {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -641,19 +562,16 @@ export class NotificationAndSyncController {
    * BR-TM-19: Ensure vacation dates align with shift schedules
    */
   @Post('vacation/validate-against-schedule')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async validateVacationAgainstShiftSchedule(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       vacationStartDate: Date;
       vacationEndDate: Date;
       shiftAssignmentId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.validateVacationAgainstShiftSchedule(
       {
@@ -662,7 +580,7 @@ export class NotificationAndSyncController {
         vacationEndDate: new Date(body.vacationEndDate),
         shiftAssignmentId: body.shiftAssignmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -675,16 +593,17 @@ export class NotificationAndSyncController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async calculateLeaveDeductionsFromAttendance(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       startDate: Date;
       endDate: Date;
       leaveType?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.calculateLeaveDeductionsFromAttendance(
       {
@@ -693,7 +612,7 @@ export class NotificationAndSyncController {
         endDate: new Date(body.endDate),
         leaveType: body.leaveType,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -706,15 +625,16 @@ export class NotificationAndSyncController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getDepartmentVacationAttendanceSummary(
-    @Body() body: {
+    @Body()
+    body: {
       departmentId?: string;
       startDate: Date;
       endDate: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.getDepartmentVacationAttendanceSummary(
       {
@@ -722,7 +642,7 @@ export class NotificationAndSyncController {
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -733,10 +653,7 @@ export class NotificationAndSyncController {
    * BR-TM-20: View escalation rules before payroll cutoff
    */
   @Get('payroll-cutoff/config')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getPayrollCutoffConfig(@CurrentUser() user: any) {
     return this.notificationService.getPayrollCutoffConfig(user.userId);
   }
@@ -746,26 +663,22 @@ export class NotificationAndSyncController {
    * BR-TM-20: Identify all unreviewed requests before cutoff
    */
   @Get('payroll-cutoff/pending')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getPendingRequestsBeforePayrollCutoff(
     @Query('payrollCutoffDate') payrollCutoffDate?: string,
     @Query('departmentId') departmentId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     // Validate departmentId - treat empty strings as undefined
-    const validDepartmentId = departmentId && departmentId.trim() !== '' 
-      ? departmentId.trim() 
-      : undefined;
-    
+    const validDepartmentId =
+      departmentId && departmentId.trim() !== '' ? departmentId.trim() : undefined;
+
     return this.notificationService.getPendingRequestsBeforePayrollCutoff(
       {
         payrollCutoffDate: payrollCutoffDate ? new Date(payrollCutoffDate) : undefined,
         departmentId: validDepartmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -774,17 +687,15 @@ export class NotificationAndSyncController {
    * BR-TM-20: Unreviewed requests must auto-escalate before payroll cutoff
    */
   @Post('payroll-cutoff/auto-escalate')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async autoEscalateBeforePayrollCutoff(
-    @Body() body: {
+    @Body()
+    body: {
       payrollCutoffDate?: Date;
       escalationDaysBefore?: number;
       notifyManagers?: boolean;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.autoEscalateBeforePayrollCutoff(
       {
@@ -792,7 +703,7 @@ export class NotificationAndSyncController {
         escalationDaysBefore: body.escalationDaysBefore,
         notifyManagers: body.notifyManagers,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -801,23 +712,21 @@ export class NotificationAndSyncController {
    * BR-TM-20: Verify all requests are processed before payroll
    */
   @Post('payroll-cutoff/readiness')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async checkPayrollReadinessStatus(
-    @Body() body: {
+    @Body()
+    body: {
       payrollCutoffDate?: Date;
       departmentId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.checkPayrollReadinessStatus(
       {
         payrollCutoffDate: body.payrollCutoffDate ? new Date(body.payrollCutoffDate) : undefined,
         departmentId: body.departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -826,17 +735,15 @@ export class NotificationAndSyncController {
    * BR-TM-20: Track escalation actions
    */
   @Post('payroll-cutoff/escalation-history')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getEscalationHistory(
-    @Body() body: {
+    @Body()
+    body: {
       startDate?: Date;
       endDate?: Date;
       type?: 'PAYROLL' | 'THRESHOLD' | 'MANUAL' | 'ALL';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.getEscalationHistory(
       {
@@ -844,7 +751,7 @@ export class NotificationAndSyncController {
         endDate: body.endDate ? new Date(body.endDate) : undefined,
         type: body.type,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -853,23 +760,21 @@ export class NotificationAndSyncController {
    * BR-TM-20: Notify stakeholders before cutoff
    */
   @Post('payroll-cutoff/send-reminders')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async sendPayrollCutoffReminders(
-    @Body() body: {
+    @Body()
+    body: {
       payrollCutoffDate?: Date;
       reminderDaysBefore?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.sendPayrollCutoffReminders(
       {
         payrollCutoffDate: body.payrollCutoffDate ? new Date(body.payrollCutoffDate) : undefined,
         reminderDaysBefore: body.reminderDaysBefore,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -880,20 +785,18 @@ export class NotificationAndSyncController {
    * BR-TM-22: Monitor sync status across all modules
    */
   @Get('cross-module/status')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async getCrossModuleSyncStatus(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.notificationService.getCrossModuleSyncStatus(
       {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -902,16 +805,15 @@ export class NotificationAndSyncController {
    * BR-TM-22: Sync with leave modules
    */
   @Post('cross-module/sync-leaves')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async syncWithLeavesModule(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId?: string;
       startDate: Date;
       endDate: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.syncWithLeavesModule(
       {
@@ -919,7 +821,7 @@ export class NotificationAndSyncController {
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -928,16 +830,15 @@ export class NotificationAndSyncController {
    * BR-TM-22: Sync with benefits modules
    */
   @Post('cross-module/sync-benefits')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async syncWithBenefitsModule(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId?: string;
       startDate: Date;
       endDate: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.syncWithBenefitsModule(
       {
@@ -945,7 +846,7 @@ export class NotificationAndSyncController {
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -954,22 +855,21 @@ export class NotificationAndSyncController {
    * BR-TM-22: Sync all time management data with payroll, benefits, and leave modules
    */
   @Post('cross-module/sync-all')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async runFullCrossModuleSync(
-    @Body() body: {
+    @Body()
+    body: {
       syncDate: Date;
       modules: ('payroll' | 'leaves' | 'benefits')[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.runFullCrossModuleSync(
       {
         syncDate: new Date(body.syncDate),
         modules: body.modules,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -978,16 +878,15 @@ export class NotificationAndSyncController {
    * BR-TM-22: Ensure data consistency
    */
   @Post('cross-module/consistency-check')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async checkCrossModuleDataConsistency(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.checkCrossModuleDataConsistency(
       {
@@ -995,7 +894,7 @@ export class NotificationAndSyncController {
         endDate: new Date(body.endDate),
         employeeId: body.employeeId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1004,17 +903,16 @@ export class NotificationAndSyncController {
    * BR-TM-22: Provide data packages for downstream systems
    */
   @Post('cross-module/data-packages')
-  @Roles(
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_MANAGER)
   async getDataForDownstreamModules(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       departmentId?: string;
       modules: ('payroll' | 'leaves' | 'benefits')[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationService.getDataForDownstreamModules(
       {
@@ -1023,7 +921,7 @@ export class NotificationAndSyncController {
         departmentId: body.departmentId,
         modules: body.modules,
       },
-      user.userId,
+      user.userId
     );
   }
 }

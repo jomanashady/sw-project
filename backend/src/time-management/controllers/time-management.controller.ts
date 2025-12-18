@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Put,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { TimeManagementService } from '../services/time-management.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -48,9 +39,7 @@ import {
 @Controller('time-management')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TimeManagementController {
-  constructor(
-    private readonly timeManagementService: TimeManagementService,
-  ) {}
+  constructor(private readonly timeManagementService: TimeManagementService) {}
 
   // ===== US5: Clock-In/Out and Attendance Records =====
   // BR-TM-06: Time-in/out captured via Biometric, Web Login, Mobile App, or Manual Input (with audit trail)
@@ -66,17 +55,11 @@ export class TimeManagementController {
     SystemRole.FINANCE_STAFF,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_EMPLOYEE
   )
-  async clockInWithID(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  async clockInWithID(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     // Self-access check
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.clockInWithID(employeeId, user.userId);
@@ -90,17 +73,11 @@ export class TimeManagementController {
     SystemRole.FINANCE_STAFF,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_EMPLOYEE
   )
-  async clockOutWithID(
-    @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
-  ) {
+  async clockOutWithID(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
     // Self-access check
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.clockOutWithID(employeeId, user.userId);
@@ -112,11 +89,12 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async clockInWithMetadata(
     @Param('employeeId') employeeId: string,
-    @Body() body: {
+    @Body()
+    body: {
       source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
       deviceId?: string;
       terminalId?: string;
@@ -124,13 +102,10 @@ export class TimeManagementController {
       gpsCoordinates?: { lat: number; lng: number };
       ipAddress?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.clockInWithMetadata(employeeId, body, user.userId);
@@ -142,11 +117,12 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async clockOutWithMetadata(
     @Param('employeeId') employeeId: string,
-    @Body() body: {
+    @Body()
+    body: {
       source: 'BIOMETRIC' | 'WEB' | 'MOBILE' | 'MANUAL';
       deviceId?: string;
       terminalId?: string;
@@ -154,13 +130,10 @@ export class TimeManagementController {
       gpsCoordinates?: { lat: number; lng: number };
       ipAddress?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.clockOutWithMetadata(employeeId, body, user.userId);
@@ -172,11 +145,11 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async validateClockInAgainstShift(
     @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.validateClockInAgainstShift(employeeId, user.userId);
   }
@@ -188,11 +161,11 @@ export class TimeManagementController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_MANAGER,
+    SystemRole.HR_MANAGER
   )
   async getEmployeeAttendanceStatus(
     @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for employees
     if (
@@ -211,12 +184,12 @@ export class TimeManagementController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_MANAGER,
+    SystemRole.HR_MANAGER
   )
   async getEmployeeAttendanceRecords(
     @Param('employeeId') employeeId: string,
     @Query('days') days: string = '30',
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for employees
     if (
@@ -226,19 +199,22 @@ export class TimeManagementController {
     ) {
       throw new Error('Access denied');
     }
-    return this.timeManagementService.getEmployeeAttendanceRecords(employeeId, parseInt(days), user.userId);
+    return this.timeManagementService.getEmployeeAttendanceRecords(
+      employeeId,
+      parseInt(days),
+      user.userId
+    );
   }
 
   @Post('attendance')
-
   @Roles(SystemRole.DEPARTMENT_HEAD)
   async createAttendanceRecord(
     @Body() createAttendanceRecordDto: CreateAttendanceRecordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.createAttendanceRecord(
       createAttendanceRecordDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -247,12 +223,12 @@ export class TimeManagementController {
   async updateAttendanceRecord(
     @Param('id') id: string,
     @Body() updateAttendanceRecordDto: UpdateAttendanceRecordDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.updateAttendanceRecord(
       id,
       updateAttendanceRecordDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -263,11 +239,11 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.FINANCE_STAFF,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async submitAttendanceCorrectionRequest(
     @Body() submitCorrectionRequestDto: SubmitCorrectionRequestDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for employees
     if (
@@ -278,7 +254,7 @@ export class TimeManagementController {
     }
     return this.timeManagementService.submitAttendanceCorrectionRequest(
       submitCorrectionRequestDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -289,11 +265,11 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async recordPunchWithMetadata(
     @Body() recordPunchWithMetadataDto: RecordPunchWithMetadataDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
     if (
@@ -304,7 +280,7 @@ export class TimeManagementController {
     }
     return this.timeManagementService.recordPunchWithMetadata(
       recordPunchWithMetadataDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -314,11 +290,11 @@ export class TimeManagementController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_EMPLOYEE
   )
   async recordPunchFromDevice(
     @Body() recordPunchWithMetadataDto: RecordPunchWithMetadataDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
     if (
@@ -329,7 +305,7 @@ export class TimeManagementController {
     }
     return this.timeManagementService.recordPunchFromDevice(
       recordPunchWithMetadataDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -337,23 +313,20 @@ export class TimeManagementController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async enforcePunchPolicy(
     @Body() enforcePunchPolicyDto: EnforcePunchPolicyDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.enforcePunchPolicy(
-      enforcePunchPolicyDto,
-      user.userId,
-    );
+    return this.timeManagementService.enforcePunchPolicy(enforcePunchPolicyDto, user.userId);
   }
 
   @Post('attendance/rounding')
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async applyAttendanceRounding(
     @Body() applyAttendanceRoundingDto: ApplyAttendanceRoundingDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.applyAttendanceRounding(
       applyAttendanceRoundingDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -361,11 +334,11 @@ export class TimeManagementController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async enforceShiftPunchPolicy(
     @Body() enforceShiftPunchPolicyDto: EnforceShiftPunchPolicyDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.enforceShiftPunchPolicy(
       enforceShiftPunchPolicyDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -380,7 +353,7 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
+    SystemRole.HR_MANAGER
   )
   async submitCorrectionRequest(
     @Body()
@@ -389,7 +362,7 @@ export class TimeManagementController {
       attendanceRecord: string;
       reason: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.submitAttendanceCorrectionRequest(
       {
@@ -397,7 +370,7 @@ export class TimeManagementController {
         attendanceRecord: body.attendanceRecord,
         reason: body.reason,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -411,14 +384,14 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getCorrectionRequestsByEmployee(
     @Param('employeeId') employeeId: string,
     @Query('status') status?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getCorrectionRequestsByEmployee(
       {
@@ -427,7 +400,7 @@ export class TimeManagementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -441,16 +414,10 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
-  async getCorrectionRequestById(
-    @Param('requestId') requestId: string,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.getCorrectionRequestById(
-      requestId,
-      user.userId,
-    );
+  async getCorrectionRequestById(@Param('requestId') requestId: string, @CurrentUser() user: any) {
+    return this.timeManagementService.getCorrectionRequestById(requestId, user.userId);
   }
 
   // ===== ATTENDANCE IMPORT (CSV) =====
@@ -467,19 +434,9 @@ export class TimeManagementController {
    * - Flag records with missing clock-out as hasMissedPunch = true
    */
   @Post('attendance/import-csv')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
-  async importAttendanceFromCsv(
-    @Body() body: ImportAttendanceCsvDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.importAttendanceFromCsv(
-      body.csv,
-      user.userId,
-    );
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  async importAttendanceFromCsv(@Body() body: ImportAttendanceCsvDto, @CurrentUser() user: any) {
+    return this.timeManagementService.importAttendanceFromCsv(body.csv, user.userId);
   }
 
   /**
@@ -491,17 +448,14 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getAllCorrectionRequests(
     @Query('status') status?: string,
     @Query('employeeId') employeeId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
-    return this.timeManagementService.getAllCorrectionRequests(
-      { status, employeeId },
-      user.userId,
-    );
+    return this.timeManagementService.getAllCorrectionRequests({ status, employeeId }, user.userId);
   }
 
   /**
@@ -509,16 +463,12 @@ export class TimeManagementController {
    * BR-TM-15: Routed to Line Manager for approval
    */
   @Get('correction-request/pending/manager')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async getPendingCorrectionRequestsForManager(
     @Query('managerId') managerId?: string,
     @Query('departmentId') departmentId?: string,
     @Query('limit') limit?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getPendingCorrectionRequestsForManager(
       {
@@ -526,7 +476,7 @@ export class TimeManagementController {
         departmentId,
         limit: limit ? Number(limit) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -535,18 +485,12 @@ export class TimeManagementController {
    * BR-TM-15: Workflow status transition
    */
   @Post('correction-request/:requestId/in-review')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async markCorrectionRequestInReview(
     @Param('requestId') requestId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.markCorrectionRequestInReview(
-      requestId,
-      user.userId,
-    );
+    return this.timeManagementService.markCorrectionRequestInReview(requestId, user.userId);
   }
 
   /**
@@ -554,22 +498,18 @@ export class TimeManagementController {
    * BR-TM-15: Line Manager approves the request
    */
   @Post('correction-request/:requestId/approve')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async approveCorrectionRequest(
     @Param('requestId') requestId: string,
     @Body() body: { reason?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.approveCorrectionRequest(
       {
         correctionRequestId: requestId,
         reason: body.reason,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -578,22 +518,18 @@ export class TimeManagementController {
    * BR-TM-15: Line Manager rejects with reason
    */
   @Post('correction-request/:requestId/reject')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async rejectCorrectionRequest(
     @Param('requestId') requestId: string,
     @Body() body: { reason: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.rejectCorrectionRequest(
       {
         correctionRequestId: requestId,
         reason: body.reason,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -602,10 +538,7 @@ export class TimeManagementController {
    * BR-TM-15: Route to HR for approval
    */
   @Post('correction-request/:requestId/escalate')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async escalateCorrectionRequest(
     @Param('requestId') requestId: string,
     @Body()
@@ -613,7 +546,7 @@ export class TimeManagementController {
       escalateTo: 'LINE_MANAGER' | 'HR_ADMIN' | 'HR_MANAGER';
       reason?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.escalateCorrectionRequest(
       {
@@ -621,7 +554,7 @@ export class TimeManagementController {
         escalateTo: body.escalateTo,
         reason: body.reason,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -634,19 +567,19 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
+    SystemRole.HR_MANAGER
   )
   async cancelCorrectionRequest(
     @Param('requestId') requestId: string,
     @Body() body: { reason?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.cancelCorrectionRequest(
       {
         requestId,
         reason: body.reason,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -659,13 +592,13 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getCorrectionRequestStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getCorrectionRequestStatistics(
       {
@@ -673,20 +606,16 @@ export class TimeManagementController {
         endDate: endDate ? new Date(endDate) : undefined,
         departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
   // ===== Time Exceptions =====
   @Post('time-exception')
-  @Roles(
-    SystemRole.DEPARTMENT_EMPLOYEE,
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER)
   async createTimeException(
     @Body() createTimeExceptionDto: CreateTimeExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
     if (
@@ -695,10 +624,7 @@ export class TimeManagementController {
     ) {
       throw new Error('Access denied');
     }
-    return this.timeManagementService.createTimeException(
-      createTimeExceptionDto,
-      user.userId,
-    );
+    return this.timeManagementService.createTimeException(createTimeExceptionDto, user.userId);
   }
 
   @Put('time-exception/:id')
@@ -706,13 +632,9 @@ export class TimeManagementController {
   async updateTimeException(
     @Param('id') id: string,
     @Body() updateTimeExceptionDto: UpdateTimeExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.updateTimeException(
-      id,
-      updateTimeExceptionDto,
-      user.userId,
-    );
+    return this.timeManagementService.updateTimeException(id, updateTimeExceptionDto, user.userId);
   }
 
   @Get('time-exception/employee/:id')
@@ -721,72 +643,49 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getTimeExceptionsByEmployee(
     @Param('id') id: string,
     @Body() getTimeExceptionsByEmployeeDto: GetTimeExceptionsByEmployeeDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== id
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== id) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.getTimeExceptionsByEmployee(
       id,
       getTimeExceptionsByEmployeeDto,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('time-exception/approve')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async approveTimeException(
     @Body() approveTimeExceptionDto: ApproveTimeExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.approveTimeException(
-      approveTimeExceptionDto,
-      user.userId,
-    );
+    return this.timeManagementService.approveTimeException(approveTimeExceptionDto, user.userId);
   }
 
   @Post('time-exception/reject')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async rejectTimeException(
     @Body() rejectTimeExceptionDto: RejectTimeExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.rejectTimeException(
-      rejectTimeExceptionDto,
-      user.userId,
-    );
+    return this.timeManagementService.rejectTimeException(rejectTimeExceptionDto, user.userId);
   }
 
   @Post('time-exception/escalate')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async escalateTimeException(
     @Body() escalateTimeExceptionDto: EscalateTimeExceptionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.escalateTimeException(
-      escalateTimeExceptionDto,
-      user.userId,
-    );
+    return this.timeManagementService.escalateTimeException(escalateTimeExceptionDto, user.userId);
   }
 
   // ===== US6 ENHANCEMENTS: Time Exception Management =====
@@ -799,7 +698,7 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getAllTimeExceptions(
     @Query('status') status?: string,
@@ -808,7 +707,7 @@ export class TimeManagementController {
     @Query('assignedTo') assignedTo?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getAllTimeExceptions(
       {
@@ -819,7 +718,7 @@ export class TimeManagementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -830,12 +729,9 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
-  async getTimeExceptionById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getTimeExceptionById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.timeManagementService.getTimeExceptionById(id, user.userId);
   }
 
@@ -846,11 +742,11 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async resolveTimeException(
     @Body() body: { timeExceptionId: string; resolutionNotes?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.resolveTimeException(body, user.userId);
   }
@@ -858,14 +754,10 @@ export class TimeManagementController {
   // Reassign time exception to a different handler
   // BR-TM-09: Workflow reassignment
   @Post('time-exception/reassign')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async reassignTimeException(
     @Body() body: { timeExceptionId: string; newAssigneeId: string; reason?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.reassignTimeException(body, user.userId);
   }
@@ -873,16 +765,12 @@ export class TimeManagementController {
   // Get exception statistics/summary
   // BR-TM-08: Track all exception types
   @Get('time-exceptions/statistics')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getTimeExceptionStatistics(
     @Query('employeeId') employeeId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getTimeExceptionStatistics(
       {
@@ -890,36 +778,27 @@ export class TimeManagementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
   // Bulk approve time exceptions
   // BR-TM-09: Bulk operations for efficiency
   @Post('time-exceptions/bulk-approve')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async bulkApproveTimeExceptions(
     @Body() body: { exceptionIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.bulkApproveTimeExceptions(
-      body.exceptionIds,
-      user.userId,
-    );
+    return this.timeManagementService.bulkApproveTimeExceptions(body.exceptionIds, user.userId);
   }
 
   // Bulk reject time exceptions
   @Post('time-exceptions/bulk-reject')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async bulkRejectTimeExceptions(
     @Body() body: { exceptionIds: string[]; reason: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.bulkRejectTimeExceptions(body, user.userId);
   }
@@ -931,23 +810,16 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getPendingExceptionsForHandler(@CurrentUser() user: any) {
-    return this.timeManagementService.getPendingExceptionsForHandler(
-      user.userId,
-      user.userId,
-    );
+    return this.timeManagementService.getPendingExceptionsForHandler(user.userId, user.userId);
   }
 
   // Get escalated exceptions
   // BR-TM-09 & BR-TM-15: View escalated exceptions requiring immediate attention
   @Get('time-exceptions/escalated')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async getEscalatedExceptions(@CurrentUser() user: any) {
     return this.timeManagementService.getEscalatedExceptions(user.userId);
   }
@@ -959,23 +831,21 @@ export class TimeManagementController {
    * BR-TM-20: Unreviewed employee requests must auto-escalate after a defined time
    */
   @Post('time-exceptions/auto-escalate-overdue')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async autoEscalateOverdueExceptions(
-    @Body() body: {
+    @Body()
+    body: {
       thresholdDays: number;
       excludeTypes?: string[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.autoEscalateOverdueExceptions(
       {
         thresholdDays: body.thresholdDays,
         excludeTypes: body.excludeTypes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -988,19 +858,19 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getOverdueExceptions(
     @Query('thresholdDays') thresholdDays: number,
     @Query('status') status?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getOverdueExceptions(
       {
         thresholdDays: Number(thresholdDays),
         status: status ? status.split(',') : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1013,7 +883,7 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getApprovalWorkflowConfig(@CurrentUser() user: any) {
     return this.timeManagementService.getApprovalWorkflowConfig(user.userId);
@@ -1028,19 +898,19 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getApprovalWorkflowDashboard(
     @Query('managerId') managerId?: string,
     @Query('departmentId') departmentId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getApprovalWorkflowDashboard(
       {
         managerId,
         departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1049,18 +919,15 @@ export class TimeManagementController {
    * BR-TM-20: Support deadline-based escalation
    */
   @Post('time-exception/set-deadline')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async setExceptionDeadline(
-    @Body() body: {
+    @Body()
+    body: {
       exceptionId: string;
       deadlineDate: Date;
       notifyBeforeDays?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.setExceptionDeadline(
       {
@@ -1068,7 +935,7 @@ export class TimeManagementController {
         deadlineDate: new Date(body.deadlineDate),
         notifyBeforeDays: body.notifyBeforeDays,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1082,84 +949,80 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getRequestsApproachingDeadline(
     @Query('withinDays') withinDays: number,
     @Query('payrollCutoffDate') payrollCutoffDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getRequestsApproachingDeadline(
       {
         withinDays: Number(withinDays),
         payrollCutoffDate: payrollCutoffDate ? new Date(payrollCutoffDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
   // Auto-create lateness exception
   // BR-TM-08 & BR-TM-17: Auto-detect lateness
   @Post('time-exception/auto-lateness')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async autoCreateLatenessException(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       attendanceRecordId: string;
       assignedTo: string;
       lateMinutes: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.autoCreateLatenessException(
       body.employeeId,
       body.attendanceRecordId,
       body.assignedTo,
       body.lateMinutes,
-      user.userId,
+      user.userId
     );
   }
 
   // Auto-create early leave exception
   // BR-TM-08: Support EARLY_LEAVE exception type
   @Post('time-exception/auto-early-leave')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async autoCreateEarlyLeaveException(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       attendanceRecordId: string;
       assignedTo: string;
       earlyMinutes: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.autoCreateEarlyLeaveException(
       body.employeeId,
       body.attendanceRecordId,
       body.assignedTo,
       body.earlyMinutes,
-      user.userId,
+      user.userId
     );
   }
 
   // ===== US4: Shift Expiry Notifications - Automatic Detection Methods =====
   // BR-TM-05: Shift schedules must be assignable by Department, Position, or Individual
-  
+
   @Post('automation/check-expiring-shifts')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async checkExpiringShiftAssignments(
     @Body() body: { daysBeforeExpiry?: number },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.checkExpiringShiftAssignments(
       body.daysBeforeExpiry || 7,
-      user.userId,
+      user.userId
     );
   }
 
@@ -1176,17 +1039,14 @@ export class TimeManagementController {
   }
 
   @Post('automation/escalate-before-payroll')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async escalateUnresolvedRequestsBeforePayroll(
     @Body() body: { payrollCutOffDate: Date },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.escalateUnresolvedRequestsBeforePayroll(
       new Date(body.payrollCutOffDate),
-      user.userId,
+      user.userId
     );
   }
 
@@ -1194,11 +1054,11 @@ export class TimeManagementController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async monitorRepeatedLateness(
     @Body() monitorRepeatedLatenessDto: MonitorRepeatedLatenessDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.monitorRepeatedLateness(
       monitorRepeatedLatenessDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -1207,15 +1067,15 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async triggerLatenessDisciplinary(
     @Body() triggerLatenessDisciplinaryDto: TriggerLatenessDisciplinaryDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.triggerLatenessDisciplinary(
       triggerLatenessDisciplinaryDto,
-      user.userId,
+      user.userId
     );
   }
 
@@ -1230,14 +1090,14 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getEmployeeLatenessHistory(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getEmployeeLatenessHistory(
       {
@@ -1246,7 +1106,7 @@ export class TimeManagementController {
         endDate: endDate ? new Date(endDate) : undefined,
         limit: limit ? Number(limit) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1255,10 +1115,7 @@ export class TimeManagementController {
    * BR-TM-09: Create disciplinary flag for tracking
    */
   @Post('lateness/flag')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async flagEmployeeForRepeatedLateness(
     @Body()
     body: {
@@ -1268,7 +1125,7 @@ export class TimeManagementController {
       severity: 'WARNING' | 'WRITTEN_WARNING' | 'FINAL_WARNING' | 'SUSPENSION';
       notes?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.flagEmployeeForRepeatedLateness(
       {
@@ -1278,7 +1135,7 @@ export class TimeManagementController {
         severity: body.severity,
         notes: body.notes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1287,17 +1144,13 @@ export class TimeManagementController {
    * BR-TM-09: Retrieve flagged employees for HR review
    */
   @Get('lateness/flags')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getLatenesDisciplinaryFlags(
     @Query('status') status?: 'PENDING' | 'RESOLVED' | 'ESCALATED',
     @Query('severity') severity?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getLatenesDisciplinaryFlags(
       {
@@ -1306,7 +1159,7 @@ export class TimeManagementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1319,19 +1172,19 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async analyzeLatenessPatterns(
     @Param('employeeId') employeeId: string,
     @Query('periodDays') periodDays?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.analyzeLatenessPatterns(
       {
         employeeId,
         periodDays: periodDays ? Number(periodDays) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1340,11 +1193,7 @@ export class TimeManagementController {
    * BR-TM-09: Organizational-level lateness tracking
    */
   @Post('lateness/trend-report')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async getLatenessTrendReport(
     @Body()
     body: {
@@ -1353,7 +1202,7 @@ export class TimeManagementController {
       endDate: string;
       groupBy?: 'day' | 'week' | 'month';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.getLatenessTrendReport(
       {
@@ -1362,7 +1211,7 @@ export class TimeManagementController {
         endDate: new Date(body.endDate),
         groupBy: body.groupBy,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1371,11 +1220,7 @@ export class TimeManagementController {
    * BR-TM-09: Mark flags as resolved after corrective action
    */
   @Post('lateness/flag/resolve')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async resolveDisciplinaryFlag(
     @Body()
     body: {
@@ -1383,7 +1228,7 @@ export class TimeManagementController {
       resolution: 'RESOLVED' | 'ESCALATED' | 'DISMISSED';
       resolutionNotes: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.resolveDisciplinaryFlag(
       {
@@ -1391,7 +1236,7 @@ export class TimeManagementController {
         resolution: body.resolution,
         resolutionNotes: body.resolutionNotes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1400,23 +1245,20 @@ export class TimeManagementController {
    * BR-TM-09: Identify repeat offenders for HR review
    */
   @Get('lateness/offenders')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
   async getRepeatedLatenessOffenders(
     @Query('threshold') threshold: number,
     @Query('periodDays') periodDays: number,
     @Query('includeResolved') includeResolved?: boolean,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getRepeatedLatenessOffenders(
       {
         threshold: Number(threshold),
         periodDays: Number(periodDays),
-        includeResolved: includeResolved === true,
+        includeResolved: includeResolved,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1438,23 +1280,21 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async requestOvertimeApproval(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       attendanceRecordId: string;
       requestedMinutes: number;
       reason: string;
       assignedTo: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for employees
-    if (
-      user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== body.employeeId
-    ) {
+    if (user.roles.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== body.employeeId) {
       throw new Error('Access denied');
     }
     return this.timeManagementService.requestOvertimeApproval(body, user.userId);
@@ -1466,17 +1306,17 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async calculateOvertimeFromAttendance(
     @Param('attendanceRecordId') attendanceRecordId: string,
     @Body() body: { standardWorkMinutes?: number },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.calculateOvertimeFromAttendance(
       attendanceRecordId,
       body.standardWorkMinutes || 480,
-      user.userId,
+      user.userId
     );
   }
 
@@ -1488,13 +1328,13 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getEmployeeOvertimeSummary(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for employees
     if (
@@ -1508,7 +1348,7 @@ export class TimeManagementController {
       employeeId,
       new Date(startDate),
       new Date(endDate),
-      user.userId,
+      user.userId
     );
   }
 
@@ -1518,71 +1358,54 @@ export class TimeManagementController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getPendingOvertimeRequests(
     @Query('departmentId') departmentId?: string,
     @Query('assignedTo') assignedTo?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getPendingOvertimeRequests(
       { departmentId, assignedTo },
-      user.userId,
+      user.userId
     );
   }
 
   // Approve overtime request
   @Post('overtime/approve/:id')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async approveOvertimeRequest(
     @Param('id') id: string,
     @Body() body: { approvalNotes?: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.approveOvertimeRequest(
-      id,
-      body.approvalNotes,
-      user.userId,
-    );
+    return this.timeManagementService.approveOvertimeRequest(id, body.approvalNotes, user.userId);
   }
 
   // Reject overtime request
   @Post('overtime/reject/:id')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async rejectOvertimeRequest(
     @Param('id') id: string,
     @Body() body: { rejectionReason: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.timeManagementService.rejectOvertimeRequest(
-      id,
-      body.rejectionReason,
-      user.userId,
-    );
+    return this.timeManagementService.rejectOvertimeRequest(id, body.rejectionReason, user.userId);
   }
 
   // Auto-detect and create overtime exception
   @Post('overtime/auto-detect/:attendanceRecordId')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async autoDetectAndCreateOvertimeException(
     @Param('attendanceRecordId') attendanceRecordId: string,
     @Body() body: { standardWorkMinutes?: number; assignedTo: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.autoDetectAndCreateOvertimeException(
       attendanceRecordId,
       body.standardWorkMinutes || 480,
       body.assignedTo,
-      user.userId,
+      user.userId
     );
   }
 
@@ -1592,13 +1415,13 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getOvertimeStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getOvertimeStatistics(
       {
@@ -1606,91 +1429,66 @@ export class TimeManagementController {
         endDate: endDate ? new Date(endDate) : undefined,
         departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
   // Bulk process overtime requests
   @Post('overtime/bulk-process')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_ADMIN)
   async bulkProcessOvertimeRequests(
     @Body() body: { action: 'approve' | 'reject'; requestIds: string[]; notes: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.bulkProcessOvertimeRequests(
       body.action,
       body.requestIds,
       body.notes,
-      user.userId,
+      user.userId
     );
   }
 
   // ===== REPORTING =====
   @Post('reports/overtime')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async generateOvertimeReport(
     @Body() generateOvertimeReportDto: GenerateOvertimeReportDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateOvertimeReport(
       generateOvertimeReportDto,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('reports/lateness')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async generateLatenessReport(
     @Body() generateLatenessReportDto: GenerateLatenessReportDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateLatenessReport(
       generateLatenessReportDto,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('reports/exception')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async generateExceptionReport(
     @Body() generateExceptionReportDto: GenerateExceptionReportDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateExceptionReport(
       generateExceptionReportDto,
-      user.userId,
+      user.userId
     );
   }
 
   @Post('reports/export')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
-  async exportReport(
-    @Body() exportReportDto: ExportReportDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.timeManagementService.exportReport(
-      exportReportDto,
-      user.userId,
-    );
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.PAYROLL_SPECIALIST)
+  async exportReport(@Body() exportReportDto: ExportReportDto, @CurrentUser() user: any) {
+    return this.timeManagementService.exportReport(exportReportDto, user.userId);
   }
 
   // ===== US15: TIME MANAGEMENT REPORTING & ANALYTICS (BR-TM-19, BR-TM-13, BR-TM-22) =====
@@ -1705,17 +1503,18 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async generateAttendanceSummaryReport(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
       departmentId?: string;
       groupBy?: 'day' | 'week' | 'month';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateAttendanceSummaryReport(
       {
@@ -1725,7 +1524,7 @@ export class TimeManagementController {
         departmentId: body.departmentId,
         groupBy: body.groupBy,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1739,10 +1538,11 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async generateOvertimeCostAnalysis(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
@@ -1750,7 +1550,7 @@ export class TimeManagementController {
       hourlyRate?: number;
       overtimeMultiplier?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateOvertimeCostAnalysis(
       {
@@ -1761,7 +1561,7 @@ export class TimeManagementController {
         hourlyRate: body.hourlyRate,
         overtimeMultiplier: body.overtimeMultiplier,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1774,10 +1574,11 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async generatePayrollReadyReport(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeIds?: string[];
@@ -1785,7 +1586,7 @@ export class TimeManagementController {
       includeExceptions?: boolean;
       includePenalties?: boolean;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generatePayrollReadyReport(
       {
@@ -1796,7 +1597,7 @@ export class TimeManagementController {
         includeExceptions: body.includeExceptions,
         includePenalties: body.includePenalties,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1806,19 +1607,16 @@ export class TimeManagementController {
    * BR-TM-09: Track for disciplinary purposes
    */
   @Post('reports/disciplinary-summary')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async generateDisciplinarySummaryReport(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       departmentId?: string;
       severityFilter?: string[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateDisciplinarySummaryReport(
       {
@@ -1827,7 +1625,7 @@ export class TimeManagementController {
         departmentId: body.departmentId,
         severityFilter: body.severityFilter,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1841,15 +1639,16 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getTimeManagementAnalyticsDashboard(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       departmentId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.getTimeManagementAnalyticsDashboard(
       {
@@ -1857,7 +1656,7 @@ export class TimeManagementController {
         endDate: new Date(body.endDate),
         departmentId: body.departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1873,10 +1672,11 @@ export class TimeManagementController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getLatenessLogs(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
@@ -1885,7 +1685,7 @@ export class TimeManagementController {
       sortBy?: 'date' | 'employee' | 'duration';
       sortOrder?: 'asc' | 'desc';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.getLatenessLogs(
       {
@@ -1897,7 +1697,7 @@ export class TimeManagementController {
         sortBy: body.sortBy,
         sortOrder: body.sortOrder,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1910,17 +1710,18 @@ export class TimeManagementController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async generateOvertimeAndExceptionComplianceReport(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
       departmentId?: string;
       includeAllExceptionTypes?: boolean;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.generateOvertimeAndExceptionComplianceReport(
       {
@@ -1930,7 +1731,7 @@ export class TimeManagementController {
         departmentId: body.departmentId,
         includeAllExceptionTypes: body.includeAllExceptionTypes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1945,17 +1746,18 @@ export class TimeManagementController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_EMPLOYEE
   )
   async getEmployeeAttendanceHistory(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       startDate: Date;
       endDate: Date;
       includeExceptions?: boolean;
       includeOvertime?: boolean;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check: employees can only view their own history
     if (
@@ -1976,7 +1778,7 @@ export class TimeManagementController {
         includeExceptions: body.includeExceptions,
         includeOvertime: body.includeOvertime,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -1986,20 +1788,17 @@ export class TimeManagementController {
    * BR-TM-23: Reports must be exportable in multiple formats
    */
   @Post('reports/overtime-exception-export')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async exportOvertimeExceptionReport(
-    @Body() body: {
+    @Body()
+    body: {
       startDate: Date;
       endDate: Date;
       employeeId?: string;
       departmentId?: string;
       format: 'excel' | 'csv' | 'text';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.exportOvertimeExceptionReport(
       {
@@ -2009,7 +1808,7 @@ export class TimeManagementController {
         departmentId: body.departmentId,
         format: body.format,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -2022,24 +1821,21 @@ export class TimeManagementController {
    * As an HR Manager, I want attendance and time management data synchronized with payroll and leave modules
    */
   @Post('sync-data')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async syncData(
-    @Body() body: {
+    @Body()
+    body: {
       syncDate?: Date;
       modules?: ('payroll' | 'leaves' | 'benefits')[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.syncTimeManagementData(
       {
         syncDate: body.syncDate ? new Date(body.syncDate) : new Date(),
         modules: body.modules || ['payroll', 'leaves', 'benefits'],
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -2048,22 +1844,18 @@ export class TimeManagementController {
    * BR-TM-22: Check sync status across modules
    */
   @Get('sync-status')
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async getSyncStatus(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.timeManagementService.getSyncStatus(
       {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       },
-      user?.userId || 'system',
+      user?.userId || 'system'
     );
   }
 
@@ -2072,18 +1864,16 @@ export class TimeManagementController {
    * BR-TM-13: Attendance devices must sync automatically once reconnected online
    */
   @Post('sync-device')
-  @Roles(
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async syncDeviceData(
-    @Body() body: {
+    @Body()
+    body: {
       deviceId: string;
       employeeId?: string;
       startDate?: Date;
       endDate?: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.timeManagementService.syncDeviceData(
       {
@@ -2092,7 +1882,7 @@ export class TimeManagementController {
         startDate: body.startDate ? new Date(body.startDate) : undefined,
         endDate: body.endDate ? new Date(body.endDate) : undefined,
       },
-      user.userId,
+      user.userId
     );
   }
 }

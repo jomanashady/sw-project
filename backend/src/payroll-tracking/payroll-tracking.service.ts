@@ -22,14 +22,26 @@ import { LeavesService } from '../leaves/leaves.service';
 import { TimeManagementService } from '../time-management/services/time-management.service';
 import { paySlip, PayslipDocument } from '../payroll-execution/models/payslip.schema';
 import { payrollRuns, payrollRunsDocument } from '../payroll-execution/models/payrollRuns.schema';
-import { LeaveEntitlement, LeaveEntitlementDocument } from '../leaves/models/leave-entitlement.schema';
+import {
+  LeaveEntitlement,
+  LeaveEntitlementDocument,
+} from '../leaves/models/leave-entitlement.schema';
 import { LeaveRequest, LeaveRequestDocument } from '../leaves/models/leave-request.schema';
-import { AttendanceRecord, AttendanceRecordDocument } from '../time-management/models/attendance-record.schema';
-import { TimeException, TimeExceptionDocument } from '../time-management/models/time-exception.schema';
+import {
+  AttendanceRecord,
+  AttendanceRecordDocument,
+} from '../time-management/models/attendance-record.schema';
+import {
+  TimeException,
+  TimeExceptionDocument,
+} from '../time-management/models/time-exception.schema';
 import { TimeExceptionType, TimeExceptionStatus } from '../time-management/models/enums/index';
 import { Department, DepartmentDocument } from '../organization-structure/models/department.schema';
 import { Position, PositionDocument } from '../organization-structure/models/position.schema';
-import { PositionAssignment, PositionAssignmentDocument } from '../organization-structure/models/position-assignment.schema';
+import {
+  PositionAssignment,
+  PositionAssignmentDocument,
+} from '../organization-structure/models/position-assignment.schema';
 import { LeaveStatus } from '../leaves/enums/leave-status.enum';
 import { PaySlipPaymentStatus } from '../payroll-execution/enums/payroll-execution-enum';
 import { CreateClaimDTO } from './dto/CreateClaimDTO.dto';
@@ -47,11 +59,7 @@ import { ConfirmDisputeApprovalDTO } from './dto/ConfirmDisputeApprovalDTO.dto';
 import { GenerateRefundForDisputeDTO } from './dto/GenerateRefundForDisputeDTO.dto';
 import { GenerateRefundForClaimDTO } from './dto/GenerateRefundForClaimDTO.dto';
 import { ProcessRefundDTO } from './dto/ProcessRefundDTO.dto';
-import {
-  ClaimStatus,
-  DisputeStatus,
-  RefundStatus,
-} from './enums/payroll-tracking-enum';
+import { ClaimStatus, DisputeStatus, RefundStatus } from './enums/payroll-tracking-enum';
 import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { ConfigStatus } from '../payroll-configuration/enums/payroll-configuration-enums';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -95,36 +103,36 @@ export class PayrollTrackingService {
     @InjectModel('NotificationLog')
     private readonly notificationLogModel: Model<any>,
     @Inject(NotificationsService)
-    private readonly notificationsService: NotificationsService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   // Helper method to generate unique IDs
   private async generateClaimId(): Promise<string> {
     try {
-    const year = new Date().getFullYear();
+      const year = new Date().getFullYear();
       const count = await this.claimModel.countDocuments({
         claimId: new RegExp(`^CLAIM-${year}-`),
       });
-    const sequence = String(count + 1).padStart(4, '0');
-    return `CLAIM-${year}-${sequence}`;
+      const sequence = String(count + 1).padStart(4, '0');
+      return `CLAIM-${year}-${sequence}`;
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to generate claim ID: ${error?.message || 'Unknown error'}`,
+        `Failed to generate claim ID: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
   private async generateDisputeId(): Promise<string> {
     try {
-    const year = new Date().getFullYear();
+      const year = new Date().getFullYear();
       const count = await this.disputeModel.countDocuments({
         disputeId: new RegExp(`^DISP-${year}-`),
       });
-    const sequence = String(count + 1).padStart(4, '0');
-    return `DISP-${year}-${sequence}`;
+      const sequence = String(count + 1).padStart(4, '0');
+      return `DISP-${year}-${sequence}`;
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to generate dispute ID: ${error?.message || 'Unknown error'}`,
+        `Failed to generate dispute ID: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -132,9 +140,7 @@ export class PayrollTrackingService {
   // Helper method to validate and convert ObjectId
   private validateObjectId(id: string, fieldName: string): Types.ObjectId {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException(
-        `Invalid ${fieldName}: ${id} is not a valid MongoDB ObjectId`,
-      );
+      throw new BadRequestException(`Invalid ${fieldName}: ${id} is not a valid MongoDB ObjectId`);
     }
     return new Types.ObjectId(id);
   }
@@ -151,7 +157,7 @@ export class PayrollTrackingService {
    */
   private async validateEmployeeExists(
     employeeId: string,
-    checkActive = true,
+    checkActive = true
   ): Promise<Types.ObjectId> {
     const validEmployeeId = this.validateObjectId(employeeId, 'employeeId');
 
@@ -160,7 +166,7 @@ export class PayrollTrackingService {
 
     if (checkActive && employee.status !== EmployeeStatus.ACTIVE) {
       throw new BadRequestException(
-        `Employee with ID ${employeeId} is not active. Current status: ${employee.status}`,
+        `Employee with ID ${employeeId} is not active. Current status: ${employee.status}`
       );
     }
 
@@ -186,7 +192,8 @@ export class PayrollTrackingService {
       });
 
       const matchingTaxRule = taxRulesResult.data.find(
-        (rule: any) => rule.name === taxDeduction.name || rule._id?.toString() === taxDeduction._id?.toString(),
+        (rule: any) =>
+          rule.name === taxDeduction.name || rule._id?.toString() === taxDeduction._id?.toString()
       );
 
       if (matchingTaxRule) {
@@ -230,14 +237,17 @@ export class PayrollTrackingService {
       }
 
       // Try to find insurance bracket by name
-      const insuranceBracketsResult = await this.payrollConfigurationService.findAllInsuranceBrackets({
-        status: ConfigStatus.APPROVED,
-        page: 1,
-        limit: 100, // Get all approved insurance brackets
-      });
+      const insuranceBracketsResult =
+        await this.payrollConfigurationService.findAllInsuranceBrackets({
+          status: ConfigStatus.APPROVED,
+          page: 1,
+          limit: 100, // Get all approved insurance brackets
+        });
 
       const matchingBracket = insuranceBracketsResult.data.find(
-        (bracket: any) => bracket.name === insuranceDeduction.name || bracket._id?.toString() === insuranceDeduction._id?.toString(),
+        (bracket: any) =>
+          bracket.name === insuranceDeduction.name ||
+          bracket._id?.toString() === insuranceDeduction._id?.toString()
       );
 
       if (matchingBracket) {
@@ -273,23 +283,23 @@ export class PayrollTrackingService {
 
   /**
    * Validates that a user has permission to access an employee's data.
-   * 
+   *
    * Security Rule:
    * - DEPARTMENT_EMPLOYEE can only access their own data
    * - PAYROLL_SPECIALIST, FINANCE_STAFF, and SYSTEM_ADMIN can access any employee's data
-   * 
+   *
    * @param requestedEmployeeId - The employee ID being accessed
    * @param authenticatedUserId - The authenticated user's ID (from req.user)
    * @param userRoles - The authenticated user's roles (from EmployeeSystemRole)
    * @throws ForbiddenException if DEPARTMENT_EMPLOYEE tries to access another employee's data
-   * 
+   *
    * Note: This method should be called from service methods that access employee-specific data.
    * The controller should extract the user from req.user and pass it to the service.
    */
   private validateEmployeeAccess(
     requestedEmployeeId: string,
     authenticatedUserId: string | undefined,
-    userRoles: SystemRole[] | undefined,
+    userRoles: SystemRole[] | undefined
   ): void {
     // If no authenticated user or roles provided, skip validation
     // (This allows the method to work without authentication for testing or admin access)
@@ -307,13 +317,13 @@ export class PayrollTrackingService {
         role === SystemRole.DEPARTMENT_EMPLOYEE &&
         !userRoles.includes(SystemRole.PAYROLL_SPECIALIST) &&
         !userRoles.includes(SystemRole.FINANCE_STAFF) &&
-        !userRoles.includes(SystemRole.SYSTEM_ADMIN),
+        !userRoles.includes(SystemRole.SYSTEM_ADMIN)
     );
 
     // If user is a regular employee, they can only access their own data
     if (isRegularEmployee && requestedId !== authenticatedId) {
       throw new ForbiddenException(
-        'You do not have permission to access this employee\'s data. You can only access your own data.',
+        "You do not have permission to access this employee's data. You can only access your own data."
       );
     }
 
@@ -334,7 +344,15 @@ export class PayrollTrackingService {
     const payrollPeriod = new Date(payrollRun.payrollPeriod);
     // Assuming monthly payroll: start of month to end of month
     const startDate = new Date(payrollPeriod.getFullYear(), payrollPeriod.getMonth(), 1);
-    const endDate = new Date(payrollPeriod.getFullYear(), payrollPeriod.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endDate = new Date(
+      payrollPeriod.getFullYear(),
+      payrollPeriod.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
     return { startDate, endDate };
   }
@@ -368,7 +386,7 @@ export class PayrollTrackingService {
     range1Start: Date,
     range1End: Date,
     range2Start: Date,
-    range2End: Date,
+    range2End: Date
   ): boolean {
     return range1Start <= range2End && range1End >= range2Start;
   }
@@ -379,7 +397,7 @@ export class PayrollTrackingService {
   private async getEmployeesByRole(role: SystemRole): Promise<string[]> {
     try {
       console.log(`[getEmployeesByRole] Searching for employees with role: ${role}`);
-      
+
       // Try both exact match and case-insensitive match
       const systemRoles = await this.employeeSystemRoleModel
         .find({
@@ -391,7 +409,7 @@ export class PayrollTrackingService {
         .exec();
 
       console.log(`[getEmployeesByRole] Found ${systemRoles.length} employees with role ${role}`);
-      
+
       if (systemRoles.length === 0) {
         // Try case-insensitive search as fallback
         console.log(`[getEmployeesByRole] Trying case-insensitive search...`);
@@ -400,15 +418,15 @@ export class PayrollTrackingService {
           .select('employeeProfileId roles')
           .lean()
           .exec();
-        
+
         const matchingRoles = allRoles.filter((sr: any) => {
-          return sr.roles && sr.roles.some((r: string) => 
-            r.toLowerCase() === role.toLowerCase()
-          );
+          return sr.roles && sr.roles.some((r: string) => r.toLowerCase() === role.toLowerCase());
         });
-        
-        console.log(`[getEmployeesByRole] Found ${matchingRoles.length} employees with case-insensitive match`);
-        
+
+        console.log(
+          `[getEmployeesByRole] Found ${matchingRoles.length} employees with case-insensitive match`
+        );
+
         return matchingRoles.map((sr: any) => sr.employeeProfileId.toString());
       }
 
@@ -416,8 +434,11 @@ export class PayrollTrackingService {
         const empId = sr.employeeProfileId;
         return empId instanceof Types.ObjectId ? empId.toString() : String(empId);
       });
-      
-      console.log(`[getEmployeesByRole] Returning ${employeeIds.length} employee IDs:`, employeeIds);
+
+      console.log(
+        `[getEmployeesByRole] Returning ${employeeIds.length} employee IDs:`,
+        employeeIds
+      );
       return employeeIds;
     } catch (error: any) {
       console.error(`[getEmployeesByRole] Error fetching employees with role ${role}:`, error);
@@ -428,7 +449,7 @@ export class PayrollTrackingService {
   /**
    * Notification method that integrates with the NotificationsService
    * This method sends notifications to users through the centralized notification system.
-   * 
+   *
    * @param notificationType - Type of notification from NotificationType enum
    * @param recipientId - Employee ID of the notification recipient (or 'FINANCE_STAFF' for all finance staff)
    * @param recipientRole - Role of the recipient (e.g., 'FINANCE_STAFF', 'DEPARTMENT_EMPLOYEE')
@@ -440,19 +461,18 @@ export class PayrollTrackingService {
     recipientId: string | Types.ObjectId,
     recipientRole: string,
     message: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, any>
   ): Promise<void> {
     try {
       // Convert recipientId to string for processing
-      const recipientIdStr = recipientId instanceof Types.ObjectId 
-        ? recipientId.toString() 
-        : recipientId;
+      const recipientIdStr =
+        recipientId instanceof Types.ObjectId ? recipientId.toString() : recipientId;
 
       // If recipientId is 'FINANCE_STAFF', get all finance staff employees
       if (recipientIdStr === 'FINANCE_STAFF' || recipientRole === 'FINANCE_STAFF') {
         console.log('[PAYROLL_TRACKING_NOTIFICATION] Notifying all finance staff...');
         const financeStaffIds = await this.getEmployeesByRole(SystemRole.FINANCE_STAFF);
-        
+
         if (financeStaffIds.length === 0) {
           console.warn('[PAYROLL_TRACKING_NOTIFICATION] No finance staff found to notify');
           console.warn('[PAYROLL_TRACKING_NOTIFICATION] This might mean:');
@@ -462,7 +482,9 @@ export class PayrollTrackingService {
           return;
         }
 
-        console.log(`[PAYROLL_TRACKING_NOTIFICATION] Creating notifications for ${financeStaffIds.length} finance staff members`);
+        console.log(
+          `[PAYROLL_TRACKING_NOTIFICATION] Creating notifications for ${financeStaffIds.length} finance staff members`
+        );
 
         // Send notification to each finance staff member
         const notifications = financeStaffIds.map(async (staffId: string) => {
@@ -471,25 +493,32 @@ export class PayrollTrackingService {
               console.error(`[PAYROLL_TRACKING_NOTIFICATION] Invalid employee ID: ${staffId}`);
               return;
             }
-            
+
             const notification = await this.notificationLogModel.create({
               to: new Types.ObjectId(staffId),
               type: notificationType,
               message: message,
               isRead: false,
             });
-            
-            console.log(`[PAYROLL_TRACKING_NOTIFICATION] ✅ Created notification ${notification._id} for finance staff ${staffId}`);
+
+            console.log(
+              `[PAYROLL_TRACKING_NOTIFICATION] ✅ Created notification ${notification._id} for finance staff ${staffId}`
+            );
             return notification;
           } catch (err: any) {
-            console.error(`[PAYROLL_TRACKING_NOTIFICATION] ❌ Error creating notification for ${staffId}:`, err?.message || err);
+            console.error(
+              `[PAYROLL_TRACKING_NOTIFICATION] ❌ Error creating notification for ${staffId}:`,
+              err?.message || err
+            );
             console.error(`[PAYROLL_TRACKING_NOTIFICATION] Error details:`, err);
           }
         });
 
         const results = await Promise.all(notifications);
-        const successful = results.filter(r => r !== undefined).length;
-        console.log(`[PAYROLL_TRACKING_NOTIFICATION] ✅ Successfully sent ${successful} out of ${notifications.length} notifications to finance staff`);
+        const successful = results.filter((r) => r !== undefined).length;
+        console.log(
+          `[PAYROLL_TRACKING_NOTIFICATION] ✅ Successfully sent ${successful} out of ${notifications.length} notifications to finance staff`
+        );
         return;
       }
 
@@ -509,15 +538,12 @@ export class PayrollTrackingService {
       } else {
         console.warn(`[PAYROLL_TRACKING_NOTIFICATION] Invalid recipient ID: ${recipientIdStr}`);
       }
-
     } catch (error: any) {
       // Don't throw error - notifications should not break the main workflow
       // Log error for debugging
       console.error('[PAYROLL_TRACKING_NOTIFICATION_ERROR]', {
         notificationType,
-        recipientId: recipientId instanceof Types.ObjectId 
-          ? recipientId.toString() 
-          : recipientId,
+        recipientId: recipientId instanceof Types.ObjectId ? recipientId.toString() : recipientId,
         error: error instanceof Error ? error?.message : 'Unknown error',
       });
     }
@@ -528,21 +554,11 @@ export class PayrollTrackingService {
   async createClaim(createClaimDTO: CreateClaimDTO, currentUserId: string) {
     try {
       // Validate required fields
-      if (
-        !createClaimDTO.description ||
-        createClaimDTO.description.trim().length === 0
-      ) {
-        throw new BadRequestException(
-          'Description is required and cannot be empty',
-        );
+      if (!createClaimDTO.description || createClaimDTO.description.trim().length === 0) {
+        throw new BadRequestException('Description is required and cannot be empty');
       }
-      if (
-        !createClaimDTO.claimType ||
-        createClaimDTO.claimType.trim().length === 0
-      ) {
-        throw new BadRequestException(
-          'Claim type is required and cannot be empty',
-        );
+      if (!createClaimDTO.claimType || createClaimDTO.claimType.trim().length === 0) {
+        throw new BadRequestException('Claim type is required and cannot be empty');
       }
       if (!createClaimDTO.amount || createClaimDTO.amount <= 0) {
         throw new BadRequestException('Amount must be greater than 0');
@@ -550,22 +566,22 @@ export class PayrollTrackingService {
       if (createClaimDTO.amount > 10000000) {
         throw new BadRequestException('Amount exceeds maximum allowed limit');
       }
-      
+
       // Validate employee exists and is active
       const employeeId = await this.validateEmployeeExists(
         createClaimDTO.employeeId,
-        true, // Check if employee is active
+        true // Check if employee is active
       );
       // Validate finance staff if provided (optional, so don't check active status)
-      const financeStaffId = createClaimDTO.financeStaffId 
+      const financeStaffId = createClaimDTO.financeStaffId
         ? await this.validateEmployeeExists(
             createClaimDTO.financeStaffId,
-            false, // Finance staff might not need to be active
+            false // Finance staff might not need to be active
           )
         : undefined;
-      
+
       const claimId = await this.generateClaimId();
-      
+
       const claimData = {
         ...createClaimDTO,
         employeeId,
@@ -575,10 +591,10 @@ export class PayrollTrackingService {
         createdBy: new Types.ObjectId(currentUserId),
         updatedBy: new Types.ObjectId(currentUserId),
       };
-      
+
       const newClaim = new this.claimModel(claimData);
       const savedClaim = await newClaim.save();
-      
+
       return await this.claimModel
         .findById(savedClaim._id)
         .populate('employeeId', 'firstName lastName employeeNumber')
@@ -587,10 +603,7 @@ export class PayrollTrackingService {
         .populate('financeStaffId', 'firstName lastName')
         .exec();
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
@@ -598,17 +611,15 @@ export class PayrollTrackingService {
           .map((err: any) => err?.message)
           .join(', ');
         throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message || 'Unknown validation error'}`,
+          `Validation error: ${validationErrors || error?.message || 'Unknown validation error'}`
         );
       }
       if (error?.code === 11000) {
         throw new BadRequestException(
-          `Duplicate key error: ${JSON.stringify(error?.keyValue || {})}`,
+          `Duplicate key error: ${JSON.stringify(error?.keyValue || {})}`
         );
       }
-      throw new BadRequestException(
-        `Failed to create claim: ${error?.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to create claim: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -630,7 +641,7 @@ export class PayrollTrackingService {
           .populate('financeStaffId', 'firstName lastName')
           .exec();
       }
-      
+
       // If not found by _id, try by claimId string
       if (!claim) {
         claim = await this.claimModel
@@ -642,19 +653,16 @@ export class PayrollTrackingService {
           .exec();
       }
 
-    if (!claim) {
-      throw new NotFoundException(`Claim with ID ${claimId} not found`);
-    }
-    return claim;
+      if (!claim) {
+        throw new NotFoundException(`Claim with ID ${claimId} not found`);
+      }
+      return claim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve claim: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve claim: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -666,10 +674,10 @@ export class PayrollTrackingService {
         throw new BadRequestException('Claim ID is required');
       }
 
-    const claim = await this.claimModel.findOne({ claimId });
-    if (!claim) {
-      throw new NotFoundException(`Claim with ID ${claimId} not found`);
-    }
+      const claim = await this.claimModel.findOne({ claimId });
+      if (!claim) {
+        throw new NotFoundException(`Claim with ID ${claimId} not found`);
+      }
 
       // Validate update data
       if (updateClaimDTO.amount !== undefined && updateClaimDTO.amount <= 0) {
@@ -677,14 +685,10 @@ export class PayrollTrackingService {
       }
       if (updateClaimDTO.approvedAmount !== undefined) {
         if (updateClaimDTO.approvedAmount <= 0) {
-          throw new BadRequestException(
-            'Approved amount must be greater than 0',
-          );
+          throw new BadRequestException('Approved amount must be greater than 0');
         }
         if (updateClaimDTO.approvedAmount > claim.amount) {
-          throw new BadRequestException(
-            'Approved amount cannot exceed the original claim amount',
-          );
+          throw new BadRequestException('Approved amount cannot exceed the original claim amount');
         }
       }
       if (
@@ -693,19 +697,16 @@ export class PayrollTrackingService {
       ) {
         throw new BadRequestException('Description cannot be empty');
       }
-      if (
-        updateClaimDTO.claimType !== undefined &&
-        updateClaimDTO.claimType.trim().length === 0
-      ) {
+      if (updateClaimDTO.claimType !== undefined && updateClaimDTO.claimType.trim().length === 0) {
         throw new BadRequestException('Claim type cannot be empty');
       }
 
-    const updateData: any = { ...updateClaimDTO };
-    if (updateClaimDTO.financeStaffId) {
+      const updateData: any = { ...updateClaimDTO };
+      if (updateClaimDTO.financeStaffId) {
         // Validate finance staff exists (don't check active status)
         updateData.financeStaffId = await this.validateEmployeeExists(
           updateClaimDTO.financeStaffId,
-          false,
+          false
         );
       }
       updateData.updatedBy = new Types.ObjectId(currentUserId);
@@ -722,30 +723,21 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after update`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after update`);
       }
 
-    return updatedClaim;
+      return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
         const validationErrors = Object.values(error?.errors || {})
           .map((err: any) => err.message)
           .join(', ');
-        throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message}`,
-        );
+        throw new BadRequestException(`Validation error: ${validationErrors || error?.message}`);
       }
-      throw new BadRequestException(
-        `Failed to update claim: ${error?.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to update claim: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -757,28 +749,25 @@ export class PayrollTrackingService {
       }
 
       // Validate employee exists (don't check active status for viewing historical claims)
-      const validEmployeeId = await this.validateEmployeeExists(
-        employeeId,
-        false,
+      const validEmployeeId = await this.validateEmployeeExists(employeeId, false);
+
+      console.log(
+        `[getClaimsByEmployeeId] Querying claims for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`
       );
 
-      console.log(`[getClaimsByEmployeeId] Querying claims for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`);
-
       // Build query with multiple formats
-      const queryConditions: any[] = [
-        { employeeId: validEmployeeId }
-      ];
-      
+      const queryConditions: any[] = [{ employeeId: validEmployeeId }];
+
       // Try with original employeeId as ObjectId if valid
       if (Types.ObjectId.isValid(employeeId)) {
         queryConditions.push({ employeeId: new Types.ObjectId(employeeId) });
       }
-      
+
       // Try with original employeeId as string
       queryConditions.push({ employeeId: employeeId });
 
       // Try multiple query formats to handle different storage formats
-      let claims = await this.claimModel
+      const claims = await this.claimModel
         .find({ $or: queryConditions })
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -787,18 +776,17 @@ export class PayrollTrackingService {
         .sort({ createdAt: -1 })
         .exec();
 
-      console.log(`[getClaimsByEmployeeId] Found ${claims.length} claims for employeeId: ${employeeId}`);
+      console.log(
+        `[getClaimsByEmployeeId] Found ${claims.length} claims for employeeId: ${employeeId}`
+      );
 
       return claims;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve claims: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve claims: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -807,20 +795,20 @@ export class PayrollTrackingService {
   async getPendingClaims() {
     try {
       return await this.claimModel
-        .find({ 
-          status: { 
-            $in: [ClaimStatus.UNDER_REVIEW, ClaimStatus.PENDING_MANAGER_APPROVAL] 
-          } 
+        .find({
+          status: {
+            $in: [ClaimStatus.UNDER_REVIEW, ClaimStatus.PENDING_MANAGER_APPROVAL],
+          },
         })
-      .populate('employeeId', 'firstName lastName employeeNumber')
+        .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
         .populate('payrollManagerId', 'firstName lastName')
-      .populate('financeStaffId', 'firstName lastName')
-      .sort({ createdAt: -1 })
-      .exec();
+        .populate('financeStaffId', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve pending claims: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve pending claims: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -838,7 +826,7 @@ export class PayrollTrackingService {
         .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve all claims: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve all claims: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -847,7 +835,7 @@ export class PayrollTrackingService {
     claimId: string,
     approvedAmount: number,
     financeStaffId: string,
-    resolutionComment?: string,
+    resolutionComment?: string
   ) {
     try {
       if (!claimId || claimId.trim().length === 0) {
@@ -860,62 +848,50 @@ export class PayrollTrackingService {
         throw new BadRequestException('Finance staff ID is required');
       }
 
-    const claim = await this.claimModel.findOne({ claimId });
-    if (!claim) {
-      throw new NotFoundException(`Claim with ID ${claimId} not found`);
-    }
-    if (claim.status !== ClaimStatus.UNDER_REVIEW) {
-      throw new BadRequestException(`Claim is already ${claim.status}`);
-    }
+      const claim = await this.claimModel.findOne({ claimId });
+      if (!claim) {
+        throw new NotFoundException(`Claim with ID ${claimId} not found`);
+      }
+      if (claim.status !== ClaimStatus.UNDER_REVIEW) {
+        throw new BadRequestException(`Claim is already ${claim.status}`);
+      }
       if (approvedAmount > claim.amount) {
         throw new BadRequestException(
-          `Approved amount (${approvedAmount}) cannot exceed the original claim amount (${claim.amount})`,
+          `Approved amount (${approvedAmount}) cannot exceed the original claim amount (${claim.amount})`
         );
       }
 
       const updatedClaim = await this.claimModel
         .findOneAndUpdate(
-      { claimId },
-      {
-        status: ClaimStatus.APPROVED,
-        approvedAmount,
-            financeStaffId: this.validateObjectId(
-              financeStaffId,
-              'financeStaffId',
-            ),
-        resolutionComment,
-      },
-          { new: true, runValidators: true },
+          { claimId },
+          {
+            status: ClaimStatus.APPROVED,
+            approvedAmount,
+            financeStaffId: this.validateObjectId(financeStaffId, 'financeStaffId'),
+            resolutionComment,
+          },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('financeStaffId', 'firstName lastName')
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after approval`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after approval`);
       }
 
       return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to approve claim: ${error?.message || 'Unknown error'}`,
+        `Failed to approve claim: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
-  async rejectClaim(
-    claimId: string,
-    rejectionReason: string,
-    financeStaffId: string,
-  ) {
+  async rejectClaim(claimId: string, rejectionReason: string, financeStaffId: string) {
     try {
       if (!claimId || claimId.trim().length === 0) {
         throw new BadRequestException('Claim ID is required');
@@ -927,48 +903,38 @@ export class PayrollTrackingService {
         throw new BadRequestException('Finance staff ID is required');
       }
 
-    const claim = await this.claimModel.findOne({ claimId });
-    if (!claim) {
-      throw new NotFoundException(`Claim with ID ${claimId} not found`);
-    }
-    if (claim.status !== ClaimStatus.UNDER_REVIEW) {
-      throw new BadRequestException(`Claim is already ${claim.status}`);
-    }
+      const claim = await this.claimModel.findOne({ claimId });
+      if (!claim) {
+        throw new NotFoundException(`Claim with ID ${claimId} not found`);
+      }
+      if (claim.status !== ClaimStatus.UNDER_REVIEW) {
+        throw new BadRequestException(`Claim is already ${claim.status}`);
+      }
 
       const updatedClaim = await this.claimModel
         .findOneAndUpdate(
-      { claimId },
-      {
-        status: ClaimStatus.REJECTED,
+          { claimId },
+          {
+            status: ClaimStatus.REJECTED,
             rejectionReason: rejectionReason.trim(),
-            financeStaffId: this.validateObjectId(
-              financeStaffId,
-              'financeStaffId',
-            ),
+            financeStaffId: this.validateObjectId(financeStaffId, 'financeStaffId'),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('financeStaffId', 'firstName lastName')
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after rejection`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after rejection`);
       }
 
       return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(
-        `Failed to reject claim: ${error?.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to reject claim: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -977,42 +943,32 @@ export class PayrollTrackingService {
   async createDispute(createDisputeDTO: CreateDisputeDTO, currentUserId: string) {
     try {
       // Validate required fields
-      if (
-        !createDisputeDTO.description ||
-        createDisputeDTO.description.trim().length === 0
-      ) {
-        throw new BadRequestException(
-          'Description is required and cannot be empty',
-        );
+      if (!createDisputeDTO.description || createDisputeDTO.description.trim().length === 0) {
+        throw new BadRequestException('Description is required and cannot be empty');
       }
       if (createDisputeDTO.description.trim().length < 10) {
         throw new BadRequestException(
-          'Description must be at least 10 characters long to explain the dispute',
+          'Description must be at least 10 characters long to explain the dispute'
         );
       }
 
       // Validate employee exists and is active
       const employeeId = await this.validateEmployeeExists(
         createDisputeDTO.employeeId,
-        true, // Check if employee is active
+        true // Check if employee is active
       );
       // Validate payslipId (ObjectId format only, existence validated by populate)
-      const payslipId = this.validateObjectId(
-        createDisputeDTO.payslipId,
-        'payslipId',
-      );
-      
+      const payslipId = this.validateObjectId(createDisputeDTO.payslipId, 'payslipId');
+
       // Security: Verify that the payslip belongs to the employee
-      const payslip = await this.payslipModel
-        .findOne({ _id: payslipId, employeeId })
-        .exec();
-      
+      const payslip = await this.payslipModel.findOne({ _id: payslipId, employeeId }).exec();
+
       if (!payslip) {
         throw new NotFoundException(
-          `Payslip with ID ${createDisputeDTO.payslipId} not found for employee ${createDisputeDTO.employeeId}. You can only dispute your own payslips.`,
+          `Payslip with ID ${createDisputeDTO.payslipId} not found for employee ${createDisputeDTO.employeeId}. You can only dispute your own payslips.`
         );
       }
-      
+
       const disputeId = await this.generateDisputeId();
       const newDispute = new this.disputeModel({
         ...createDisputeDTO,
@@ -1033,27 +989,20 @@ export class PayrollTrackingService {
         .populate('payslipId')
         .exec();
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
         const validationErrors = Object.values(error?.errors || {})
           .map((err: any) => err.message)
           .join(', ');
-        throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message}`,
-        );
+        throw new BadRequestException(`Validation error: ${validationErrors || error?.message}`);
       }
       if (error?.code === 11000) {
-        throw new BadRequestException(
-          `Duplicate key error: ${JSON.stringify(error?.keyValue)}`,
-        );
+        throw new BadRequestException(`Duplicate key error: ${JSON.stringify(error?.keyValue)}`);
       }
       throw new BadRequestException(
-        `Failed to create dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to create dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1105,20 +1054,21 @@ export class PayrollTrackingService {
       }
       return dispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
   // REQ-PY-16: Allow dispute owners to refine details before resolution.
-  async updateDispute(disputeId: string, updateDisputeDTO: UpdateDisputeDTO, currentUserId: string) {
+  async updateDispute(
+    disputeId: string,
+    updateDisputeDTO: UpdateDisputeDTO,
+    currentUserId: string
+  ) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
         throw new BadRequestException('Dispute ID is required');
@@ -1145,7 +1095,7 @@ export class PayrollTrackingService {
       // Only allow updates if dispute is still under review (employees can only update before resolution)
       if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Cannot update dispute. Dispute status is ${dispute.status}. Only disputes under review can be updated.`,
+          `Cannot update dispute. Dispute status is ${dispute.status}. Only disputes under review can be updated.`
         );
       }
 
@@ -1155,9 +1105,7 @@ export class PayrollTrackingService {
           throw new BadRequestException('Description cannot be empty');
         }
         if (updateDisputeDTO.description.trim().length < 10) {
-          throw new BadRequestException(
-            'Description must be at least 10 characters long',
-          );
+          throw new BadRequestException('Description must be at least 10 characters long');
         }
       }
       if (
@@ -1169,27 +1117,27 @@ export class PayrollTrackingService {
 
       // Build update object with only defined fields (remove undefined values)
       const updateData: any = {};
-      
+
       if (updateDisputeDTO.description !== undefined) {
         updateData.description = updateDisputeDTO.description.trim();
       }
-      
+
       if (updateDisputeDTO.resolutionComment !== undefined) {
         updateData.resolutionComment = updateDisputeDTO.resolutionComment.trim();
       }
-      
+
       if (updateDisputeDTO.rejectionReason !== undefined) {
         updateData.rejectionReason = updateDisputeDTO.rejectionReason.trim();
       }
-      
+
       if (updateDisputeDTO.financeStaffId !== undefined) {
         // Validate finance staff exists (don't check active status)
         updateData.financeStaffId = await this.validateEmployeeExists(
           updateDisputeDTO.financeStaffId,
-          false,
+          false
         );
       }
-      
+
       if (updateDisputeDTO.status !== undefined) {
         updateData.status = updateDisputeDTO.status;
       }
@@ -1214,29 +1162,22 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after update`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after update`);
       }
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
         const validationErrors = Object.values(error?.errors || {})
           .map((err: any) => err.message)
           .join(', ');
-        throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message}`,
-        );
+        throw new BadRequestException(`Validation error: ${validationErrors || error?.message}`);
       }
       throw new BadRequestException(
-        `Failed to update dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to update dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1249,28 +1190,25 @@ export class PayrollTrackingService {
       }
 
       // Validate employee exists (don't check active status for viewing historical disputes)
-      const validEmployeeId = await this.validateEmployeeExists(
-        employeeId,
-        false,
+      const validEmployeeId = await this.validateEmployeeExists(employeeId, false);
+
+      console.log(
+        `[getDisputesByEmployeeId] Querying disputes for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`
       );
 
-      console.log(`[getDisputesByEmployeeId] Querying disputes for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`);
-
       // Build query with multiple formats
-      const queryConditions: any[] = [
-        { employeeId: validEmployeeId }
-      ];
-      
+      const queryConditions: any[] = [{ employeeId: validEmployeeId }];
+
       // Try with original employeeId as ObjectId if valid
       if (Types.ObjectId.isValid(employeeId)) {
         queryConditions.push({ employeeId: new Types.ObjectId(employeeId) });
       }
-      
+
       // Try with original employeeId as string
       queryConditions.push({ employeeId: employeeId });
 
       // Try multiple query formats to handle different storage formats
-      let disputes = await this.disputeModel
+      const disputes = await this.disputeModel
         .find({ $or: queryConditions })
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -1280,18 +1218,17 @@ export class PayrollTrackingService {
         .sort({ createdAt: -1 })
         .exec();
 
-      console.log(`[getDisputesByEmployeeId] Found ${disputes.length} disputes for employeeId: ${employeeId}`);
+      console.log(
+        `[getDisputesByEmployeeId] Found ${disputes.length} disputes for employeeId: ${employeeId}`
+      );
 
       return disputes;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve disputes: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve disputes: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1300,21 +1237,21 @@ export class PayrollTrackingService {
   async getPendingDisputes() {
     try {
       return await this.disputeModel
-        .find({ 
-          status: { 
-            $in: [DisputeStatus.UNDER_REVIEW, DisputeStatus.PENDING_MANAGER_APPROVAL] 
-          } 
+        .find({
+          status: {
+            $in: [DisputeStatus.UNDER_REVIEW, DisputeStatus.PENDING_MANAGER_APPROVAL],
+          },
         })
-      .populate('employeeId', 'firstName lastName employeeNumber')
+        .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
         .populate('payrollManagerId', 'firstName lastName')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('payslipId')
-      .sort({ createdAt: -1 })
-      .exec();
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('payslipId')
+        .sort({ createdAt: -1 })
+        .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve pending disputes: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve pending disputes: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1333,16 +1270,12 @@ export class PayrollTrackingService {
         .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve all disputes: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve all disputes: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
-  async approveDispute(
-    disputeId: string,
-    financeStaffId: string,
-    resolutionComment?: string,
-  ) {
+  async approveDispute(disputeId: string, financeStaffId: string, resolutionComment?: string) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
         throw new BadRequestException('Dispute ID is required');
@@ -1351,26 +1284,23 @@ export class PayrollTrackingService {
         throw new BadRequestException('Finance staff ID is required');
       }
 
-    const dispute = await this.disputeModel.findOne({ disputeId });
-    if (!dispute) {
-      throw new NotFoundException(`Dispute with ID ${disputeId} not found`);
-    }
-    if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
-      throw new BadRequestException(`Dispute is already ${dispute.status}`);
-    }
+      const dispute = await this.disputeModel.findOne({ disputeId });
+      if (!dispute) {
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found`);
+      }
+      if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
+        throw new BadRequestException(`Dispute is already ${dispute.status}`);
+      }
 
       const updatedDispute = await this.disputeModel
         .findOneAndUpdate(
-      { disputeId },
-      {
-        status: DisputeStatus.APPROVED,
-            financeStaffId: this.validateObjectId(
-              financeStaffId,
-              'financeStaffId',
-            ),
-        resolutionComment,
-      },
-          { new: true, runValidators: true },
+          { disputeId },
+          {
+            status: DisputeStatus.APPROVED,
+            financeStaffId: this.validateObjectId(financeStaffId, 'financeStaffId'),
+            resolutionComment,
+          },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('financeStaffId', 'firstName lastName')
@@ -1378,30 +1308,21 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after approval`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after approval`);
       }
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to approve dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to approve dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
-  async rejectDispute(
-    disputeId: string,
-    rejectionReason: string,
-    financeStaffId: string,
-  ) {
+  async rejectDispute(disputeId: string, rejectionReason: string, financeStaffId: string) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
         throw new BadRequestException('Dispute ID is required');
@@ -1413,26 +1334,23 @@ export class PayrollTrackingService {
         throw new BadRequestException('Finance staff ID is required');
       }
 
-    const dispute = await this.disputeModel.findOne({ disputeId });
-    if (!dispute) {
-      throw new NotFoundException(`Dispute with ID ${disputeId} not found`);
-    }
-    if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
-      throw new BadRequestException(`Dispute is already ${dispute.status}`);
-    }
+      const dispute = await this.disputeModel.findOne({ disputeId });
+      if (!dispute) {
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found`);
+      }
+      if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
+        throw new BadRequestException(`Dispute is already ${dispute.status}`);
+      }
 
       const updatedDispute = await this.disputeModel
         .findOneAndUpdate(
-      { disputeId },
-      {
-        status: DisputeStatus.REJECTED,
+          { disputeId },
+          {
+            status: DisputeStatus.REJECTED,
             rejectionReason: rejectionReason.trim(),
-            financeStaffId: this.validateObjectId(
-              financeStaffId,
-              'financeStaffId',
-            ),
+            financeStaffId: this.validateObjectId(financeStaffId, 'financeStaffId'),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('financeStaffId', 'firstName lastName')
@@ -1440,21 +1358,16 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after rejection`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after rejection`);
       }
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to reject dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to reject dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1471,44 +1384,33 @@ export class PayrollTrackingService {
         !createRefundDTO.refundDetails.description ||
         createRefundDTO.refundDetails.description.trim().length === 0
       ) {
-        throw new BadRequestException(
-          'Refund description is required and cannot be empty',
-        );
+        throw new BadRequestException('Refund description is required and cannot be empty');
       }
-      if (
-        !createRefundDTO.refundDetails.amount ||
-        createRefundDTO.refundDetails.amount <= 0
-      ) {
+      if (!createRefundDTO.refundDetails.amount || createRefundDTO.refundDetails.amount <= 0) {
         throw new BadRequestException('Refund amount must be greater than 0');
       }
       if (createRefundDTO.refundDetails.amount > 10000000) {
-        throw new BadRequestException(
-          'Refund amount exceeds maximum allowed limit',
-        );
+        throw new BadRequestException('Refund amount exceeds maximum allowed limit');
       }
 
-    // Validate that either claimId or disputeId is provided and is approved
+      // Validate that either claimId or disputeId is provided and is approved
       if (createRefundDTO.claimId && createRefundDTO.disputeId) {
         throw new BadRequestException(
-          'Cannot provide both claimId and disputeId. Please provide only one.',
+          'Cannot provide both claimId and disputeId. Please provide only one.'
         );
       }
       if (!createRefundDTO.claimId && !createRefundDTO.disputeId) {
-        throw new BadRequestException(
-          'Either claimId or disputeId must be provided',
-        );
+        throw new BadRequestException('Either claimId or disputeId must be provided');
       }
 
-    if (createRefundDTO.claimId) {
-      const claim = await this.claimModel.findById(createRefundDTO.claimId);
-      if (!claim) {
-          throw new NotFoundException(
-            `Claim with ID ${createRefundDTO.claimId} not found`,
-          );
-      }
-      if (claim.status !== ClaimStatus.APPROVED) {
+      if (createRefundDTO.claimId) {
+        const claim = await this.claimModel.findById(createRefundDTO.claimId);
+        if (!claim) {
+          throw new NotFoundException(`Claim with ID ${createRefundDTO.claimId} not found`);
+        }
+        if (claim.status !== ClaimStatus.APPROVED) {
           throw new BadRequestException(
-            `Claim must be approved before creating a refund. Current status: ${claim.status}`,
+            `Claim must be approved before creating a refund. Current status: ${claim.status}`
           );
         }
         // Check if refund already exists for this claim
@@ -1517,23 +1419,17 @@ export class PayrollTrackingService {
           status: RefundStatus.PENDING,
         });
         if (existingRefund) {
-          throw new BadRequestException(
-            'A pending refund already exists for this claim',
-          );
+          throw new BadRequestException('A pending refund already exists for this claim');
+        }
       }
-    }
-    if (createRefundDTO.disputeId) {
-        const dispute = await this.disputeModel.findById(
-          createRefundDTO.disputeId,
-        );
-      if (!dispute) {
-          throw new NotFoundException(
-            `Dispute with ID ${createRefundDTO.disputeId} not found`,
-          );
-      }
-      if (dispute.status !== DisputeStatus.APPROVED) {
+      if (createRefundDTO.disputeId) {
+        const dispute = await this.disputeModel.findById(createRefundDTO.disputeId);
+        if (!dispute) {
+          throw new NotFoundException(`Dispute with ID ${createRefundDTO.disputeId} not found`);
+        }
+        if (dispute.status !== DisputeStatus.APPROVED) {
           throw new BadRequestException(
-            `Dispute must be approved before creating a refund. Current status: ${dispute.status}`,
+            `Dispute must be approved before creating a refund. Current status: ${dispute.status}`
           );
         }
         // Check if refund already exists for this dispute
@@ -1542,27 +1438,19 @@ export class PayrollTrackingService {
           status: RefundStatus.PENDING,
         });
         if (existingRefund) {
-          throw new BadRequestException(
-            'A pending refund already exists for this dispute',
-          );
+          throw new BadRequestException('A pending refund already exists for this dispute');
         }
-    }
+      }
 
       // Validate employee exists (refunds can be for inactive employees too, so don't check active)
-      const validEmployeeId = await this.validateEmployeeExists(
-        createRefundDTO.employeeId,
-        false,
-      );
+      const validEmployeeId = await this.validateEmployeeExists(createRefundDTO.employeeId, false);
       // Validate finance staff if provided
       const validFinanceStaffId = createRefundDTO.financeStaffId
-        ? await this.validateEmployeeExists(
-            createRefundDTO.financeStaffId,
-            false,
-          )
+        ? await this.validateEmployeeExists(createRefundDTO.financeStaffId, false)
         : undefined;
 
-    const newRefund = new this.refundModel({
-      ...createRefundDTO,
+      const newRefund = new this.refundModel({
+        ...createRefundDTO,
         employeeId: validEmployeeId,
         financeStaffId: validFinanceStaffId,
         claimId: createRefundDTO.claimId
@@ -1571,41 +1459,34 @@ export class PayrollTrackingService {
         disputeId: createRefundDTO.disputeId
           ? this.validateObjectId(createRefundDTO.disputeId, 'disputeId')
           : undefined,
-      status: createRefundDTO.status || RefundStatus.PENDING,
-      createdBy: new Types.ObjectId(currentUserId),
-      updatedBy: new Types.ObjectId(currentUserId),
-    });
-    const savedRefund = await newRefund.save();
+        status: createRefundDTO.status || RefundStatus.PENDING,
+        createdBy: new Types.ObjectId(currentUserId),
+        updatedBy: new Types.ObjectId(currentUserId),
+      });
+      const savedRefund = await newRefund.save();
       return await this.refundModel
         .findById(savedRefund._id)
-      .populate('employeeId', 'firstName lastName employeeNumber')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('claimId')
-      .populate('disputeId')
-      .populate('paidInPayrollRunId')
-      .exec();
+        .populate('employeeId', 'firstName lastName employeeNumber')
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('claimId')
+        .populate('disputeId')
+        .populate('paidInPayrollRunId')
+        .exec();
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
         const validationErrors = Object.values(error?.errors || {})
           .map((err: any) => err.message)
           .join(', ');
-        throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message}`,
-        );
+        throw new BadRequestException(`Validation error: ${validationErrors || error?.message}`);
       }
       if (error?.code === 11000) {
-        throw new BadRequestException(
-          `Duplicate key error: ${JSON.stringify(error?.keyValue)}`,
-        );
+        throw new BadRequestException(`Duplicate key error: ${JSON.stringify(error?.keyValue)}`);
       }
       throw new BadRequestException(
-        `Failed to create refund: ${error?.message || 'Unknown error'}`,
+        `Failed to create refund: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1615,7 +1496,7 @@ export class PayrollTrackingService {
    * ✅ CALLED FROM OTHER SUBSYSTEMS:
    * - PayrollExecutionModule: Called to verify refund details when processing payroll runs.
    *   Used to get refund information before including it in payslip earnings.
-   * 
+   *
    * Integration Status: ✅ AVAILABLE
    * - Method is ready for use by PayrollExecutionModule for refund verification
    */
@@ -1624,35 +1505,34 @@ export class PayrollTrackingService {
       // Reject reserved route keywords that should not be treated as refund IDs
       const reservedKeywords = ['all', 'pending', 'employee'];
       if (reservedKeywords.includes(refundId?.toLowerCase())) {
-        throw new BadRequestException(`'${refundId}' is a reserved keyword and cannot be used as a refund ID`);
+        throw new BadRequestException(
+          `'${refundId}' is a reserved keyword and cannot be used as a refund ID`
+        );
       }
-      
+
       if (!refundId || !Types.ObjectId.isValid(refundId)) {
         throw new BadRequestException('Valid refund ID is required');
       }
 
       const refund = await this.refundModel
         .findById(refundId)
-      .populate('employeeId', 'firstName lastName employeeNumber')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('claimId')
-      .populate('disputeId')
-      .populate('paidInPayrollRunId')
-      .exec();
+        .populate('employeeId', 'firstName lastName employeeNumber')
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('claimId')
+        .populate('disputeId')
+        .populate('paidInPayrollRunId')
+        .exec();
 
-    if (!refund) {
-      throw new NotFoundException(`Refund with ID ${refundId} not found`);
-    }
-    return refund;
+      if (!refund) {
+        throw new NotFoundException(`Refund with ID ${refundId} not found`);
+      }
+      return refund;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve refund: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve refund: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1664,10 +1544,10 @@ export class PayrollTrackingService {
         throw new BadRequestException('Valid refund ID is required');
       }
 
-    const refund = await this.refundModel.findById(refundId);
-    if (!refund) {
-      throw new NotFoundException(`Refund with ID ${refundId} not found`);
-    }
+      const refund = await this.refundModel.findById(refundId);
+      if (!refund) {
+        throw new NotFoundException(`Refund with ID ${refundId} not found`);
+      }
 
       // Validate update data
       if (updateRefundDTO.refundDetails) {
@@ -1677,23 +1557,15 @@ export class PayrollTrackingService {
         ) {
           throw new BadRequestException('Refund description cannot be empty');
         }
-        if (
-          !updateRefundDTO.refundDetails.amount ||
-          updateRefundDTO.refundDetails.amount <= 0
-        ) {
+        if (!updateRefundDTO.refundDetails.amount || updateRefundDTO.refundDetails.amount <= 0) {
           throw new BadRequestException('Refund amount must be greater than 0');
         }
       }
 
       // Prevent status changes that violate business rules
       if (updateRefundDTO.status) {
-        if (
-          refund.status === RefundStatus.PAID &&
-          updateRefundDTO.status !== RefundStatus.PAID
-        ) {
-          throw new BadRequestException(
-            'Cannot change status of a paid refund',
-          );
+        if (refund.status === RefundStatus.PAID && updateRefundDTO.status !== RefundStatus.PAID) {
+          throw new BadRequestException('Cannot change status of a paid refund');
         }
         if (
           refund.status === RefundStatus.PENDING &&
@@ -1701,35 +1573,29 @@ export class PayrollTrackingService {
           !updateRefundDTO.paidInPayrollRunId
         ) {
           throw new BadRequestException(
-            'Cannot mark refund as paid without providing paidInPayrollRunId',
+            'Cannot mark refund as paid without providing paidInPayrollRunId'
           );
         }
       }
 
-    const updateData: any = { ...updateRefundDTO };
-    if (updateRefundDTO.financeStaffId) {
+      const updateData: any = { ...updateRefundDTO };
+      if (updateRefundDTO.financeStaffId) {
         // Validate finance staff exists (don't check active status)
         updateData.financeStaffId = await this.validateEmployeeExists(
           updateRefundDTO.financeStaffId,
-          false,
+          false
         );
-    }
-    if (updateRefundDTO.claimId) {
-        updateData.claimId = this.validateObjectId(
-          updateRefundDTO.claimId,
-          'claimId',
-        );
-    }
-    if (updateRefundDTO.disputeId) {
-        updateData.disputeId = this.validateObjectId(
-          updateRefundDTO.disputeId,
-          'disputeId',
-        );
-    }
-    if (updateRefundDTO.paidInPayrollRunId) {
+      }
+      if (updateRefundDTO.claimId) {
+        updateData.claimId = this.validateObjectId(updateRefundDTO.claimId, 'claimId');
+      }
+      if (updateRefundDTO.disputeId) {
+        updateData.disputeId = this.validateObjectId(updateRefundDTO.disputeId, 'disputeId');
+      }
+      if (updateRefundDTO.paidInPayrollRunId) {
         updateData.paidInPayrollRunId = this.validateObjectId(
           updateRefundDTO.paidInPayrollRunId,
-          'paidInPayrollRunId',
+          'paidInPayrollRunId'
         );
       }
       updateData.updatedBy = new Types.ObjectId(currentUserId);
@@ -1740,36 +1606,29 @@ export class PayrollTrackingService {
           runValidators: true,
         })
         .populate('employeeId', 'firstName lastName employeeNumber')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('claimId')
-      .populate('disputeId')
-      .populate('paidInPayrollRunId')
-      .exec();
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('claimId')
+        .populate('disputeId')
+        .populate('paidInPayrollRunId')
+        .exec();
 
       if (!updatedRefund) {
-        throw new NotFoundException(
-          `Refund with ID ${refundId} not found after update`,
-        );
+        throw new NotFoundException(`Refund with ID ${refundId} not found after update`);
       }
 
-    return updatedRefund;
+      return updatedRefund;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       if (error?.name === 'ValidationError') {
         const validationErrors = Object.values(error?.errors || {})
           .map((err: any) => err.message)
           .join(', ');
-        throw new BadRequestException(
-          `Validation error: ${validationErrors || error?.message}`,
-        );
+        throw new BadRequestException(`Validation error: ${validationErrors || error?.message}`);
       }
       throw new BadRequestException(
-        `Failed to update refund: ${error?.message || 'Unknown error'}`,
+        `Failed to update refund: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1780,7 +1639,7 @@ export class PayrollTrackingService {
    * - PayrollExecutionModule: Called during payroll calculation to get all pending refunds
    *   for a specific employee that need to be included in the current payroll run.
    *   The refunds are then added to the payslip earningsDetails.refunds array.
-   * 
+   *
    * Integration Status: ✅ ACTIVE
    * - Used in PayrollExecutionService.calculateRefunds() for net pay calculation
    * - Used in PayrollExecutionService.generateAndDistributePayslips() for payslip generation
@@ -1792,23 +1651,20 @@ export class PayrollTrackingService {
       }
 
       // Validate employee exists (don't check active status for viewing historical refunds)
-      const validEmployeeId = await this.validateEmployeeExists(
-        employeeId,
-        false,
+      const validEmployeeId = await this.validateEmployeeExists(employeeId, false);
+
+      console.log(
+        `[getRefundsByEmployeeId] Querying refunds for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`
       );
 
-      console.log(`[getRefundsByEmployeeId] Querying refunds for employeeId: ${employeeId}, validEmployeeId: ${validEmployeeId}`);
-
       // Build query with multiple formats
-      const queryConditions: any[] = [
-        { employeeId: validEmployeeId }
-      ];
-      
+      const queryConditions: any[] = [{ employeeId: validEmployeeId }];
+
       // Try with original employeeId as ObjectId if valid
       if (Types.ObjectId.isValid(employeeId)) {
         queryConditions.push({ employeeId: new Types.ObjectId(employeeId) });
       }
-      
+
       // Try with original employeeId as string
       queryConditions.push({ employeeId: employeeId });
 
@@ -1824,45 +1680,51 @@ export class PayrollTrackingService {
         .sort({ createdAt: -1 })
         .exec();
 
-      console.log(`[getRefundsByEmployeeId] Found ${refunds.length} refunds by direct employeeId query`);
+      console.log(
+        `[getRefundsByEmployeeId] Found ${refunds.length} refunds by direct employeeId query`
+      );
 
       // If no refunds found directly, also check refunds associated with employee's claims/disputes
       // This handles cases where refunds might be linked via claimId/disputeId
       if (refunds.length === 0) {
         // Get all claims and disputes for this employee
-        const employeeClaims = await this.claimModel.find({ 
-          $or: [
-            { employeeId: validEmployeeId },
-            { employeeId: new Types.ObjectId(employeeId) }
-          ]
-        }).select('_id').exec();
-        
-        const employeeDisputes = await this.disputeModel.find({ 
-          $or: [
-            { employeeId: validEmployeeId },
-            { employeeId: new Types.ObjectId(employeeId) }
-          ]
-        }).select('_id').exec();
-        
-        console.log(`[getRefundsByEmployeeId] Found ${employeeClaims.length} claims and ${employeeDisputes.length} disputes for employee`);
-        
-        const claimIds = employeeClaims.map(c => c._id);
-        const disputeIds = employeeDisputes.map(d => d._id);
-        
+        const employeeClaims = await this.claimModel
+          .find({
+            $or: [{ employeeId: validEmployeeId }, { employeeId: new Types.ObjectId(employeeId) }],
+          })
+          .select('_id')
+          .exec();
+
+        const employeeDisputes = await this.disputeModel
+          .find({
+            $or: [{ employeeId: validEmployeeId }, { employeeId: new Types.ObjectId(employeeId) }],
+          })
+          .select('_id')
+          .exec();
+
+        console.log(
+          `[getRefundsByEmployeeId] Found ${employeeClaims.length} claims and ${employeeDisputes.length} disputes for employee`
+        );
+
+        const claimIds = employeeClaims.map((c) => c._id);
+        const disputeIds = employeeDisputes.map((d) => d._id);
+
         if (claimIds.length > 0 || disputeIds.length > 0) {
           const query: any = {
-            $or: []
+            $or: [],
           };
-          
+
           if (claimIds.length > 0) {
             query.$or.push({ claimId: { $in: claimIds } });
           }
           if (disputeIds.length > 0) {
             query.$or.push({ disputeId: { $in: disputeIds } });
           }
-          
+
           if (query.$or.length > 0) {
-            console.log(`[getRefundsByEmployeeId] Querying refunds by claimIds (${claimIds.length}) and disputeIds (${disputeIds.length})`);
+            console.log(
+              `[getRefundsByEmployeeId] Querying refunds by claimIds (${claimIds.length}) and disputeIds (${disputeIds.length})`
+            );
             refunds = await this.refundModel
               .find(query)
               .populate('employeeId', 'firstName lastName employeeNumber')
@@ -1872,46 +1734,56 @@ export class PayrollTrackingService {
               .populate('paidInPayrollRunId')
               .sort({ createdAt: -1 })
               .exec();
-            console.log(`[getRefundsByEmployeeId] Found ${refunds.length} refunds via claims/disputes query`);
+            console.log(
+              `[getRefundsByEmployeeId] Found ${refunds.length} refunds via claims/disputes query`
+            );
           }
         }
       }
 
       // Also try to find ALL refunds and filter by employeeId from populated data (last resort)
       if (refunds.length === 0) {
-        console.log(`[getRefundsByEmployeeId] Trying to find all refunds and filter by employee...`);
+        console.log(
+          `[getRefundsByEmployeeId] Trying to find all refunds and filter by employee...`
+        );
         const allRefunds = await this.refundModel
           .find({})
           .populate('employeeId', 'firstName lastName employeeNumber')
           .populate('claimId')
           .populate('disputeId')
           .exec();
-        
+
         console.log(`[getRefundsByEmployeeId] Total refunds in database: ${allRefunds.length}`);
-        
+
         // Filter refunds where employeeId matches (handling both ObjectId and populated objects)
         refunds = allRefunds.filter((refund: any) => {
-          const refundEmployeeId = refund.employeeId?._id?.toString() || refund.employeeId?.toString() || String(refund.employeeId);
+          const refundEmployeeId =
+            refund.employeeId?._id?.toString() ||
+            refund.employeeId?.toString() ||
+            String(refund.employeeId);
           const targetEmployeeId = validEmployeeId.toString();
           const targetEmployeeIdString = employeeId;
-          return refundEmployeeId === targetEmployeeId || refundEmployeeId === targetEmployeeIdString;
+          return (
+            refundEmployeeId === targetEmployeeId || refundEmployeeId === targetEmployeeIdString
+          );
         });
-        
-        console.log(`[getRefundsByEmployeeId] Filtered to ${refunds.length} refunds matching employee`);
+
+        console.log(
+          `[getRefundsByEmployeeId] Filtered to ${refunds.length} refunds matching employee`
+        );
       }
 
-      console.log(`[getRefundsByEmployeeId] Final result: ${refunds.length} refunds for employeeId: ${employeeId}`);
-      
+      console.log(
+        `[getRefundsByEmployeeId] Final result: ${refunds.length} refunds for employeeId: ${employeeId}`
+      );
+
       return refunds;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve refunds: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve refunds: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1925,7 +1797,7 @@ export class PayrollTrackingService {
    *   1. Filter refunds by employees in the current payroll run
    *   2. Include refund amounts in payslip earningsDetails.refunds
    *   3. Call processRefund() after payroll run is finalized to mark refunds as PAID
-   * 
+   *
    * Integration Status: ✅ AVAILABLE
    * - Method is ready for use by PayrollExecutionModule
    * - Can be used for bulk refund retrieval at payroll run start
@@ -1934,15 +1806,15 @@ export class PayrollTrackingService {
     try {
       return await this.refundModel
         .find({ status: RefundStatus.PENDING })
-      .populate('employeeId', 'firstName lastName employeeNumber')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('claimId')
-      .populate('disputeId')
-      .sort({ createdAt: -1 })
-      .exec();
+        .populate('employeeId', 'firstName lastName employeeNumber')
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('claimId')
+        .populate('disputeId')
+        .sort({ createdAt: -1 })
+        .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve pending refunds: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve pending refunds: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1961,7 +1833,7 @@ export class PayrollTrackingService {
         .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve all refunds: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve all refunds: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -1971,14 +1843,14 @@ export class PayrollTrackingService {
    * ✅ CALLED FROM OTHER SUBSYSTEMS:
    * - PayrollExecutionModule: Called after a payroll run is finalized and payments are processed.
    *   This method marks refunds as PAID and links them to the payroll run that executed the payment.
-   *   
+   *
    *   Workflow:
    *   1. PayrollExecutionModule includes pending refunds in payslip earnings
    *   2. Payslips are generated with refunds in earningsDetails.refunds
    *   3. PayrollExecutionModule calls this method for each refund that was included in payslip
    *   4. Refund status changes from PENDING to PAID
    *   5. paidInPayrollRunId is set to link refund to the payroll run
-   * 
+   *
    * Integration Status: ✅ ACTIVE
    * - Called from PayrollExecutionService.generateAndDistributePayslips() after payslip generation
    * - Automatically marks refunds as PAID when included in payroll
@@ -1989,60 +1861,59 @@ export class PayrollTrackingService {
         throw new BadRequestException('Valid refund ID is required');
       }
       if (!processRefundDTO.paidInPayrollRunId) {
+        throw new BadRequestException('Payroll run ID is required to process refund');
+      }
+
+      const refund = await this.refundModel.findById(refundId);
+      if (!refund) {
+        throw new NotFoundException(`Refund with ID ${refundId} not found`);
+      }
+      if (refund.status !== RefundStatus.PENDING) {
         throw new BadRequestException(
-          'Payroll run ID is required to process refund',
+          `Refund is already ${refund.status}. Only pending refunds can be processed.`
         );
       }
 
-    const refund = await this.refundModel.findById(refundId);
-    if (!refund) {
-      throw new NotFoundException(`Refund with ID ${refundId} not found`);
-    }
-    if (refund.status !== RefundStatus.PENDING) {
-        throw new BadRequestException(
-          `Refund is already ${refund.status}. Only pending refunds can be processed.`,
-        );
-    }
-
       const updatedRefund = await this.refundModel
         .findByIdAndUpdate(
-      refundId,
-      {
-        status: RefundStatus.PAID,
+          refundId,
+          {
+            status: RefundStatus.PAID,
             paidInPayrollRunId: this.validateObjectId(
               processRefundDTO.paidInPayrollRunId,
-              'paidInPayrollRunId',
+              'paidInPayrollRunId'
             ),
             updatedBy: new Types.ObjectId(currentUserId),
-      },
-          { new: true, runValidators: true },
+          },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
-      .populate('financeStaffId', 'firstName lastName')
-      .populate('claimId')
-      .populate('disputeId')
-      .populate('paidInPayrollRunId')
-      .exec();
+        .populate('financeStaffId', 'firstName lastName')
+        .populate('claimId')
+        .populate('disputeId')
+        .populate('paidInPayrollRunId')
+        .exec();
 
       if (!updatedRefund) {
-        throw new NotFoundException(
-          `Refund with ID ${refundId} not found after processing`,
-        );
+        throw new NotFoundException(`Refund with ID ${refundId} not found after processing`);
       }
 
       // Notify employee that refund has been processed and included in payroll
       const employeeIdValue = updatedRefund.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       const refundAmount = updatedRefund.refundDetails?.amount || 0;
       const refundDescription = updatedRefund.refundDetails?.description || 'Refund';
       const payrollRunIdValue = updatedRefund.paidInPayrollRunId;
-      const payrollRunId = payrollRunIdValue instanceof Types.ObjectId
-        ? payrollRunIdValue.toString()
-        : (payrollRunIdValue as any)?._id?.toString() || (payrollRunIdValue ? String(payrollRunIdValue) : 'N/A');
-      
+      const payrollRunId =
+        payrollRunIdValue instanceof Types.ObjectId
+          ? payrollRunIdValue.toString()
+          : (payrollRunIdValue as any)?._id?.toString() ||
+            (payrollRunIdValue ? String(payrollRunIdValue) : 'N/A');
+
       await this.sendNotification(
         'REFUND_PROCESSED',
         employeeId,
@@ -2056,19 +1927,16 @@ export class PayrollTrackingService {
           status: RefundStatus.PAID,
           claimId: updatedRefund.claimId?.toString(),
           disputeId: updatedRefund.disputeId?.toString(),
-        },
+        }
       );
 
       return updatedRefund;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to process refund: ${error?.message || 'Unknown error'}`,
+        `Failed to process refund: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2079,7 +1947,7 @@ export class PayrollTrackingService {
   async approveClaimBySpecialist(
     claimId: string,
     approveClaimBySpecialistDTO: ApproveClaimBySpecialistDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!claimId || claimId.trim().length === 0) {
@@ -2092,26 +1960,25 @@ export class PayrollTrackingService {
       }
       if (claim.status !== ClaimStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Claim is already ${claim.status}. Only claims under review can be approved by specialist.`,
+          `Claim is already ${claim.status}. Only claims under review can be approved by specialist.`
         );
       }
 
       // Validate approved amount if provided
-      const approvedAmount =
-        approveClaimBySpecialistDTO.approvedAmount || claim.amount;
+      const approvedAmount = approveClaimBySpecialistDTO.approvedAmount || claim.amount;
       if (approvedAmount <= 0) {
         throw new BadRequestException('Approved amount must be greater than 0');
       }
       if (approvedAmount > claim.amount) {
         throw new BadRequestException(
-          `Approved amount (${approvedAmount}) cannot exceed the original claim amount (${claim.amount})`,
+          `Approved amount (${approvedAmount}) cannot exceed the original claim amount (${claim.amount})`
         );
       }
 
       // Validate payroll specialist exists
       const validPayrollSpecialistId = await this.validateEmployeeExists(
         approveClaimBySpecialistDTO.payrollSpecialistId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       // Specialist approves - status becomes PENDING_MANAGER_APPROVAL, waiting for manager confirmation
@@ -2125,7 +1992,7 @@ export class PayrollTrackingService {
             resolutionComment: approveClaimBySpecialistDTO.resolutionComment,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2134,17 +2001,16 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after approval`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after approval`);
       }
 
       // Notify employee about status change (pending manager approval)
       const employeeIdValue = updatedClaim.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         'CLAIM_PENDING_MANAGER_APPROVAL',
         employeeId,
@@ -2154,19 +2020,16 @@ export class PayrollTrackingService {
           claimId: updatedClaim.claimId,
           approvedAmount,
           status: ClaimStatus.PENDING_MANAGER_APPROVAL,
-        },
+        }
       );
 
       return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to approve claim: ${error?.message || 'Unknown error'}`,
+        `Failed to approve claim: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2175,7 +2038,7 @@ export class PayrollTrackingService {
   async rejectClaimBySpecialist(
     claimId: string,
     rejectClaimBySpecialistDTO: RejectClaimBySpecialistDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!claimId || claimId.trim().length === 0) {
@@ -2194,14 +2057,14 @@ export class PayrollTrackingService {
       }
       if (claim.status !== ClaimStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Claim is already ${claim.status}. Cannot reject a claim that is not under review.`,
+          `Claim is already ${claim.status}. Cannot reject a claim that is not under review.`
         );
       }
 
       // Validate payroll specialist exists
       const validPayrollSpecialistId = await this.validateEmployeeExists(
         rejectClaimBySpecialistDTO.payrollSpecialistId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       const updatedClaim = await this.claimModel
@@ -2213,7 +2076,7 @@ export class PayrollTrackingService {
             payrollSpecialistId: validPayrollSpecialistId,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2222,17 +2085,16 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after rejection`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after rejection`);
       }
 
       // Notify employee about rejection
       const employeeIdValue = updatedClaim.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         NotificationType.CLAIM_REJECTED,
         employeeId,
@@ -2242,20 +2104,15 @@ export class PayrollTrackingService {
           claimId: updatedClaim.claimId,
           rejectionReason: rejectClaimBySpecialistDTO.rejectionReason,
           status: ClaimStatus.REJECTED,
-        },
+        }
       );
 
       return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(
-        `Failed to reject claim: ${error?.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to reject claim: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -2263,7 +2120,7 @@ export class PayrollTrackingService {
   async approveDisputeBySpecialist(
     disputeId: string,
     approveDisputeBySpecialistDTO: ApproveDisputeBySpecialistDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
@@ -2276,14 +2133,14 @@ export class PayrollTrackingService {
       }
       if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Dispute is already ${dispute.status}. Only disputes under review can be approved by specialist.`,
+          `Dispute is already ${dispute.status}. Only disputes under review can be approved by specialist.`
         );
       }
 
       // Validate payroll specialist exists
       const validPayrollSpecialistId = await this.validateEmployeeExists(
         approveDisputeBySpecialistDTO.payrollSpecialistId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       // Specialist approves - status becomes PENDING_MANAGER_APPROVAL, waiting for manager confirmation
@@ -2296,7 +2153,7 @@ export class PayrollTrackingService {
             resolutionComment: approveDisputeBySpecialistDTO.resolutionComment,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2306,17 +2163,16 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after approval`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after approval`);
       }
 
       // Notify employee about status change (pending manager approval)
       const employeeIdValue = updatedDispute.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         'DISPUTE_PENDING_MANAGER_APPROVAL',
         employeeId,
@@ -2325,19 +2181,16 @@ export class PayrollTrackingService {
         {
           disputeId: updatedDispute.disputeId,
           status: DisputeStatus.PENDING_MANAGER_APPROVAL,
-        },
+        }
       );
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to approve dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to approve dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2346,7 +2199,7 @@ export class PayrollTrackingService {
   async rejectDisputeBySpecialist(
     disputeId: string,
     rejectDisputeBySpecialistDTO: RejectDisputeBySpecialistDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
@@ -2365,14 +2218,14 @@ export class PayrollTrackingService {
       }
       if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Dispute is already ${dispute.status}. Cannot reject a dispute that is not under review.`,
+          `Dispute is already ${dispute.status}. Cannot reject a dispute that is not under review.`
         );
       }
 
       // Validate payroll specialist exists
       const validPayrollSpecialistId = await this.validateEmployeeExists(
         rejectDisputeBySpecialistDTO.payrollSpecialistId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       const updatedDispute = await this.disputeModel
@@ -2380,12 +2233,11 @@ export class PayrollTrackingService {
           { disputeId },
           {
             status: DisputeStatus.REJECTED,
-            rejectionReason:
-              rejectDisputeBySpecialistDTO.rejectionReason.trim(),
+            rejectionReason: rejectDisputeBySpecialistDTO.rejectionReason.trim(),
             payrollSpecialistId: validPayrollSpecialistId,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2395,17 +2247,16 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after rejection`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after rejection`);
       }
 
       // Notify employee about rejection
       const employeeIdValue = updatedDispute.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         NotificationType.DISPUTE_REJECTED,
         employeeId,
@@ -2415,19 +2266,16 @@ export class PayrollTrackingService {
           disputeId: updatedDispute.disputeId,
           rejectionReason: rejectDisputeBySpecialistDTO.rejectionReason,
           status: DisputeStatus.REJECTED,
-        },
+        }
       );
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to reject dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to reject dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2438,7 +2286,7 @@ export class PayrollTrackingService {
   async confirmDisputeApproval(
     disputeId: string,
     confirmDisputeApprovalDTO: ConfirmDisputeApprovalDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
@@ -2451,14 +2299,14 @@ export class PayrollTrackingService {
       }
       if (dispute.status !== DisputeStatus.PENDING_MANAGER_APPROVAL) {
         throw new BadRequestException(
-          `Dispute must be pending manager approval. Current status: ${dispute.status}`,
+          `Dispute must be pending manager approval. Current status: ${dispute.status}`
         );
       }
 
       // Validate payroll manager exists
       const validPayrollManagerId = await this.validateEmployeeExists(
         confirmDisputeApprovalDTO.payrollManagerId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       // Manager confirms - status becomes APPROVED, finance staff can now see it
@@ -2469,11 +2317,10 @@ export class PayrollTrackingService {
             status: DisputeStatus.APPROVED, // Manager approved, now visible to finance
             payrollManagerId: validPayrollManagerId,
             resolutionComment:
-              confirmDisputeApprovalDTO.resolutionComment ||
-              dispute.resolutionComment,
+              confirmDisputeApprovalDTO.resolutionComment || dispute.resolutionComment,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2483,9 +2330,7 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedDispute) {
-        throw new NotFoundException(
-          `Dispute with ID ${disputeId} not found after confirmation`,
-        );
+        throw new NotFoundException(`Dispute with ID ${disputeId} not found after confirmation`);
       }
 
       // Notify finance staff that a dispute has been approved and is ready for refund processing
@@ -2503,15 +2348,16 @@ export class PayrollTrackingService {
               : (empId as any)?._id?.toString() || String(empId);
           })(),
           status: DisputeStatus.APPROVED,
-        },
+        }
       );
 
       // Also notify employee that dispute has been fully approved
       const employeeIdValue = updatedDispute.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         NotificationType.DISPUTE_APPROVED,
         employeeId,
@@ -2520,19 +2366,16 @@ export class PayrollTrackingService {
         {
           disputeId: updatedDispute.disputeId,
           status: DisputeStatus.APPROVED,
-        },
+        }
       );
 
       return updatedDispute;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to confirm dispute approval: ${error?.message || 'Unknown error'}`,
+        `Failed to confirm dispute approval: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2541,7 +2384,7 @@ export class PayrollTrackingService {
   async confirmClaimApproval(
     claimId: string,
     confirmClaimApprovalDTO: ConfirmClaimApprovalDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!claimId || claimId.trim().length === 0) {
@@ -2554,14 +2397,14 @@ export class PayrollTrackingService {
       }
       if (claim.status !== ClaimStatus.PENDING_MANAGER_APPROVAL) {
         throw new BadRequestException(
-          `Claim must be pending manager approval. Current status: ${claim.status}`,
+          `Claim must be pending manager approval. Current status: ${claim.status}`
         );
       }
 
       // Validate payroll manager exists
       const validPayrollManagerId = await this.validateEmployeeExists(
         confirmClaimApprovalDTO.payrollManagerId,
-        false, // Don't check active status for staff
+        false // Don't check active status for staff
       );
 
       // Manager confirms - status becomes APPROVED, finance staff can now see it
@@ -2571,12 +2414,10 @@ export class PayrollTrackingService {
           {
             status: ClaimStatus.APPROVED, // Manager approved, now visible to finance
             payrollManagerId: validPayrollManagerId,
-            resolutionComment:
-              confirmClaimApprovalDTO.resolutionComment ||
-              claim.resolutionComment,
+            resolutionComment: confirmClaimApprovalDTO.resolutionComment || claim.resolutionComment,
             updatedBy: new Types.ObjectId(currentUserId),
           },
-          { new: true, runValidators: true },
+          { new: true, runValidators: true }
         )
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollSpecialistId', 'firstName lastName')
@@ -2585,9 +2426,7 @@ export class PayrollTrackingService {
         .exec();
 
       if (!updatedClaim) {
-        throw new NotFoundException(
-          `Claim with ID ${claimId} not found after confirmation`,
-        );
+        throw new NotFoundException(`Claim with ID ${claimId} not found after confirmation`);
       }
 
       // REQ: As Finance staff, I want to view and get notified with approved expense claims, so that adjustments can be done.
@@ -2610,16 +2449,17 @@ export class PayrollTrackingService {
           employeeNumber: (updatedClaim.employeeId as any)?.employeeNumber || 'N/A',
           approvedAmount: updatedClaim.approvedAmount || updatedClaim.amount,
           status: ClaimStatus.APPROVED,
-        },
+        }
       );
       console.log(`[confirmClaimApproval] Finance staff notification sent for claim ${claimId}`);
 
       // Also notify employee that claim has been fully approved
       const employeeIdValue = updatedClaim.employeeId;
-      const employeeId = employeeIdValue instanceof Types.ObjectId
-        ? employeeIdValue.toString()
-        : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
-      
+      const employeeId =
+        employeeIdValue instanceof Types.ObjectId
+          ? employeeIdValue.toString()
+          : (employeeIdValue as any)?._id?.toString() || String(employeeIdValue);
+
       await this.sendNotification(
         NotificationType.CLAIM_APPROVED,
         employeeId,
@@ -2629,19 +2469,16 @@ export class PayrollTrackingService {
           claimId: updatedClaim.claimId,
           approvedAmount: updatedClaim.approvedAmount || updatedClaim.amount,
           status: ClaimStatus.APPROVED,
-        },
+        }
       );
 
       return updatedClaim;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to confirm claim approval: ${error?.message || 'Unknown error'}`,
+        `Failed to confirm claim approval: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2662,7 +2499,7 @@ export class PayrollTrackingService {
         .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve approved disputes: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve approved disputes: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2680,7 +2517,7 @@ export class PayrollTrackingService {
         .exec();
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve approved claims: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve approved claims: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2692,7 +2529,7 @@ export class PayrollTrackingService {
   async generateRefundForDispute(
     disputeId: string,
     generateRefundForDisputeDTO: GenerateRefundForDisputeDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!disputeId || disputeId.trim().length === 0) {
@@ -2706,7 +2543,7 @@ export class PayrollTrackingService {
       }
       if (dispute.status !== DisputeStatus.APPROVED) {
         throw new BadRequestException(
-          `Dispute must be approved before generating refund. Current status: ${dispute.status}`,
+          `Dispute must be approved before generating refund. Current status: ${dispute.status}`
         );
       }
 
@@ -2716,9 +2553,7 @@ export class PayrollTrackingService {
         status: RefundStatus.PENDING,
       });
       if (existingRefund) {
-        throw new BadRequestException(
-          'A pending refund already exists for this dispute',
-        );
+        throw new BadRequestException('A pending refund already exists for this dispute');
       }
 
       // Get MongoDB _id for createRefund (which uses findById)
@@ -2733,14 +2568,11 @@ export class PayrollTrackingService {
 
       return await this.createRefund(createRefundDTO, currentUserId);
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to generate refund for dispute: ${error?.message || 'Unknown error'}`,
+        `Failed to generate refund for dispute: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2749,7 +2581,7 @@ export class PayrollTrackingService {
   async generateRefundForClaim(
     claimId: string,
     generateRefundForClaimDTO: GenerateRefundForClaimDTO,
-    currentUserId: string,
+    currentUserId: string
   ) {
     try {
       if (!claimId || claimId.trim().length === 0) {
@@ -2762,7 +2594,7 @@ export class PayrollTrackingService {
       }
       if (claim.status !== ClaimStatus.APPROVED) {
         throw new BadRequestException(
-          `Claim must be approved before generating refund. Current status: ${claim.status}`,
+          `Claim must be approved before generating refund. Current status: ${claim.status}`
         );
       }
 
@@ -2772,9 +2604,7 @@ export class PayrollTrackingService {
         status: RefundStatus.PENDING,
       });
       if (existingRefund) {
-        throw new BadRequestException(
-          'A pending refund already exists for this claim',
-        );
+        throw new BadRequestException('A pending refund already exists for this claim');
       }
 
       const employeeId = claim.employeeId.toString();
@@ -2788,14 +2618,11 @@ export class PayrollTrackingService {
 
       return await this.createRefund(createRefundDTO, currentUserId);
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to generate refund for claim: ${error?.message || 'Unknown error'}`,
+        `Failed to generate refund for claim: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2825,9 +2652,7 @@ export class PayrollTrackingService {
             .exec();
 
           const isDisputed = disputes.length > 0;
-          const hasActiveDispute = disputes.some(
-            (d) => d.status !== DisputeStatus.REJECTED,
-          );
+          const hasActiveDispute = disputes.some((d) => d.status !== DisputeStatus.REJECTED);
 
           const payslipData = payslip.toObject ? payslip.toObject() : payslip;
           return {
@@ -2845,19 +2670,16 @@ export class PayrollTrackingService {
                 ? 'paid'
                 : 'pending',
           };
-        }),
+        })
       );
 
       return enhancedPayslips;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve payslips: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve payslips: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2876,9 +2698,7 @@ export class PayrollTrackingService {
         .exec();
 
       if (!payslip) {
-        throw new NotFoundException(
-          `Payslip with ID ${payslipId} not found for this employee`,
-        );
+        throw new NotFoundException(`Payslip with ID ${payslipId} not found for this employee`);
       }
 
       // Check if this payslip has any disputes (to show "disputed" status)
@@ -2890,9 +2710,7 @@ export class PayrollTrackingService {
 
       // Determine if payslip is disputed
       const isDisputed = disputes.length > 0;
-      const hasActiveDispute = disputes.some(
-        (d) => d.status !== DisputeStatus.REJECTED,
-      );
+      const hasActiveDispute = disputes.some((d) => d.status !== DisputeStatus.REJECTED);
       const latestDispute = disputes.length > 0 ? disputes[0] : null;
 
       // Return payslip with enhanced status information
@@ -2923,14 +2741,11 @@ export class PayrollTrackingService {
             : 'pending',
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve payslip: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve payslip: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -2949,9 +2764,7 @@ export class PayrollTrackingService {
         .exec();
 
       if (!payslip) {
-        throw new NotFoundException(
-          `Payslip with ID ${payslipId} not found for this employee`,
-        );
+        throw new NotFoundException(`Payslip with ID ${payslipId} not found for this employee`);
       }
 
       // Get employee details
@@ -2962,9 +2775,7 @@ export class PayrollTrackingService {
 
       // Get payroll run for period information
       const payrollRun = await this.payrollRunsModel.findById(payslip.payrollRunId).exec();
-      const periodDate = payrollRun
-        ? new Date(payrollRun.payrollPeriod)
-        : new Date();
+      const periodDate = payrollRun ? new Date(payrollRun.payrollPeriod) : new Date();
       const periodMonth = periodDate.toLocaleString('default', {
         month: 'long',
         year: 'numeric',
@@ -2976,7 +2787,7 @@ export class PayrollTrackingService {
         PDFDocument = require('pdfkit');
       } catch (e) {
         throw new BadRequestException(
-          'PDF generation is not available. Please contact system administrator.',
+          'PDF generation is not available. Please contact system administrator.'
         );
       }
 
@@ -2986,14 +2797,12 @@ export class PayrollTrackingService {
 
       // Collect PDF data
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      
+
       // Generate PDF content
       doc.fontSize(20).text('PAYSLIP', { align: 'center' });
       doc.moveDown(0.5);
       doc.fontSize(12);
-      doc.text(
-        `Employee: ${employee.fullName || `${employee.firstName} ${employee.lastName}`}`,
-      );
+      doc.text(`Employee: ${employee.fullName || `${employee.firstName} ${employee.lastName}`}`);
       doc.text(`Employee Number: ${employee.employeeNumber}`);
       doc.text(`Period: ${periodMonth}`);
       if (payrollRun?.runId) {
@@ -3006,76 +2815,56 @@ export class PayrollTrackingService {
       doc.fontSize(10);
       doc.text(`Base Salary: $${payslip.earningsDetails.baseSalary.toFixed(2)}`);
 
-      if (
-        payslip.earningsDetails.allowances &&
-        payslip.earningsDetails.allowances.length > 0
-      ) {
+      if (payslip.earningsDetails.allowances && payslip.earningsDetails.allowances.length > 0) {
         payslip.earningsDetails.allowances.forEach((allowance: any) => {
           doc.text(
-            `  ${allowance.allowanceName || 'Allowance'}: $${(allowance.amount || 0).toFixed(2)}`,
+            `  ${allowance.allowanceName || 'Allowance'}: $${(allowance.amount || 0).toFixed(2)}`
           );
         });
       }
 
-      if (
-        payslip.earningsDetails.bonuses &&
-        payslip.earningsDetails.bonuses.length > 0
-      ) {
+      if (payslip.earningsDetails.bonuses && payslip.earningsDetails.bonuses.length > 0) {
         payslip.earningsDetails.bonuses.forEach((bonus: any) => {
           doc.text(`  ${bonus.bonusName || 'Bonus'}: $${(bonus.amount || 0).toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.earningsDetails.benefits &&
-        payslip.earningsDetails.benefits.length > 0
-      ) {
+      if (payslip.earningsDetails.benefits && payslip.earningsDetails.benefits.length > 0) {
         payslip.earningsDetails.benefits.forEach((benefit: any) => {
           doc.text(`  ${benefit.benefitName || 'Benefit'}: $${(benefit.amount || 0).toFixed(2)}`);
         });
       }
 
-      if (
-        payslip.earningsDetails.refunds &&
-        payslip.earningsDetails.refunds.length > 0
-      ) {
+      if (payslip.earningsDetails.refunds && payslip.earningsDetails.refunds.length > 0) {
         payslip.earningsDetails.refunds.forEach((refund: any) => {
           doc.text(
-            `  Refund: $${(refund.refundAmount || 0).toFixed(2)} - ${refund.refundDescription || ''}`,
+            `  Refund: $${(refund.refundAmount || 0).toFixed(2)} - ${refund.refundDescription || ''}`
           );
         });
       }
 
       doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(`Total Gross Salary: $${payslip.totalGrossSalary.toFixed(2)}`, {
-          underline: true,
-        });
+      doc.fontSize(12).text(`Total Gross Salary: $${payslip.totalGrossSalary.toFixed(2)}`, {
+        underline: true,
+      });
 
       // Deductions section
       doc.moveDown();
       doc.fontSize(14).text('DEDUCTIONS', { underline: true });
       doc.fontSize(10);
 
-      if (
-        payslip.deductionsDetails.taxes &&
-        payslip.deductionsDetails.taxes.length > 0
-      ) {
+      if (payslip.deductionsDetails.taxes && payslip.deductionsDetails.taxes.length > 0) {
         payslip.deductionsDetails.taxes.forEach((tax: any) => {
           doc.text(
-            `  ${tax.taxName || 'Tax'} (${tax.taxRate || 0}%): $${(tax.taxAmount || 0).toFixed(2)}`,
+            `  ${tax.taxName || 'Tax'} (${tax.taxRate || 0}%): $${(tax.taxAmount || 0).toFixed(2)}`
           );
         });
       }
 
-      if (
-        payslip.deductionsDetails.insurances &&
-        payslip.deductionsDetails.insurances.length > 0
-      ) {
+      if (payslip.deductionsDetails.insurances && payslip.deductionsDetails.insurances.length > 0) {
         payslip.deductionsDetails.insurances.forEach((insurance: any) => {
           doc.text(
-            `  ${insurance.insuranceName || 'Insurance'}: $${(insurance.employeeContribution || 0).toFixed(2)}`,
+            `  ${insurance.insuranceName || 'Insurance'}: $${(insurance.employeeContribution || 0).toFixed(2)}`
           );
         });
       }
@@ -3097,18 +2886,14 @@ export class PayrollTrackingService {
       }
 
       doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(`Total Deductions: $${(payslip.totaDeductions || 0).toFixed(2)}`, {
-          underline: true,
-        });
+      doc.fontSize(12).text(`Total Deductions: $${(payslip.totaDeductions || 0).toFixed(2)}`, {
+        underline: true,
+      });
 
       // Summary
       doc.moveDown();
       doc.fontSize(16).text('NET PAY', { align: 'center', underline: true });
-      doc
-        .fontSize(18)
-        .text(`$${payslip.netPay.toFixed(2)}`, { align: 'center' });
+      doc.fontSize(18).text(`$${payslip.netPay.toFixed(2)}`, { align: 'center' });
 
       doc.end();
 
@@ -3123,15 +2908,10 @@ export class PayrollTrackingService {
         });
       });
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(
-        `Failed to generate PDF: ${error?.message || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to generate PDF: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -3144,9 +2924,10 @@ export class PayrollTrackingService {
       // Extract payGradeId - handle both populated and non-populated cases
       let payGradeIdValue: string | null = null;
       if (employee.payGradeId) {
-        payGradeIdValue = (employee.payGradeId as any)?._id?.toString() || 
-                         (employee.payGradeId as any)?.toString() || 
-                         null;
+        payGradeIdValue =
+          (employee.payGradeId as any)?._id?.toString() ||
+          (employee.payGradeId as any)?.toString() ||
+          null;
       }
 
       // Enrich pay grade details using PayrollConfigurationService
@@ -3183,7 +2964,8 @@ export class PayrollTrackingService {
 
       // Build response with base salary at root level
       const response: any = {
-        employeeId: (employee as any)._id?.toString() || (employee as any).id?.toString() || employeeId,
+        employeeId:
+          (employee as any)._id?.toString() || (employee as any).id?.toString() || employeeId,
         employeeNumber: employee.employeeNumber,
         firstName: employee.firstName,
         lastName: employee.lastName,
@@ -3200,21 +2982,19 @@ export class PayrollTrackingService {
 
       // Add warning if no pay grade is assigned
       if (!payGradeIdValue) {
-        response.warning = 'No pay grade assigned to this employee. Base salary information is not available.';
+        response.warning =
+          'No pay grade assigned to this employee. Base salary information is not available.';
       } else if (!baseSalary) {
         response.warning = 'Pay grade found but base salary information is not available.';
       }
 
       return response;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve base salary: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve base salary: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3257,12 +3037,13 @@ export class PayrollTrackingService {
       }
 
       // Get leave encashment from payslip earnings
-      const leaveEncashment = payslip?.earningsDetails?.allowances?.filter(
-        (allowance: any) => 
-          allowance.type === 'LEAVE_ENCASHMENT' || 
-          allowance.name?.toLowerCase().includes('leave') ||
-          allowance.name?.toLowerCase().includes('encashment'),
-      ) || [];
+      const leaveEncashment =
+        payslip?.earningsDetails?.allowances?.filter(
+          (allowance: any) =>
+            allowance.type === 'LEAVE_ENCASHMENT' ||
+            allowance.name?.toLowerCase().includes('leave') ||
+            allowance.name?.toLowerCase().includes('encashment')
+        ) || [];
 
       // Enrich leave encashment allowances with configuration details
       const enrichedLeaveEncashment = await Promise.all(
@@ -3276,7 +3057,8 @@ export class PayrollTrackingService {
                 limit: 100,
               });
               const matchingAllowance = allowancesResult.data.find(
-                (allowance: any) => allowance.name === enc.name || allowance._id?.toString() === enc._id?.toString(),
+                (allowance: any) =>
+                  allowance.name === enc.name || allowance._id?.toString() === enc._id?.toString()
               );
               if (matchingAllowance) {
                 return {
@@ -3295,7 +3077,7 @@ export class PayrollTrackingService {
             console.warn(`Failed to enrich leave encashment allowance: ${error?.message}`);
             return enc;
           }
-        }),
+        })
       );
 
       // Calculate potential encashment for unused leave days
@@ -3307,12 +3089,12 @@ export class PayrollTrackingService {
       const encashableLeaves = leaveEntitlements
         .filter((ent) => {
           const leaveType = ent.leaveTypeId as any;
-          return leaveType && (leaveType.encashable !== false) && ent.remaining > 0;
+          return leaveType && leaveType.encashable !== false && ent.remaining > 0;
         })
         .map((ent) => {
           const leaveType = ent.leaveTypeId as any;
           const potentialEncashment = ent.remaining * dailySalary;
-      return {
+          return {
             leaveType: {
               id: leaveType._id || leaveType,
               name: leaveType.name,
@@ -3367,20 +3149,17 @@ export class PayrollTrackingService {
         })),
         totalEncashmentInPayslip: enrichedLeaveEncashment.reduce(
           (sum: number, enc: any) => sum + (enc.amount || 0),
-          0,
+          0
         ),
         payslipId: payslip?._id,
         payrollPeriod: payrollPeriodInfo,
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve leave encashment: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve leave encashment: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3407,12 +3186,13 @@ export class PayrollTrackingService {
         throw new NotFoundException('No payslip found for this employee');
       }
 
-      const transportationAllowance = payslip.earningsDetails?.allowances?.filter(
-        (allowance: any) =>
-          allowance.type === 'TRANSPORTATION' ||
-          allowance.name?.toLowerCase().includes('transport') ||
-          allowance.name?.toLowerCase().includes('commuting'),
-      ) || [];
+      const transportationAllowance =
+        payslip.earningsDetails?.allowances?.filter(
+          (allowance: any) =>
+            allowance.type === 'TRANSPORTATION' ||
+            allowance.name?.toLowerCase().includes('transport') ||
+            allowance.name?.toLowerCase().includes('commuting')
+        ) || [];
 
       // Enrich transportation allowances with configuration details
       const enrichedTransportationAllowance = await Promise.all(
@@ -3425,7 +3205,9 @@ export class PayrollTrackingService {
                 limit: 100,
               });
               const matchingAllowance = allowancesResult.data.find(
-                (configAllowance: any) => configAllowance.name === allowance.name || configAllowance._id?.toString() === allowance._id?.toString(),
+                (configAllowance: any) =>
+                  configAllowance.name === allowance.name ||
+                  configAllowance._id?.toString() === allowance._id?.toString()
               );
               if (matchingAllowance) {
                 return {
@@ -3444,7 +3226,7 @@ export class PayrollTrackingService {
             console.warn(`Failed to enrich transportation allowance: ${error?.message}`);
             return allowance;
           }
-        }),
+        })
       );
 
       return {
@@ -3453,18 +3235,15 @@ export class PayrollTrackingService {
         transportationAllowance: enrichedTransportationAllowance,
         totalTransportationAllowance: enrichedTransportationAllowance.reduce(
           (sum: number, allowance: any) => sum + (allowance.amount || 0),
-          0,
+          0
         ),
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve transportation allowance: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve transportation allowance: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3496,7 +3275,7 @@ export class PayrollTrackingService {
       // Enrich tax deductions with full tax rule details (including laws/rules from description)
       const taxDeductions = payslip.deductionsDetails?.taxes || [];
       const enrichedTaxDeductions = await Promise.all(
-        taxDeductions.map((tax: any) => this.enrichTaxDeductionWithConfiguration(tax)),
+        taxDeductions.map((tax: any) => this.enrichTaxDeductionWithConfiguration(tax))
       );
 
       return {
@@ -3505,18 +3284,15 @@ export class PayrollTrackingService {
         taxDeductions: enrichedTaxDeductions,
         totalTaxDeductions: enrichedTaxDeductions.reduce(
           (sum: number, tax: any) => sum + (tax.amount || tax.taxAmount || 0),
-          0,
+          0
         ),
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve tax deductions: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve tax deductions: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3548,7 +3324,9 @@ export class PayrollTrackingService {
       // Enrich insurance deductions with full configuration details from PayrollConfigurationService
       const insuranceDeductions = payslip.deductionsDetails?.insurances || [];
       const enrichedInsuranceDeductions = await Promise.all(
-        insuranceDeductions.map((insurance: any) => this.enrichInsuranceDeductionWithConfiguration(insurance)),
+        insuranceDeductions.map((insurance: any) =>
+          this.enrichInsuranceDeductionWithConfiguration(insurance)
+        )
       );
 
       return {
@@ -3557,18 +3335,15 @@ export class PayrollTrackingService {
         insuranceDeductions: enrichedInsuranceDeductions,
         totalInsuranceDeductions: enrichedInsuranceDeductions.reduce(
           (sum: number, insurance: any) => sum + (insurance.amount || 0),
-          0,
+          0
         ),
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve insurance deductions: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve insurance deductions: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3606,9 +3381,9 @@ export class PayrollTrackingService {
           .populate('payrollRunId')
           .sort({ createdAt: -1 })
           .exec();
-      if (!payslip) {
-        throw new NotFoundException('No payslip found for this employee');
-      }
+        if (!payslip) {
+          throw new NotFoundException('No payslip found for this employee');
+        }
         if (payslip.payrollRunId) {
           payrollRun = await this.payrollRunsModel.findById(payslip.payrollRunId).exec();
           if (payrollRun) {
@@ -3645,21 +3420,25 @@ export class PayrollTrackingService {
             // If no attendance record available, include it (better to show than hide)
             return true;
           }
-          
+
           // Get date from first punch in attendance record (since AttendanceRecord doesn't have createdAt)
           let exceptionDate: Date | undefined;
-          if (attendanceRecord.punches && Array.isArray(attendanceRecord.punches) && attendanceRecord.punches.length > 0) {
+          if (
+            attendanceRecord.punches &&
+            Array.isArray(attendanceRecord.punches) &&
+            attendanceRecord.punches.length > 0
+          ) {
             // Use the first punch time as the date
             exceptionDate = new Date(attendanceRecord.punches[0].time);
           } else {
             // If no punches available, include it (better to show than hide)
             return true;
           }
-          
+
           return this.isDateInRange(
             exceptionDate,
-            payrollPeriodRange!.startDate,
-            payrollPeriodRange!.endDate,
+            payrollPeriodRange.startDate,
+            payrollPeriodRange.endDate
           );
         });
       }
@@ -3676,7 +3455,7 @@ export class PayrollTrackingService {
             finalisedForPayroll: true,
           })
           .exec();
-        
+
         // Filter by first punch time within the payroll period
         attendanceRecords = allAttendanceRecords.filter((record) => {
           if (!record.punches || record.punches.length === 0) {
@@ -3686,7 +3465,7 @@ export class PayrollTrackingService {
           return this.isDateInRange(
             firstPunchTime,
             payrollPeriodRange.startDate,
-            payrollPeriodRange.endDate,
+            payrollPeriodRange.endDate
           );
         });
       }
@@ -3698,16 +3477,16 @@ export class PayrollTrackingService {
 
       // Categorize time exceptions
       const lateExceptions = relevantTimeExceptions.filter(
-        (ex) => ex.type === TimeExceptionType.LATE,
+        (ex) => ex.type === TimeExceptionType.LATE
       );
       const earlyLeaveExceptions = relevantTimeExceptions.filter(
-        (ex) => ex.type === TimeExceptionType.EARLY_LEAVE,
+        (ex) => ex.type === TimeExceptionType.EARLY_LEAVE
       );
       const shortTimeExceptions = relevantTimeExceptions.filter(
-        (ex) => ex.type === TimeExceptionType.SHORT_TIME,
+        (ex) => ex.type === TimeExceptionType.SHORT_TIME
       );
       const missedPunchExceptions = relevantTimeExceptions.filter(
-        (ex) => ex.type === TimeExceptionType.MISSED_PUNCH,
+        (ex) => ex.type === TimeExceptionType.MISSED_PUNCH
       );
 
       // Get penalties from payslip
@@ -3726,13 +3505,15 @@ export class PayrollTrackingService {
         employeeId: validEmployeeId,
         employeeNumber: employee.employeeNumber,
         payslipId: payslip._id,
-        payrollPeriod: payrollRun ? {
-          payrollRunId: payrollRun._id,
-          runId: payrollRun.runId,
-          period: payrollRun.payrollPeriod,
-          startDate: payrollPeriodRange?.startDate,
-          endDate: payrollPeriodRange?.endDate,
-        } : null,
+        payrollPeriod: payrollRun
+          ? {
+              payrollRunId: payrollRun._id,
+              runId: payrollRun.runId,
+              period: payrollRun.payrollPeriod,
+              startDate: payrollPeriodRange?.startDate,
+              endDate: payrollPeriodRange?.endDate,
+            }
+          : null,
         baseSalary,
         dailySalary,
         hourlySalary,
@@ -3744,7 +3525,11 @@ export class PayrollTrackingService {
             // Get date from first punch in attendance record (since AttendanceRecord doesn't have createdAt)
             let exceptionDate: Date | undefined;
             if (attendanceRecord && typeof attendanceRecord === 'object') {
-              if (attendanceRecord.punches && Array.isArray(attendanceRecord.punches) && attendanceRecord.punches.length > 0) {
+              if (
+                attendanceRecord.punches &&
+                Array.isArray(attendanceRecord.punches) &&
+                attendanceRecord.punches.length > 0
+              ) {
                 exceptionDate = new Date(attendanceRecord.punches[0].time);
               }
             }
@@ -3790,14 +3575,11 @@ export class PayrollTrackingService {
         note: 'Actual deductions are reflected in the payslip penalties. This is informational data showing time exceptions that may have resulted in deductions.',
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve misconduct deductions: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve misconduct deductions: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3854,12 +3636,10 @@ export class PayrollTrackingService {
         .exec();
 
       // Filter unpaid leave requests (where paid === false)
-      const unpaidLeaveRequests = allLeaveRequests.filter(
-        (request) => {
-          const leaveType = request.leaveTypeId as any;
-          return leaveType && leaveType.paid === false;
-        },
-      );
+      const unpaidLeaveRequests = allLeaveRequests.filter((request) => {
+        const leaveType = request.leaveTypeId as any;
+        return leaveType && leaveType.paid === false;
+      });
 
       // Filter by payroll period if available
       let relevantUnpaidLeaves = unpaidLeaveRequests;
@@ -3870,8 +3650,8 @@ export class PayrollTrackingService {
           return this.doDateRangesOverlap(
             leaveStart,
             leaveEnd,
-            payrollPeriodRange!.startDate,
-            payrollPeriodRange!.endDate,
+            payrollPeriodRange.startDate,
+            payrollPeriodRange.endDate
           );
         });
       }
@@ -3885,7 +3665,7 @@ export class PayrollTrackingService {
       const unpaidLeaveDeductions = relevantUnpaidLeaves.map((leave) => {
         const leaveType = leave.leaveTypeId as any;
         const deductionAmount = leave.durationDays * dailySalary;
-        
+
         // Calculate days within payroll period if filtering by period
         let daysInPeriod = leave.durationDays;
         if (payrollPeriodRange) {
@@ -3893,7 +3673,7 @@ export class PayrollTrackingService {
           const leaveEnd = new Date(leave.dates.to);
           const periodStart = new Date(payrollPeriodRange.startDate);
           const periodEnd = new Date(payrollPeriodRange.endDate);
-          
+
           // Calculate overlapping days
           const overlapStart = leaveStart > periodStart ? leaveStart : periodStart;
           const overlapEnd = leaveEnd < periodEnd ? leaveEnd : periodEnd;
@@ -3903,9 +3683,9 @@ export class PayrollTrackingService {
           } else {
             daysInPeriod = 0;
           }
-      }
+        }
 
-      return {
+        return {
           leaveRequestId: leave._id,
           leaveType: {
             id: leaveType._id || leaveType,
@@ -3930,7 +3710,7 @@ export class PayrollTrackingService {
       // Calculate total deduction amount
       const totalDeductionAmount = unpaidLeaveDeductions.reduce(
         (sum, deduction) => sum + (deduction.deductionAmount || 0),
-        0,
+        0
       );
 
       // Get deduction from payslip if available
@@ -3945,28 +3725,27 @@ export class PayrollTrackingService {
         unpaidLeaveRequests: unpaidLeaveDeductions,
         totalUnpaidLeaveDays: relevantUnpaidLeaves.reduce(
           (sum, leave) => sum + leave.durationDays,
-          0,
+          0
         ),
         totalDeductionAmount,
         payslipDeduction,
         payslipId: payslip?._id,
-        payrollPeriod: payrollRun ? {
-          payrollRunId: payrollRun._id,
-          runId: payrollRun.runId,
-          period: payrollRun.payrollPeriod,
-          startDate: payrollPeriodRange?.startDate,
-          endDate: payrollPeriodRange?.endDate,
-        } : null,
+        payrollPeriod: payrollRun
+          ? {
+              payrollRunId: payrollRun._id,
+              runId: payrollRun.runId,
+              period: payrollRun.payrollPeriod,
+              startDate: payrollPeriodRange?.startDate,
+              endDate: payrollPeriodRange?.endDate,
+            }
+          : null,
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve unpaid leave deductions: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve unpaid leave deductions: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -3979,19 +3758,18 @@ export class PayrollTrackingService {
         .find({ employeeId: validEmployeeId })
         .populate('employeeId', 'firstName lastName employeeNumber')
         .populate('payrollRunId', 'runId payrollPeriod status entity')
-        .select('earningsDetails deductionsDetails totalGrossSalary totaDeductions netPay paymentStatus createdAt')
+        .select(
+          'earningsDetails deductionsDetails totalGrossSalary totaDeductions netPay paymentStatus createdAt'
+        )
         .sort({ createdAt: -1 })
         .limit(limit)
         .exec();
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve salary history: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve salary history: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4021,14 +3799,13 @@ export class PayrollTrackingService {
       }
 
       // Employer contributions are typically in insurance brackets
-      const employerContributions = payslip.deductionsDetails?.insurances?.map(
-        (insurance: any) => ({
+      const employerContributions =
+        payslip.deductionsDetails?.insurances?.map((insurance: any) => ({
           type: insurance.type,
           employeeContribution: insurance.employeeContribution || 0,
           employerContribution: insurance.employerContribution || 0,
           total: insurance.amount || 0,
-        }),
-      ) || [];
+        })) || [];
 
       return {
         payslipId: payslip._id,
@@ -4036,18 +3813,15 @@ export class PayrollTrackingService {
         employerContributions,
         totalEmployerContributions: employerContributions.reduce(
           (sum, contrib) => sum + (contrib.employerContribution || 0),
-          0,
+          0
         ),
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve employer contributions: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve employer contributions: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4089,9 +3863,9 @@ export class PayrollTrackingService {
             sum +
             (p.deductionsDetails?.taxes?.reduce(
               (taxSum: number, tax: any) => taxSum + (tax.amount || 0),
-              0,
+              0
             ) || 0),
-          0,
+          0
         ),
         payslips: payslips.map((p) => ({
           payslipId: p._id,
@@ -4108,14 +3882,11 @@ export class PayrollTrackingService {
         annualStatement: annualTotals,
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to retrieve tax documents: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve tax documents: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4126,7 +3897,7 @@ export class PayrollTrackingService {
   async getPayrollReportByDepartment(departmentId: string, payrollRunId?: string) {
     try {
       const validDepartmentId = this.validateObjectId(departmentId, 'departmentId');
-      
+
       // Get department with populated head position
       const department = await this.departmentModel
         .findById(validDepartmentId)
@@ -4150,8 +3921,8 @@ export class PayrollTrackingService {
       // Get employees in this department using EmployeeProfileService
       const employeesData = await this.employeeProfileService.findByDepartment(departmentId);
       const employees = employeesData
-        .filter(emp => emp.status === EmployeeStatus.ACTIVE)
-        .map(emp => ({
+        .filter((emp) => emp.status === EmployeeStatus.ACTIVE)
+        .map((emp) => ({
           _id: new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString()),
           firstName: emp.firstName,
           lastName: emp.lastName,
@@ -4179,10 +3950,7 @@ export class PayrollTrackingService {
           throw new NotFoundException(`Payroll run with ID ${payrollRunId} not found`);
         }
       } else {
-        payrollRun = await this.payrollRunsModel
-          .findOne()
-          .sort({ createdAt: -1 })
-          .exec();
+        payrollRun = await this.payrollRunsModel.findOne().sort({ createdAt: -1 }).exec();
       }
 
       if (!payrollRun) {
@@ -4235,7 +4003,10 @@ export class PayrollTrackingService {
       const payslipsByPosition: Record<string, any[]> = {};
       payslips.forEach((payslip) => {
         const employee = payslip.employeeId as any;
-        const positionId = employee?.primaryPositionId?._id?.toString() || employee?.primaryPositionId?.toString() || 'UNASSIGNED';
+        const positionId =
+          employee?.primaryPositionId?._id?.toString() ||
+          employee?.primaryPositionId?.toString() ||
+          'UNASSIGNED';
         if (!payslipsByPosition[positionId]) {
           payslipsByPosition[positionId] = [];
         }
@@ -4249,11 +4020,13 @@ export class PayrollTrackingService {
           code: department.code,
           description: department.description,
           isActive: department.isActive,
-          headPosition: department.headPositionId ? {
-            id: (department.headPositionId as any)?._id,
-            title: (department.headPositionId as any)?.title,
-            code: (department.headPositionId as any)?.code,
-          } : null,
+          headPosition: department.headPositionId
+            ? {
+                id: (department.headPositionId as any)?._id,
+                title: (department.headPositionId as any)?.title,
+                code: (department.headPositionId as any)?.code,
+              }
+            : null,
         },
         organizationStructure: {
           totalPositions: positions.length,
@@ -4297,13 +4070,18 @@ export class PayrollTrackingService {
           const positionPayslips = payslipsByPosition[positionId];
           const position = positions.find((p) => p._id.toString() === positionId);
           return {
-            position: position ? {
-              id: position._id,
-              code: position.code,
-              title: position.title,
-            } : { id: 'UNASSIGNED', code: 'UNASSIGNED', title: 'Unassigned Position' },
+            position: position
+              ? {
+                  id: position._id,
+                  code: position.code,
+                  title: position.title,
+                }
+              : { id: 'UNASSIGNED', code: 'UNASSIGNED', title: 'Unassigned Position' },
             employeeCount: positionPayslips.length,
-            totalGrossSalary: positionPayslips.reduce((sum, p) => sum + (p.totalGrossSalary || 0), 0),
+            totalGrossSalary: positionPayslips.reduce(
+              (sum, p) => sum + (p.totalGrossSalary || 0),
+              0
+            ),
             totalDeductions: positionPayslips.reduce((sum, p) => sum + (p.totaDeductions || 0), 0),
             totalNetPay: positionPayslips.reduce((sum, p) => sum + (p.netPay || 0), 0),
           };
@@ -4316,16 +4094,18 @@ export class PayrollTrackingService {
               firstName: employee?.firstName,
               lastName: employee?.lastName,
               employeeNumber: employee?.employeeNumber,
-              position: employee?.primaryPositionId ? {
-                id: (employee.primaryPositionId as any)?._id,
-                title: (employee.primaryPositionId as any)?.title,
-                code: (employee.primaryPositionId as any)?.code,
-              } : null,
+              position: employee?.primaryPositionId
+                ? {
+                    id: employee.primaryPositionId?._id,
+                    title: employee.primaryPositionId?.title,
+                    code: employee.primaryPositionId?.code,
+                  }
+                : null,
             },
-          grossSalary: p.totalGrossSalary,
-          deductions: p.totaDeductions,
-          netPay: p.netPay,
-          paymentStatus: p.paymentStatus,
+            grossSalary: p.totalGrossSalary,
+            deductions: p.totaDeductions,
+            netPay: p.netPay,
+            paymentStatus: p.paymentStatus,
             payslipId: p._id,
           };
         }),
@@ -4333,14 +4113,11 @@ export class PayrollTrackingService {
 
       return report;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to generate department report: ${error?.message || 'Unknown error'}`,
+        `Failed to generate department report: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4363,21 +4140,23 @@ export class PayrollTrackingService {
       // Filter by department if provided
       let department: DepartmentDocument | null = null;
       let employeeIds: Types.ObjectId[] | null = null;
-      
+
       if (departmentId) {
         const validDepartmentId = this.validateObjectId(departmentId, 'departmentId');
         department = await this.departmentModel.findById(validDepartmentId).exec();
         if (!department) {
           throw new NotFoundException(`Department with ID ${departmentId} not found`);
         }
-        
+
         // Get employees in this department using EmployeeProfileService
         const employees = await this.employeeProfileService.findByDepartment(departmentId);
         // Filter to only active employees and extract IDs
         employeeIds = employees
-          .filter(emp => emp.status === EmployeeStatus.ACTIVE)
-          .map((emp) => new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString()));
-        
+          .filter((emp) => emp.status === EmployeeStatus.ACTIVE)
+          .map(
+            (emp) => new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString())
+          );
+
         if (employeeIds.length === 0) {
           // Return empty summary if no employees in department
           return {
@@ -4442,11 +4221,11 @@ export class PayrollTrackingService {
       } else {
         // All departments breakdown
         const departmentMap = new Map<string, { name: string; code: string; payslips: any[] }>();
-        
+
         payslips.forEach((payslip) => {
           const employee = payslip.employeeId as any;
           const deptId = employee?.primaryDepartmentId?.toString() || 'UNASSIGNED';
-          
+
           if (!departmentMap.has(deptId)) {
             departmentMap.set(deptId, {
               name: deptId === 'UNASSIGNED' ? 'Unassigned' : 'Unknown',
@@ -4454,7 +4233,7 @@ export class PayrollTrackingService {
               payslips: [],
             });
           }
-          departmentMap.get(deptId)!.payslips.push(payslip);
+          departmentMap.get(deptId).payslips.push(payslip);
         });
 
         // Populate department names
@@ -4464,12 +4243,12 @@ export class PayrollTrackingService {
             .find({ _id: { $in: departmentIds.map((id) => new Types.ObjectId(id)) } })
             .select('_id name code')
             .exec();
-          
+
           departments.forEach((dept) => {
             const deptId = dept._id.toString();
             if (departmentMap.has(deptId)) {
-              departmentMap.get(deptId)!.name = dept.name;
-              departmentMap.get(deptId)!.code = dept.code;
+              departmentMap.get(deptId).name = dept.name;
+              departmentMap.get(deptId).code = dept.code;
             }
           });
         }
@@ -4491,11 +4270,13 @@ export class PayrollTrackingService {
         period,
         startDate,
         endDate,
-        department: department ? {
-          id: department._id,
-          name: department.name,
-          code: department.code,
-        } : null,
+        department: department
+          ? {
+              id: department._id,
+              name: department.name,
+              code: department.code,
+            }
+          : null,
         totalPayrollRuns: payrollRuns.length,
         totalEmployees: new Set(payslips.map((p) => p.employeeId.toString())).size,
         totalGrossSalary: payslips.reduce((sum, p) => sum + (p.totalGrossSalary || 0), 0),
@@ -4514,20 +4295,21 @@ export class PayrollTrackingService {
 
       return summary;
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to generate payroll summary: ${error?.message || 'Unknown error'}`,
+        `Failed to generate payroll summary: ${error?.message || 'Unknown error'}`
       );
     }
   }
 
   // REQ-PY-25: Finance staff generate reports about taxes, insurance contributions, and benefits
-  async getTaxInsuranceBenefitsReport(period: 'month' | 'year', date?: Date, departmentId?: string) {
+  async getTaxInsuranceBenefitsReport(
+    period: 'month' | 'year',
+    date?: Date,
+    departmentId?: string
+  ) {
     try {
       const targetDate = date || new Date();
       let startDate: Date;
@@ -4544,21 +4326,23 @@ export class PayrollTrackingService {
       // Filter by department if provided
       let department: DepartmentDocument | null = null;
       let employeeIds: Types.ObjectId[] | null = null;
-      
+
       if (departmentId) {
         const validDepartmentId = this.validateObjectId(departmentId, 'departmentId');
         department = await this.departmentModel.findById(validDepartmentId).exec();
         if (!department) {
           throw new NotFoundException(`Department with ID ${departmentId} not found`);
         }
-        
+
         // Get employees in this department using EmployeeProfileService
         const employees = await this.employeeProfileService.findByDepartment(departmentId);
         // Filter to only active employees and extract IDs
         employeeIds = employees
-          .filter(emp => emp.status === EmployeeStatus.ACTIVE)
-          .map((emp) => new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString()));
-        
+          .filter((emp) => emp.status === EmployeeStatus.ACTIVE)
+          .map(
+            (emp) => new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString())
+          );
+
         if (employeeIds.length === 0) {
           // Return empty report if no employees in department
           return {
@@ -4654,19 +4438,22 @@ export class PayrollTrackingService {
       let departmentBreakdown: any = null;
       if (!department) {
         // Group by department for breakdown
-        const departmentMap = new Map<string, { 
-          name: string; 
-          code: string; 
-          payslips: any[];
-          taxes: Record<string, number>;
-          insurance: Record<string, { employee: number; employer: number }>;
-          benefits: number;
-        }>();
-        
+        const departmentMap = new Map<
+          string,
+          {
+            name: string;
+            code: string;
+            payslips: any[];
+            taxes: Record<string, number>;
+            insurance: Record<string, { employee: number; employer: number }>;
+            benefits: number;
+          }
+        >();
+
         payslips.forEach((payslip) => {
           const employee = payslip.employeeId as any;
           const deptId = employee?.primaryDepartmentId?.toString() || 'UNASSIGNED';
-          
+
           if (!departmentMap.has(deptId)) {
             departmentMap.set(deptId, {
               name: deptId === 'UNASSIGNED' ? 'Unassigned' : 'Unknown',
@@ -4677,16 +4464,16 @@ export class PayrollTrackingService {
               benefits: 0,
             });
           }
-          
-          const deptData = departmentMap.get(deptId)!;
+
+          const deptData = departmentMap.get(deptId);
           deptData.payslips.push(payslip);
-          
+
           // Aggregate taxes for this department
           payslip.deductionsDetails?.taxes?.forEach((tax: any) => {
             const taxType = tax.type || tax.name || 'Unknown';
             deptData.taxes[taxType] = (deptData.taxes[taxType] || 0) + (tax.amount || 0);
           });
-          
+
           // Aggregate insurance for this department
           payslip.deductionsDetails?.insurances?.forEach((insurance: any) => {
             const insType = insurance.type || insurance.name || 'Unknown';
@@ -4696,7 +4483,7 @@ export class PayrollTrackingService {
             deptData.insurance[insType].employee += insurance.employeeContribution || 0;
             deptData.insurance[insType].employer += insurance.employerContribution || 0;
           });
-          
+
           // Aggregate benefits for this department
           payslip.earningsDetails?.benefits?.forEach((benefit: any) => {
             deptData.benefits += benefit.amount || 0;
@@ -4710,12 +4497,12 @@ export class PayrollTrackingService {
             .find({ _id: { $in: departmentIds.map((id) => new Types.ObjectId(id)) } })
             .select('_id name code')
             .exec();
-          
+
           departments.forEach((dept) => {
             const deptId = dept._id.toString();
             if (departmentMap.has(deptId)) {
-              departmentMap.get(deptId)!.name = dept.name;
-              departmentMap.get(deptId)!.code = dept.code;
+              departmentMap.get(deptId).name = dept.name;
+              departmentMap.get(deptId).code = dept.code;
             }
           });
         }
@@ -4733,9 +4520,18 @@ export class PayrollTrackingService {
           },
           insurance: {
             breakdown: data.insurance,
-            totalEmployeeContributions: Object.values(data.insurance).reduce((sum, ins) => sum + ins.employee, 0),
-            totalEmployerContributions: Object.values(data.insurance).reduce((sum, ins) => sum + ins.employer, 0),
-            total: Object.values(data.insurance).reduce((sum, ins) => sum + ins.employee + ins.employer, 0),
+            totalEmployeeContributions: Object.values(data.insurance).reduce(
+              (sum, ins) => sum + ins.employee,
+              0
+            ),
+            totalEmployerContributions: Object.values(data.insurance).reduce(
+              (sum, ins) => sum + ins.employer,
+              0
+            ),
+            total: Object.values(data.insurance).reduce(
+              (sum, ins) => sum + ins.employee + ins.employer,
+              0
+            ),
           },
           benefits: {
             total: data.benefits,
@@ -4747,11 +4543,13 @@ export class PayrollTrackingService {
         period,
         startDate,
         endDate,
-        department: department ? {
-          id: department._id,
-          name: department.name,
-          code: department.code,
-        } : null,
+        department: department
+          ? {
+              id: department._id,
+              name: department.name,
+              code: department.code,
+            }
+          : null,
         taxes: {
           breakdown: taxBreakdown,
           total: totalTaxes,
@@ -4772,14 +4570,11 @@ export class PayrollTrackingService {
         departmentBreakdown,
       };
     } catch (error: any) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to generate tax/insurance/benefits report: ${error?.message || 'Unknown error'}`,
+        `Failed to generate tax/insurance/benefits report: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4815,14 +4610,16 @@ export class PayrollTrackingService {
             code: dept.code,
             description: dept.description,
             isActive: dept.isActive,
-            headPosition: dept.headPositionId ? {
-              id: (dept.headPositionId as any)?._id,
-              title: (dept.headPositionId as any)?.title,
-              code: (dept.headPositionId as any)?.code,
-            } : null,
+            headPosition: dept.headPositionId
+              ? {
+                  id: (dept.headPositionId as any)?._id,
+                  title: (dept.headPositionId as any)?.title,
+                  code: (dept.headPositionId as any)?.code,
+                }
+              : null,
             activeEmployeeCount: employeeCount,
           };
-        }),
+        })
       );
 
       return {
@@ -4831,7 +4628,7 @@ export class PayrollTrackingService {
       };
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to retrieve departments: ${error?.message || 'Unknown error'}`,
+        `Failed to retrieve departments: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4883,8 +4680,11 @@ export class PayrollTrackingService {
           const employees = await this.employeeProfileService.findByDepartment(dept._id.toString());
           // Filter to only active employees and extract IDs
           const employeeIds = employees
-            .filter(emp => emp.status === EmployeeStatus.ACTIVE)
-            .map((emp) => new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString()));
+            .filter((emp) => emp.status === EmployeeStatus.ACTIVE)
+            .map(
+              (emp) =>
+                new Types.ObjectId((emp as any)._id?.toString() || (emp as any).id?.toString())
+            );
 
           // Filter payslips for this department
           const deptPayslips = payslips.filter((p) => {
@@ -4893,7 +4693,10 @@ export class PayrollTrackingService {
             return employeeIds.some((eid) => eid.toString() === empId);
           });
 
-          const totalGrossSalary = deptPayslips.reduce((sum, p) => sum + (p.totalGrossSalary || 0), 0);
+          const totalGrossSalary = deptPayslips.reduce(
+            (sum, p) => sum + (p.totalGrossSalary || 0),
+            0
+          );
           const totalDeductions = deptPayslips.reduce((sum, p) => sum + (p.totaDeductions || 0), 0);
           const totalNetPay = deptPayslips.reduce((sum, p) => sum + (p.netPay || 0), 0);
 
@@ -4908,15 +4711,22 @@ export class PayrollTrackingService {
             totalGrossSalary,
             totalDeductions,
             totalNetPay,
-            averageGrossSalary: deptPayslips.length > 0 ? totalGrossSalary / deptPayslips.length : 0,
+            averageGrossSalary:
+              deptPayslips.length > 0 ? totalGrossSalary / deptPayslips.length : 0,
             averageNetPay: deptPayslips.length > 0 ? totalNetPay / deptPayslips.length : 0,
           };
-        }),
+        })
       );
 
       // Calculate totals
-      const totalGrossSalary = departmentSummaries.reduce((sum, dept) => sum + dept.totalGrossSalary, 0);
-      const totalDeductions = departmentSummaries.reduce((sum, dept) => sum + dept.totalDeductions, 0);
+      const totalGrossSalary = departmentSummaries.reduce(
+        (sum, dept) => sum + dept.totalGrossSalary,
+        0
+      );
+      const totalDeductions = departmentSummaries.reduce(
+        (sum, dept) => sum + dept.totalDeductions,
+        0
+      );
       const totalNetPay = departmentSummaries.reduce((sum, dept) => sum + dept.totalNetPay, 0);
       const totalEmployees = departmentSummaries.reduce((sum, dept) => sum + dept.employeeCount, 0);
 
@@ -4935,7 +4745,7 @@ export class PayrollTrackingService {
       };
     } catch (error: any) {
       throw new BadRequestException(
-        `Failed to generate payroll summary by departments: ${error?.message || 'Unknown error'}`,
+        `Failed to generate payroll summary by departments: ${error?.message || 'Unknown error'}`
       );
     }
   }
@@ -4948,7 +4758,7 @@ export class PayrollTrackingService {
   async exportTaxInsuranceBenefitsReportAsCSV(
     period: 'month' | 'year',
     date?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<string> {
     const reportData = await this.getTaxInsuranceBenefitsReport(period, date, departmentId);
     return this.formatReportAsCSV(reportData, 'Tax, Insurance & Benefits Report');
@@ -4960,7 +4770,7 @@ export class PayrollTrackingService {
   async exportTaxInsuranceBenefitsReportAsPDF(
     period: 'month' | 'year',
     date?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<Buffer> {
     const reportData = await this.getTaxInsuranceBenefitsReport(period, date, departmentId);
     return this.formatReportAsPDF(reportData, 'Tax, Insurance & Benefits Report');
@@ -4972,10 +4782,13 @@ export class PayrollTrackingService {
   async exportPayrollSummaryAsCSV(
     period: 'month' | 'year',
     date?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<string> {
     const summaryData = await this.getPayrollSummary(period, date, departmentId);
-    return this.formatSummaryAsCSV(summaryData, period === 'month' ? 'Month-End Payroll Summary' : 'Year-End Payroll Summary');
+    return this.formatSummaryAsCSV(
+      summaryData,
+      period === 'month' ? 'Month-End Payroll Summary' : 'Year-End Payroll Summary'
+    );
   }
 
   /**
@@ -4984,10 +4797,13 @@ export class PayrollTrackingService {
   async exportPayrollSummaryAsPDF(
     period: 'month' | 'year',
     date?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<Buffer> {
     const summaryData = await this.getPayrollSummary(period, date, departmentId);
-    return this.formatSummaryAsPDF(summaryData, period === 'month' ? 'Month-End Payroll Summary' : 'Year-End Payroll Summary');
+    return this.formatSummaryAsPDF(
+      summaryData,
+      period === 'month' ? 'Month-End Payroll Summary' : 'Year-End Payroll Summary'
+    );
   }
 
   /**
@@ -4995,7 +4811,7 @@ export class PayrollTrackingService {
    */
   private formatReportAsCSV(data: any, reportTitle: string): string {
     const lines: string[] = [];
-    
+
     // Header
     lines.push(reportTitle);
     lines.push(`Generated: ${new Date().toISOString()}`);
@@ -5030,12 +4846,14 @@ export class PayrollTrackingService {
     if (data.insurance && data.insurance.breakdown) {
       lines.push('Insurance Breakdown');
       lines.push('Insurance Type,Employee Contribution,Employer Contribution,Total');
-      Object.entries(data.insurance.breakdown).forEach(([insuranceName, details]: [string, any]) => {
-        const employee = details.employee || 0;
-        const employer = details.employer || 0;
-        const total = employee + employer;
-        lines.push(`${insuranceName},${employee},${employer},${total}`);
-      });
+      Object.entries(data.insurance.breakdown).forEach(
+        ([insuranceName, details]: [string, any]) => {
+          const employee = details.employee || 0;
+          const employer = details.employer || 0;
+          const total = employee + employer;
+          lines.push(`${insuranceName},${employee},${employer},${total}`);
+        }
+      );
       lines.push(`Total Employee Contributions,${data.insurance.totalEmployeeContributions || 0}`);
       lines.push(`Total Employer Contributions,${data.insurance.totalEmployerContributions || 0}`);
       lines.push(`Total Insurance,${data.insurance.total || 0}`);
@@ -5058,7 +4876,7 @@ export class PayrollTrackingService {
    */
   private formatSummaryAsCSV(data: any, summaryTitle: string): string {
     const lines: string[] = [];
-    
+
     // Header
     lines.push(summaryTitle);
     lines.push(`Generated: ${new Date().toISOString()}`);
@@ -5083,12 +4901,16 @@ export class PayrollTrackingService {
       lines.push('Employee Number,Employee Name,Department,Gross Salary,Deductions,Net Pay');
       data.employees.forEach((emp: any) => {
         const employeeNumber = emp.employee?.employeeNumber || 'N/A';
-        const employeeName = emp.employee ? `${emp.employee.firstName} ${emp.employee.lastName}` : 'N/A';
+        const employeeName = emp.employee
+          ? `${emp.employee.firstName} ${emp.employee.lastName}`
+          : 'N/A';
         const department = emp.department?.name || 'N/A';
         const grossSalary = emp.grossSalary || 0;
         const deductions = emp.deductions || 0;
         const netPay = emp.netPay || 0;
-        lines.push(`${employeeNumber},${employeeName},${department},${grossSalary},${deductions},${netPay}`);
+        lines.push(
+          `${employeeNumber},${employeeName},${department},${grossSalary},${deductions},${netPay}`
+        );
       });
       lines.push('');
     }
@@ -5096,7 +4918,9 @@ export class PayrollTrackingService {
     // Department breakdown
     if (data.departments && data.departments.length > 0) {
       lines.push('Department Breakdown');
-      lines.push('Department Name,Employee Count,Total Gross Salary,Total Deductions,Total Net Pay');
+      lines.push(
+        'Department Name,Employee Count,Total Gross Salary,Total Deductions,Total Net Pay'
+      );
       data.departments.forEach((dept: any) => {
         const deptName = dept.department?.name || 'N/A';
         const empCount = dept.employeeCount || 0;
@@ -5119,7 +4943,7 @@ export class PayrollTrackingService {
       PDFDocument = require('pdfkit');
     } catch (e) {
       throw new BadRequestException(
-        'PDF generation is not available. Please contact system administrator.',
+        'PDF generation is not available. Please contact system administrator.'
       );
     }
 
@@ -5133,8 +4957,10 @@ export class PayrollTrackingService {
     doc.moveDown(0.5);
     doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
     if (data.period) doc.text(`Period: ${data.period}`, { align: 'center' });
-    if (data.startDate) doc.text(`Start Date: ${new Date(data.startDate).toLocaleDateString()}`, { align: 'center' });
-    if (data.endDate) doc.text(`End Date: ${new Date(data.endDate).toLocaleDateString()}`, { align: 'center' });
+    if (data.startDate)
+      doc.text(`Start Date: ${new Date(data.startDate).toLocaleDateString()}`, { align: 'center' });
+    if (data.endDate)
+      doc.text(`End Date: ${new Date(data.endDate).toLocaleDateString()}`, { align: 'center' });
     if (data.department) doc.text(`Department: ${data.department.name}`, { align: 'center' });
     doc.moveDown(1);
 
@@ -5166,17 +4992,25 @@ export class PayrollTrackingService {
       doc.fontSize(14).text('Insurance Breakdown', { underline: true });
       doc.moveDown(0.3);
       doc.fontSize(10);
-      Object.entries(data.insurance.breakdown).forEach(([insuranceName, details]: [string, any]) => {
-        const employee = details.employee || 0;
-        const employer = details.employer || 0;
-        const total = employee + employer;
-        doc.text(`${insuranceName}:`, { indent: 20 });
-        doc.text(`  Employee: ${employee}`, { indent: 40 });
-        doc.text(`  Employer: ${employer}`, { indent: 40 });
-        doc.text(`  Total: ${total}`, { indent: 40 });
+      Object.entries(data.insurance.breakdown).forEach(
+        ([insuranceName, details]: [string, any]) => {
+          const employee = details.employee || 0;
+          const employer = details.employer || 0;
+          const total = employee + employer;
+          doc.text(`${insuranceName}:`, { indent: 20 });
+          doc.text(`  Employee: ${employee}`, { indent: 40 });
+          doc.text(`  Employer: ${employer}`, { indent: 40 });
+          doc.text(`  Total: ${total}`, { indent: 40 });
+        }
+      );
+      doc.text(`Total Employee Contributions: ${data.insurance.totalEmployeeContributions || 0}`, {
+        indent: 20,
+        bold: true,
       });
-      doc.text(`Total Employee Contributions: ${data.insurance.totalEmployeeContributions || 0}`, { indent: 20, bold: true });
-      doc.text(`Total Employer Contributions: ${data.insurance.totalEmployerContributions || 0}`, { indent: 20, bold: true });
+      doc.text(`Total Employer Contributions: ${data.insurance.totalEmployerContributions || 0}`, {
+        indent: 20,
+        bold: true,
+      });
       doc.text(`Total Insurance: ${data.insurance.total || 0}`, { indent: 20, bold: true });
       doc.moveDown(1);
     }
@@ -5197,7 +5031,9 @@ export class PayrollTrackingService {
         resolve(pdfBuffer);
       });
       doc.on('error', (error: any) => {
-        reject(new BadRequestException(`Failed to generate PDF: ${error?.message || 'Unknown error'}`));
+        reject(
+          new BadRequestException(`Failed to generate PDF: ${error?.message || 'Unknown error'}`)
+        );
       });
     });
   }
@@ -5211,7 +5047,7 @@ export class PayrollTrackingService {
       PDFDocument = require('pdfkit');
     } catch (e) {
       throw new BadRequestException(
-        'PDF generation is not available. Please contact system administrator.',
+        'PDF generation is not available. Please contact system administrator.'
       );
     }
 
@@ -5225,8 +5061,10 @@ export class PayrollTrackingService {
     doc.moveDown(0.5);
     doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
     if (data.period) doc.text(`Period: ${data.period}`, { align: 'center' });
-    if (data.startDate) doc.text(`Start Date: ${new Date(data.startDate).toLocaleDateString()}`, { align: 'center' });
-    if (data.endDate) doc.text(`End Date: ${new Date(data.endDate).toLocaleDateString()}`, { align: 'center' });
+    if (data.startDate)
+      doc.text(`Start Date: ${new Date(data.startDate).toLocaleDateString()}`, { align: 'center' });
+    if (data.endDate)
+      doc.text(`End Date: ${new Date(data.endDate).toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
 
     // Summary
@@ -5248,18 +5086,27 @@ export class PayrollTrackingService {
       const employeesToShow = data.employees.slice(0, 50);
       employeesToShow.forEach((emp: any, index: number) => {
         const employeeNumber = emp.employee?.employeeNumber || 'N/A';
-        const employeeName = emp.employee ? `${emp.employee.firstName} ${emp.employee.lastName}` : 'N/A';
+        const employeeName = emp.employee
+          ? `${emp.employee.firstName} ${emp.employee.lastName}`
+          : 'N/A';
         const department = emp.department?.name || 'N/A';
         const grossSalary = emp.grossSalary || 0;
         const deductions = emp.deductions || 0;
         const netPay = emp.netPay || 0;
-        
-        doc.text(`${index + 1}. ${employeeNumber} - ${employeeName} (${department})`, { indent: 20 });
-        doc.text(`   Gross: ${grossSalary} | Deductions: ${deductions} | Net Pay: ${netPay}`, { indent: 40 });
+
+        doc.text(`${index + 1}. ${employeeNumber} - ${employeeName} (${department})`, {
+          indent: 20,
+        });
+        doc.text(`   Gross: ${grossSalary} | Deductions: ${deductions} | Net Pay: ${netPay}`, {
+          indent: 40,
+        });
         doc.moveDown(0.2);
       });
       if (data.employees.length > 50) {
-        doc.text(`... and ${data.employees.length - 50} more employees`, { indent: 20, italic: true });
+        doc.text(`... and ${data.employees.length - 50} more employees`, {
+          indent: 20,
+          italic: true,
+        });
       }
       doc.moveDown(1);
     }
@@ -5275,7 +5122,7 @@ export class PayrollTrackingService {
         const totalGross = dept.totalGrossSalary || 0;
         const totalDeductions = dept.totalDeductions || 0;
         const totalNetPay = dept.totalNetPay || 0;
-        
+
         doc.text(`${deptName}:`, { indent: 20, bold: true });
         doc.text(`  Employees: ${empCount}`, { indent: 40 });
         doc.text(`  Total Gross Salary: ${totalGross}`, { indent: 40 });
@@ -5293,7 +5140,9 @@ export class PayrollTrackingService {
         resolve(pdfBuffer);
       });
       doc.on('error', (error: any) => {
-        reject(new BadRequestException(`Failed to generate PDF: ${error?.message || 'Unknown error'}`));
+        reject(
+          new BadRequestException(`Failed to generate PDF: ${error?.message || 'Unknown error'}`)
+        );
       });
     });
   }

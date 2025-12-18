@@ -1,14 +1,5 @@
-import {
-  IsString,
-  IsArray,
-  IsOptional,
-  IsEnum,
-  Validate,
-} from 'class-validator';
-import {
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
+import { IsString, IsArray, IsOptional, IsEnum, Validate } from 'class-validator';
+import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { ApplicationStage } from '../enums/application-stage.enum';
 import { InterviewMethod } from '../enums/interview-method.enum';
 import { InterviewStatus } from '../enums/interview-status.enum';

@@ -6,8 +6,7 @@ import {
 } from '../enums/organization-structure.enums';
 import { EmployeeProfile } from '../../employee-profile/models/employee-profile.schema';
 
-export type StructureChangeRequestDocument =
-  HydratedDocument<StructureChangeRequest>;
+export type StructureChangeRequestDocument = HydratedDocument<StructureChangeRequest>;
 
 @Schema({ collection: 'structure_change_requests', timestamps: true })
 export class StructureChangeRequest {
@@ -53,6 +52,4 @@ export class StructureChangeRequest {
   submittedAt?: Date;
 }
 
-export const StructureChangeRequestSchema = SchemaFactory.createForClass(
-  StructureChangeRequest,
-);
+export const StructureChangeRequestSchema = SchemaFactory.createForClass(StructureChangeRequest);

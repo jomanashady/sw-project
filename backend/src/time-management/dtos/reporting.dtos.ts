@@ -13,9 +13,7 @@ import { Type } from 'class-transformer';
 
 // Custom validator to ensure endDate >= startDate
 @ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
-export class IsEndDateAfterStartDateConstraint
-  implements ValidatorConstraintInterface
-{
+export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInterface {
   validate(endDate: any, args: ValidationArguments) {
     const obj = args.object as any;
     const startDate = obj.startDate;
@@ -107,4 +105,3 @@ export class ExportReportDto {
   @Validate(IsEndDateAfterStartDateConstraint)
   endDate?: Date; // Optional: End date for the export
 }
-

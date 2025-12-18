@@ -32,5 +32,5 @@ export class EmployeeProfileChangeRequest {
 }
 
 export const EmployeeProfileChangeRequestSchema = SchemaFactory.createForClass(
-  EmployeeProfileChangeRequest,
+  EmployeeProfileChangeRequest
 );

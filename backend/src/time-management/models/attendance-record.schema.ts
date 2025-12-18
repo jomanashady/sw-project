@@ -31,5 +31,4 @@ export class AttendanceRecord {
   finalisedForPayroll: boolean;
 }
 
-export const AttendanceRecordSchema =
-  SchemaFactory.createForClass(AttendanceRecord);
+export const AttendanceRecordSchema = SchemaFactory.createForClass(AttendanceRecord);

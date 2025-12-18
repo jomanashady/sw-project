@@ -127,35 +127,17 @@ class RouteValidator {
 
         // Check for required validators
         if (file === 'create-employee.dto.ts') {
-          if (
-            !content.includes('@IsString()') ||
-            !content.includes('firstName')
-          ) {
-            this.addIssue(
-              'error',
-              `CreateEmployeeDto missing required validators`,
-              file,
-            );
+          if (!content.includes('@IsString()') || !content.includes('firstName')) {
+            this.addIssue('error', `CreateEmployeeDto missing required validators`, file);
           }
-          if (
-            !content.includes('nationalId') ||
-            !content.includes('@Matches')
-          ) {
-            this.addIssue(
-              'error',
-              `CreateEmployeeDto missing nationalId validation`,
-              file,
-            );
+          if (!content.includes('nationalId') || !content.includes('@Matches')) {
+            this.addIssue('error', `CreateEmployeeDto missing nationalId validation`, file);
           }
         }
 
         if (file === 'query-employee.dto.ts') {
           if (!content.includes('@IsOptional()')) {
-            this.addIssue(
-              'warning',
-              `QueryEmployeeDto should have optional validators`,
-              file,
-            );
+            this.addIssue('warning', `QueryEmployeeDto should have optional validators`, file);
           }
         }
       } catch (error) {
@@ -173,12 +155,9 @@ class RouteValidator {
       // Read both schema files
       const employeeProfileContent = readFileSync(
         join(schemaPath, 'employee-profile.schema.ts'),
-        'utf-8',
+        'utf-8'
       );
-      const userSchemaContent = readFileSync(
-        join(schemaPath, 'user-schema.ts'),
-        'utf-8',
-      );
+      const userSchemaContent = readFileSync(join(schemaPath, 'user-schema.ts'), 'utf-8');
 
       // Check EmployeeProfile schema structure
       const employeeProfileFields = ['employeeNumber', 'dateOfHire', 'status'];
@@ -188,7 +167,7 @@ class RouteValidator {
           this.addIssue(
             'error',
             `EmployeeProfile schema missing required field: ${field}`,
-            'employee-profile.schema.ts',
+            'employee-profile.schema.ts'
           );
         }
       }
@@ -201,7 +180,7 @@ class RouteValidator {
           this.addIssue(
             'error',
             `UserProfileBase schema missing required field: ${field}`,
-            'user-schema.ts',
+            'user-schema.ts'
           );
         }
       }
@@ -214,7 +193,7 @@ class RouteValidator {
         this.addIssue(
           'warning',
           `Schema should use enum for status field`,
-          'employee-profile.schema.ts',
+          'employee-profile.schema.ts'
         );
       }
 
@@ -223,15 +202,11 @@ class RouteValidator {
         this.addIssue(
           'error',
           `EmployeeProfile should extend UserProfileBase`,
-          'employee-profile.schema.ts',
+          'employee-profile.schema.ts'
         );
       }
     } catch (error) {
-      this.addIssue(
-        'error',
-        `Cannot read schema files: ${error}`,
-        'schema validation',
-      );
+      this.addIssue('error', `Cannot read schema files: ${error}`, 'schema validation');
     }
   }
 
@@ -254,11 +229,7 @@ class RouteValidator {
 
       for (const enumName of requiredEnums) {
         if (!content.includes(`enum ${enumName}`)) {
-          this.addIssue(
-            'error',
-            `Missing required enum: ${enumName}`,
-            enumPath,
-          );
+          this.addIssue('error', `Missing required enum: ${enumName}`, enumPath);
         }
       }
 
@@ -273,11 +244,7 @@ class RouteValidator {
 
       for (const role of systemRoleValues) {
         if (!content.includes(role)) {
-          this.addIssue(
-            'warning',
-            `SystemRole enum may be missing: ${role}`,
-            enumPath,
-          );
+          this.addIssue('warning', `SystemRole enum may be missing: ${role}`, enumPath);
         }
       }
     } catch (error) {
@@ -308,24 +275,13 @@ class RouteValidator {
 
       for (const method of requiredMethods) {
         if (!content.includes(`async ${method}(`)) {
-          this.addIssue(
-            'error',
-            `Service missing required method: ${method}`,
-            servicePath,
-          );
+          this.addIssue('error', `Service missing required method: ${method}`, servicePath);
         }
       }
 
       // Check for proper error handling
-      if (
-        !content.includes('NotFoundException') ||
-        !content.includes('BadRequestException')
-      ) {
-        this.addIssue(
-          'warning',
-          `Service should use proper exception types`,
-          servicePath,
-        );
+      if (!content.includes('NotFoundException') || !content.includes('BadRequestException')) {
+        this.addIssue('warning', `Service should use proper exception types`, servicePath);
       }
     } catch (error) {
       this.addIssue('error', `Cannot read service file`, servicePath);
@@ -346,47 +302,26 @@ class RouteValidator {
       const schemaContent = readFileSync(schemaPath, 'utf-8');
 
       // Check common fields
-      const commonFields = [
-        'firstName',
-        'lastName',
-        'nationalId',
-        'dateOfHire',
-      ];
+      const commonFields = ['firstName', 'lastName', 'nationalId', 'dateOfHire'];
 
       for (const field of commonFields) {
         const inDto = dtoContent.includes(field);
         const inSchema = schemaContent.includes(field);
 
         if (inDto && !inSchema) {
-          this.addIssue(
-            'error',
-            `Field ${field} in DTO but not in schema`,
-            'DTO-Schema',
-          );
+          this.addIssue('error', `Field ${field} in DTO but not in schema`, 'DTO-Schema');
         }
         if (inSchema && !inDto && field !== 'employeeNumber') {
           // employeeNumber is auto-generated, so it's OK to not be in DTO
-          this.addIssue(
-            'warning',
-            `Field ${field} in schema but not in DTO`,
-            'DTO-Schema',
-          );
+          this.addIssue('warning', `Field ${field} in schema but not in DTO`, 'DTO-Schema');
         }
       }
     } catch (error) {
-      this.addIssue(
-        'error',
-        `Cannot validate DTO-Schema consistency`,
-        'DTO-Schema',
-      );
+      this.addIssue('error', `Cannot validate DTO-Schema consistency`, 'DTO-Schema');
     }
   }
 
-  private addIssue(
-    severity: 'error' | 'warning',
-    message: string,
-    location: string,
-  ) {
+  private addIssue(severity: 'error' | 'warning', message: string, location: string) {
     this.issues.push({ severity, message, location });
   }
 
@@ -420,7 +355,7 @@ class RouteValidator {
 
     console.log('='.repeat(60));
     console.log(
-      `Total Issues: ${this.issues.length} (${errors.length} errors, ${warnings.length} warnings)`,
+      `Total Issues: ${this.issues.length} (${errors.length} errors, ${warnings.length} warnings)`
     );
     console.log('='.repeat(60) + '\n');
 

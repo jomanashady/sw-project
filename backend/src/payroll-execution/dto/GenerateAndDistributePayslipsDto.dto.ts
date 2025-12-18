@@ -1,8 +1,4 @@
-import {
-  IsMongoId,
-  IsOptional,
-  IsEnum,
-} from 'class-validator';
+import { IsMongoId, IsOptional, IsEnum } from 'class-validator';
 
 export enum PayslipDistributionMethod {
   PDF = 'PDF',
@@ -18,4 +14,3 @@ export class GenerateAndDistributePayslipsDto {
   @IsEnum(PayslipDistributionMethod)
   distributionMethod?: PayslipDistributionMethod; // Optional, defaults to 'PORTAL'
 }
-

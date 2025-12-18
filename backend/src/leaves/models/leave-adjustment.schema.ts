@@ -31,5 +31,4 @@ export class LeaveAdjustment {
   hrUserId: Types.ObjectId;
 }
 
-export const LeaveAdjustmentSchema =
-  SchemaFactory.createForClass(LeaveAdjustment);
+export const LeaveAdjustmentSchema = SchemaFactory.createForClass(LeaveAdjustment);

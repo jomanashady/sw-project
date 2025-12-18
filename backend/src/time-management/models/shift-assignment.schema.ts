@@ -32,5 +32,4 @@ export class ShiftAssignment {
   status: ShiftAssignmentStatus;
 }
 
-export const ShiftAssignmentSchema =
-  SchemaFactory.createForClass(ShiftAssignment);
+export const ShiftAssignmentSchema = SchemaFactory.createForClass(ShiftAssignment);

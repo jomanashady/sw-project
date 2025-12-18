@@ -31,7 +31,7 @@ export class UpdateClaimDTO {
   @Min(0.01, { message: 'Approved amount must be greater than 0' })
   @Max(
     1000000, // Set to a maximum amount that makes sense based on your system requirements
-    { message: 'Approved amount cannot exceed the claimed amount' },
+    { message: 'Approved amount cannot exceed the claimed amount' }
   ) // Ensure the approved amount is less than or equal to the original claim amount
   approvedAmount?: number; // Optional, can update approved amount
 

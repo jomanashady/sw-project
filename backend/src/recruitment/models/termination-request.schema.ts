@@ -37,5 +37,4 @@ export class TerminationRequest {
 }
 
 export type TerminationRequestDocument = HydratedDocument<TerminationRequest>;
-export const TerminationRequestSchema =
-  SchemaFactory.createForClass(TerminationRequest);
+export const TerminationRequestSchema = SchemaFactory.createForClass(TerminationRequest);

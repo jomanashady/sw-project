@@ -56,12 +56,7 @@ class RouteDebugger {
           path: '/api/v1/employee-profile',
           handler: 'findAll',
           dto: 'QueryEmployeeDto',
-          roles: [
-            'SYSTEM_ADMIN',
-            'HR_MANAGER',
-            'HR_EMPLOYEE',
-            'DEPARTMENT_HEAD',
-          ],
+          roles: ['SYSTEM_ADMIN', 'HR_MANAGER', 'HR_EMPLOYEE', 'DEPARTMENT_HEAD'],
           query: [
             'search',
             'departmentId',
@@ -180,22 +175,15 @@ class RouteDebugger {
 
       // Try to read DTO file and show fields
       try {
-        const dtoPath = join(
-          __dirname,
-          `../dto/${this.getDTOFileName(route.dto)}`,
-        );
+        const dtoPath = join(__dirname, `../dto/${this.getDTOFileName(route.dto)}`);
         const dtoContent = readFileSync(dtoPath, 'utf-8');
 
         // Extract field names (basic regex)
-        const fieldMatches = dtoContent.matchAll(
-          /(\w+):\s*(string|number|Date|boolean|\w+Dto)/g,
-        );
+        const fieldMatches = dtoContent.matchAll(/(\w+):\s*(string|number|Date|boolean|\w+Dto)/g);
         const fields = Array.from(fieldMatches, (m) => m[1]).slice(0, 10); // First 10 fields
 
         if (fields.length > 0) {
-          console.log(
-            `  Fields: ${fields.join(', ')}${fields.length === 10 ? '...' : ''}`,
-          );
+          console.log(`  Fields: ${fields.join(', ')}${fields.length === 10 ? '...' : ''}`);
         }
       } catch (error) {
         console.log(`  (Could not read DTO file)`);

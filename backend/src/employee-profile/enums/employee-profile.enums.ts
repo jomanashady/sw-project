@@ -43,7 +43,6 @@ export enum SystemRole {
   FINANCE_STAFF = 'Finance Staff',
   JOB_CANDIDATE = 'Job Candidate',
   HR_ADMIN = 'HR Admin',
-
 }
 
 export enum CandidateStatus {

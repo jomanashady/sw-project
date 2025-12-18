@@ -9,9 +9,7 @@ describe('OrganizationStructureService', () => {
       providers: [OrganizationStructureService],
     }).compile();
 
-    service = module.get<OrganizationStructureService>(
-      OrganizationStructureService,
-    );
+    service = module.get<OrganizationStructureService>(OrganizationStructureService);
   });
 
   it('should be defined', () => {

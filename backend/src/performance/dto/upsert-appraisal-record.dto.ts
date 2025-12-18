@@ -1,10 +1,4 @@
-import {
-  IsArray,
-  IsOptional,
-  IsNumber,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsOptional, IsNumber, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RatingEntryDto } from './rating-entry.dto';
 

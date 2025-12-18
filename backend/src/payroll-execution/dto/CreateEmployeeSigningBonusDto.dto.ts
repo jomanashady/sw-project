@@ -20,4 +20,3 @@ export class CreateEmployeeSigningBonusDto {
   @IsISO8601()
   paymentDate?: string; // Optional payment date
 }
-

@@ -11,10 +11,7 @@ import {
   employeePayrollDetails,
   employeePayrollDetailsSchema,
 } from './models/employeePayrollDetails.schema';
-import {
-  employeePenalties,
-  employeePenaltiesSchema,
-} from './models/employeePenalties.schema';
+import { employeePenalties, employeePenaltiesSchema } from './models/employeePenalties.schema';
 import {
   employeeSigningBonus,
   employeeSigningBonusSchema,
@@ -31,8 +28,14 @@ import { TimeManagementModule } from '../time-management/time-management.module'
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { LeavesModule } from '../leaves/leaves.module';
 import { RecruitmentModule } from '../recruitment/recruitment.module';
-import { EmployeeSystemRole, EmployeeSystemRoleSchema } from '../employee-profile/models/employee-system-role.schema';
-import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
+import {
+  EmployeeSystemRole,
+  EmployeeSystemRoleSchema,
+} from '../employee-profile/models/employee-system-role.schema';
+import {
+  EmployeeProfile,
+  EmployeeProfileSchema,
+} from '../employee-profile/models/employee-profile.schema';
 
 @Module({
   imports: [
@@ -52,7 +55,10 @@ import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/mode
       { name: employeePayrollDetails.name, schema: employeePayrollDetailsSchema },
       { name: employeeSigningBonus.name, schema: employeeSigningBonusSchema },
       { name: EmployeeTerminationResignation.name, schema: EmployeeTerminationResignationSchema },
-      { name: terminationAndResignationBenefits.name, schema: terminationAndResignationBenefitsSchema },
+      {
+        name: terminationAndResignationBenefits.name,
+        schema: terminationAndResignationBenefitsSchema,
+      },
       { name: employeePenalties.name, schema: employeePenaltiesSchema },
       { name: EmployeeSystemRole.name, schema: EmployeeSystemRoleSchema },
       { name: EmployeeProfile.name, schema: EmployeeProfileSchema },

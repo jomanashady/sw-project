@@ -30,16 +30,13 @@ export class PolicyConfigService {
     private latenessRuleModel: Model<LatenessRule>,
     @InjectModel(Holiday.name) private holidayModel: Model<Holiday>,
     @Inject(forwardRef(() => LeavesService))
-    private leavesService: LeavesService,
+    private leavesService: LeavesService
   ) {}
 
   // ===== OVERTIME RULE METHODS =====
 
   // Create a new overtime rule
-  async createOvertimeRule(
-    createOvertimeRuleDto: CreateOvertimeRuleDto,
-    currentUserId: string,
-  ) {
+  async createOvertimeRule(createOvertimeRuleDto: CreateOvertimeRuleDto, currentUserId: string) {
     const newOvertimeRule = new this.overtimeRuleModel({
       ...createOvertimeRuleDto,
       createdBy: currentUserId,
@@ -49,10 +46,7 @@ export class PolicyConfigService {
   }
 
   // Get all overtime rules with optional filters
-  async getOvertimeRules(
-    getPoliciesDto: GetPoliciesDto,
-    currentUserId: string,
-  ) {
+  async getOvertimeRules(getPoliciesDto: GetPoliciesDto, currentUserId: string) {
     const query: any = {};
 
     if (getPoliciesDto.active !== undefined) {
@@ -75,7 +69,7 @@ export class PolicyConfigService {
   async updateOvertimeRule(
     id: string,
     updateOvertimeRuleDto: UpdateOvertimeRuleDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     return this.overtimeRuleModel
       .findByIdAndUpdate(
@@ -84,7 +78,7 @@ export class PolicyConfigService {
           ...updateOvertimeRuleDto,
           updatedBy: currentUserId,
         },
-        { new: true },
+        { new: true }
       )
       .exec();
   }
@@ -101,33 +95,30 @@ export class PolicyConfigService {
    * Get applicable overtime rules for a specific date
    * BR-TM-08: Determines which rules apply based on date type (weekday/weekend/holiday)
    */
-  async getApplicableOvertimeRules(
-    date: Date,
-    currentUserId: string,
-  ) {
+  async getApplicableOvertimeRules(date: Date, currentUserId: string) {
     // Check if date is a holiday
     const holidayCheck = await this.checkHoliday({ date }, currentUserId);
-    
+
     // Check if date is weekend (Saturday = 6, Sunday = 0)
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
+
     // Get all active and approved overtime rules
-    const allRules = await this.overtimeRuleModel
-      .find({ active: true, approved: true })
-      .exec();
-    
+    const allRules = await this.overtimeRuleModel.find({ active: true, approved: true }).exec();
+
     return {
       date,
       isHoliday: holidayCheck.isHoliday,
       holidayName: holidayCheck.holiday?.name || null,
       isWeekend,
-      dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+      dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+        dayOfWeek
+      ],
       applicableRules: allRules,
-      recommendation: holidayCheck.isHoliday 
-        ? 'Apply HOLIDAY overtime multiplier' 
-        : isWeekend 
-          ? 'Apply WEEKEND overtime multiplier' 
+      recommendation: holidayCheck.isHoliday
+        ? 'Apply HOLIDAY overtime multiplier'
+        : isWeekend
+          ? 'Apply WEEKEND overtime multiplier'
           : 'Apply REGULAR overtime multiplier',
     };
   }
@@ -143,25 +134,25 @@ export class PolicyConfigService {
       standardWorkMinutes?: number;
       date: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { totalWorkMinutes, standardWorkMinutes = 480, date } = params; // Default 8 hours standard
-    
+    const { totalWorkMinutes, standardWorkMinutes, date } = params; // Default 8 hours standard
+
     // Get applicable rules for this date
     const applicableRules = await this.getApplicableOvertimeRules(date, currentUserId);
-    
+
     // Calculate overtime minutes
     const overtimeMinutes = Math.max(0, totalWorkMinutes - standardWorkMinutes);
     const overtimeHours = Math.round((overtimeMinutes / 60) * 100) / 100;
-    
+
     // Calculate short-time (undertime) minutes
     const shortTimeMinutes = Math.max(0, standardWorkMinutes - totalWorkMinutes);
     const shortTimeHours = Math.round((shortTimeMinutes / 60) * 100) / 100;
-    
+
     // Determine overtime type and multiplier based on date
     let overtimeType = 'REGULAR';
     let multiplier = 1.5; // Default 1.5x for regular overtime
-    
+
     if (applicableRules.isHoliday) {
       overtimeType = 'HOLIDAY';
       multiplier = 2.5; // 2.5x for holiday overtime
@@ -169,7 +160,7 @@ export class PolicyConfigService {
       overtimeType = 'WEEKEND';
       multiplier = 2.0; // 2x for weekend overtime
     }
-    
+
     return {
       attendanceRecordId: params.attendanceRecordId,
       date,
@@ -228,17 +219,17 @@ export class PolicyConfigService {
       standardWorkMinutes?: number;
       date: Date;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const config = await this.getShortTimeConfig(currentUserId);
-    const { totalWorkMinutes, standardWorkMinutes = config.standardWorkMinutes, date } = params;
-    
+    const { totalWorkMinutes, standardWorkMinutes, date } = params;
+
     const shortTimeMinutes = Math.max(0, standardWorkMinutes - totalWorkMinutes);
     const shortTimeHours = Math.round((shortTimeMinutes / 60) * 100) / 100;
-    
+
     // Determine if short-time should be applied (threshold check)
     const applyShortTime = shortTimeMinutes >= config.shortTimeThresholdMinutes;
-    
+
     // Determine work type
     let workType = 'FULL_DAY';
     if (totalWorkMinutes < config.minimumWorkMinutes) {
@@ -246,7 +237,7 @@ export class PolicyConfigService {
     } else if (totalWorkMinutes < standardWorkMinutes) {
       workType = 'HALF_DAY';
     }
-    
+
     return {
       attendanceRecordId: params.attendanceRecordId,
       date,
@@ -260,8 +251,8 @@ export class PolicyConfigService {
       },
       workType,
       config,
-      recommendation: applyShortTime 
-        ? 'Apply short-time deduction or require leave request' 
+      recommendation: applyShortTime
+        ? 'Apply short-time deduction or require leave request'
         : 'Short-time below threshold, no deduction required',
     };
   }
@@ -276,29 +267,29 @@ export class PolicyConfigService {
       date: Date;
       expectedOvertimeMinutes: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, date, expectedOvertimeMinutes } = params;
-    
+
     // Get applicable rules to check if pre-approval is required
     const applicableRules = await this.getApplicableOvertimeRules(date, currentUserId);
-    
+
     // Pre-approval thresholds (could be configurable)
     const preApprovalThresholdMinutes = 60; // Require pre-approval for overtime > 1 hour
     const requiresPreApproval = expectedOvertimeMinutes > preApprovalThresholdMinutes;
-    
+
     // Holiday/Weekend work typically requires pre-approval
     const requiresDueToDateType = applicableRules.isHoliday || applicableRules.isWeekend;
-    
+
     return {
       employeeId,
       date,
       expectedOvertimeMinutes,
       expectedOvertimeHours: Math.round((expectedOvertimeMinutes / 60) * 100) / 100,
       preApprovalRequired: requiresPreApproval || requiresDueToDateType,
-      reason: requiresDueToDateType 
+      reason: requiresDueToDateType
         ? `Pre-approval required for ${applicableRules.isHoliday ? 'holiday' : 'weekend'} work`
-        : requiresPreApproval 
+        : requiresPreApproval
           ? `Pre-approval required for overtime exceeding ${preApprovalThresholdMinutes} minutes`
           : 'Pre-approval not required',
       dateInfo: {
@@ -350,18 +341,18 @@ export class PolicyConfigService {
       period: 'daily' | 'weekly' | 'monthly';
       additionalOvertimeMinutes?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const config = await this.getOvertimeLimitsConfig(currentUserId);
     const periodConfig = config[params.period];
-    
+
     const currentMinutes = params.currentOvertimeMinutes;
     const additionalMinutes = params.additionalOvertimeMinutes || 0;
     const projectedMinutes = currentMinutes + additionalMinutes;
-    
+
     const withinSoftLimit = projectedMinutes <= periodConfig.softLimitMinutes;
     const withinHardLimit = projectedMinutes <= periodConfig.maxOvertimeMinutes;
-    
+
     return {
       employeeId: params.employeeId,
       period: params.period,
@@ -384,9 +375,9 @@ export class PolicyConfigService {
         requiresApproval: !withinSoftLimit && config.policies.requireApprovalAboveSoftLimit,
         blocked: !withinHardLimit && config.policies.enforceHardLimits,
       },
-      recommendation: !withinHardLimit 
+      recommendation: !withinHardLimit
         ? 'BLOCKED: Overtime exceeds hard limit'
-        : !withinSoftLimit 
+        : !withinSoftLimit
           ? 'WARNING: Overtime exceeds soft limit, requires approval'
           : 'OK: Within overtime limits',
     };
@@ -400,7 +391,7 @@ export class PolicyConfigService {
     const overtimeRules = await this.overtimeRuleModel.find({ active: true }).exec();
     const limits = await this.getOvertimeLimitsConfig(currentUserId);
     const shortTimeConfig = await this.getShortTimeConfig(currentUserId);
-    
+
     return {
       generatedAt: new Date(),
       overtime: {
@@ -423,10 +414,7 @@ export class PolicyConfigService {
   // ===== LATENESS RULE METHODS =====
 
   // Create a new lateness rule
-  async createLatenessRule(
-    createLatenessRuleDto: CreateLatenessRuleDto,
-    currentUserId: string,
-  ) {
+  async createLatenessRule(createLatenessRuleDto: CreateLatenessRuleDto, currentUserId: string) {
     const newLatenessRule = new this.latenessRuleModel({
       ...createLatenessRuleDto,
       createdBy: currentUserId,
@@ -436,10 +424,7 @@ export class PolicyConfigService {
   }
 
   // Get all lateness rules with optional filters
-  async getLatenessRules(
-    getPoliciesDto: GetPoliciesDto,
-    currentUserId: string,
-  ) {
+  async getLatenessRules(getPoliciesDto: GetPoliciesDto, currentUserId: string) {
     const query: any = {};
 
     if (getPoliciesDto.active !== undefined) {
@@ -458,7 +443,7 @@ export class PolicyConfigService {
   async updateLatenessRule(
     id: string,
     updateLatenessRuleDto: UpdateLatenessRuleDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     return this.latenessRuleModel
       .findByIdAndUpdate(
@@ -467,7 +452,7 @@ export class PolicyConfigService {
           ...updateLatenessRuleDto,
           updatedBy: currentUserId,
         },
-        { new: true },
+        { new: true }
       )
       .exec();
   }
@@ -545,29 +530,32 @@ export class PolicyConfigService {
       actualArrivalMinutes: number; // e.g., 555 for 9:15 AM
       gracePeriodMinutes?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { scheduledStartMinutes, actualArrivalMinutes } = params;
-    
+
     // Get active lateness rules
     const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
     const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
-    
+
     // Use rule-specific grace period or default
-    const gracePeriod = params.gracePeriodMinutes ?? 
-      (latenessRules.length > 0 ? latenessRules[0].gracePeriodMinutes : thresholdsConfig.gracePeriodMinutes);
-    
+    const gracePeriod =
+      params.gracePeriodMinutes ??
+      (latenessRules.length > 0
+        ? latenessRules[0].gracePeriodMinutes
+        : thresholdsConfig.gracePeriodMinutes);
+
     // Calculate raw lateness
     const rawLatenessMinutes = Math.max(0, actualArrivalMinutes - scheduledStartMinutes);
-    
+
     // Apply grace period
     const effectiveLatenessMinutes = Math.max(0, rawLatenessMinutes - gracePeriod);
-    
+
     // Determine lateness category
     let category = 'ON_TIME';
     let action = 'NO_ACTION';
     let deductionMultiplier = 0;
-    
+
     if (rawLatenessMinutes <= 0) {
       category = 'EARLY';
       action = 'NO_ACTION';
@@ -587,12 +575,13 @@ export class PolicyConfigService {
       action = 'ESCALATION';
       deductionMultiplier = 2.0;
     }
-    
+
     // Calculate deduction amount
-    const deductionPerMinute = latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
+    const deductionPerMinute =
+      latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
     const baseDeduction = effectiveLatenessMinutes * deductionPerMinute;
     const totalDeduction = baseDeduction * deductionMultiplier;
-    
+
     return {
       attendanceRecordId: params.attendanceRecordId,
       scheduledStartMinutes,
@@ -647,14 +636,15 @@ export class PolicyConfigService {
       currentLatenessMinutes: number;
       periodDays?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const config = await this.getLatenessThresholdsConfig(currentUserId);
-    const { currentLatenessMinutes, periodDays = 30 } = params;
-    
+    const { currentLatenessMinutes, periodDays } = params;
+
     // Check if current lateness exceeds escalation threshold
-    const exceedsTimeThreshold = currentLatenessMinutes > config.escalationPolicy.escalateAfterMinutes;
-    
+    const exceedsTimeThreshold =
+      currentLatenessMinutes > config.escalationPolicy.escalateAfterMinutes;
+
     // In a real implementation, we'd query historical lateness data here
     // For now, return the escalation rules and current status
     return {
@@ -691,10 +681,10 @@ export class PolicyConfigService {
       latenessMinutes: number;
       latenessRuleId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, attendanceRecordId, latenessMinutes, latenessRuleId } = params;
-    
+
     // Get applicable lateness rule
     let latenessRule;
     if (latenessRuleId) {
@@ -704,7 +694,7 @@ export class PolicyConfigService {
       const rules = await this.latenessRuleModel.find({ active: true }).exec();
       latenessRule = rules[0];
     }
-    
+
     if (!latenessRule) {
       return {
         success: false,
@@ -712,10 +702,10 @@ export class PolicyConfigService {
         deductionApplied: false,
       };
     }
-    
+
     // Calculate effective lateness after grace period
     const effectiveLatenessMinutes = Math.max(0, latenessMinutes - latenessRule.gracePeriodMinutes);
-    
+
     if (effectiveLatenessMinutes <= 0) {
       return {
         success: true,
@@ -728,10 +718,10 @@ export class PolicyConfigService {
         },
       };
     }
-    
+
     // Calculate deduction
     const deductionAmount = effectiveLatenessMinutes * latenessRule.deductionForEachMinute;
-    
+
     return {
       success: true,
       message: 'Deduction calculated successfully',
@@ -744,7 +734,7 @@ export class PolicyConfigService {
         effectiveMinutes: effectiveLatenessMinutes,
       },
       deduction: {
-        ruleId: (latenessRule as any)._id,
+        ruleId: latenessRule._id,
         ruleName: latenessRule.name,
         ratePerMinute: latenessRule.deductionForEachMinute,
         amount: Math.round(deductionAmount * 100) / 100,
@@ -761,10 +751,10 @@ export class PolicyConfigService {
   async getLatenesPenaltySummary(currentUserId: string) {
     const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
     const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
-    
+
     return {
       generatedAt: new Date(),
-      activeRules: latenessRules.map(rule => ({
+      activeRules: latenessRules.map((rule) => ({
         id: (rule as any)._id,
         name: rule.name,
         description: rule.description,
@@ -794,29 +784,32 @@ export class PolicyConfigService {
       actualDepartureMinutes: number; // e.g., 960 for 4:00 PM
       gracePeriodMinutes?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { scheduledEndMinutes, actualDepartureMinutes } = params;
-    
+
     // Get active lateness rules (early leave uses same rules)
     const latenessRules = await this.latenessRuleModel.find({ active: true }).exec();
     const thresholdsConfig = await this.getLatenessThresholdsConfig(currentUserId);
-    
+
     // Use rule-specific grace period or default
-    const gracePeriod = params.gracePeriodMinutes ?? 
-      (latenessRules.length > 0 ? latenessRules[0].gracePeriodMinutes : thresholdsConfig.gracePeriodMinutes);
-    
+    const gracePeriod =
+      params.gracePeriodMinutes ??
+      (latenessRules.length > 0
+        ? latenessRules[0].gracePeriodMinutes
+        : thresholdsConfig.gracePeriodMinutes);
+
     // Calculate raw early leave (if left before scheduled end)
     const rawEarlyMinutes = Math.max(0, scheduledEndMinutes - actualDepartureMinutes);
-    
+
     // Apply grace period
     const effectiveEarlyMinutes = Math.max(0, rawEarlyMinutes - gracePeriod);
-    
+
     // Determine early leave category (using same thresholds as lateness)
     let category = 'NORMAL';
     let action = 'NO_ACTION';
     let deductionMultiplier = 0;
-    
+
     if (rawEarlyMinutes <= 0) {
       category = 'OVERTIME';
       action = 'NO_ACTION';
@@ -836,12 +829,13 @@ export class PolicyConfigService {
       action = 'ESCALATION';
       deductionMultiplier = 2.0;
     }
-    
+
     // Calculate deduction amount
-    const deductionPerMinute = latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
+    const deductionPerMinute =
+      latenessRules.length > 0 ? latenessRules[0].deductionForEachMinute : 0;
     const baseDeduction = effectiveEarlyMinutes * deductionPerMinute;
     const totalDeduction = baseDeduction * deductionMultiplier;
-    
+
     return {
       attendanceRecordId: params.attendanceRecordId,
       scheduledEndMinutes,
@@ -861,21 +855,19 @@ export class PolicyConfigService {
         totalAmount: Math.round(totalDeduction * 100) / 100,
       },
       requiresEscalation: action === 'ESCALATION',
-      recommendation: rawEarlyMinutes <= 0 
-        ? 'Employee worked overtime' 
-        : rawEarlyMinutes <= gracePeriod 
-          ? 'Within acceptable range' 
-          : `Early departure by ${rawEarlyMinutes} minutes - apply appropriate action`,
+      recommendation:
+        rawEarlyMinutes <= 0
+          ? 'Employee worked overtime'
+          : rawEarlyMinutes <= gracePeriod
+            ? 'Within acceptable range'
+            : `Early departure by ${rawEarlyMinutes} minutes - apply appropriate action`,
     };
   }
 
   // ===== HOLIDAY METHODS =====
 
   // Create a new holiday
-  async createHoliday(
-    createHolidayDto: CreateHolidayDto,
-    currentUserId: string,
-  ) {
+  async createHoliday(createHolidayDto: CreateHolidayDto, currentUserId: string) {
     const newHoliday = new this.holidayModel({
       ...createHolidayDto,
       createdBy: currentUserId,
@@ -929,11 +921,7 @@ export class PolicyConfigService {
   }
 
   // Update a holiday
-  async updateHoliday(
-    id: string,
-    updateHolidayDto: UpdateHolidayDto,
-    currentUserId: string,
-  ) {
+  async updateHoliday(id: string, updateHolidayDto: UpdateHolidayDto, currentUserId: string) {
     return this.holidayModel
       .findByIdAndUpdate(
         id,
@@ -941,7 +929,7 @@ export class PolicyConfigService {
           ...updateHolidayDto,
           updatedBy: currentUserId,
         },
-        { new: true },
+        { new: true }
       )
       .exec();
   }
@@ -964,22 +952,22 @@ export class PolicyConfigService {
       effectiveTo?: Date;
       departmentId?: string;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { restDays, effectiveFrom, effectiveTo, departmentId } = params;
-    
+
     // Validate rest days
-    const validDays = restDays.filter(d => d >= 0 && d <= 6);
+    const validDays = restDays.filter((d) => d >= 0 && d <= 6);
     if (validDays.length === 0) {
       return {
         success: false,
         message: 'Invalid rest days provided. Use 0-6 (Sunday-Saturday)',
       };
     }
-    
+
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const restDayNames = validDays.map(d => dayNames[d]);
-    
+    const restDayNames = validDays.map((d) => dayNames[d]);
+
     return {
       success: true,
       configuration: {
@@ -1008,24 +996,24 @@ export class PolicyConfigService {
       date: Date;
       restDays?: number[]; // Custom rest days, default [5, 6] (Fri, Sat) or [0, 6] (Sun, Sat)
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { date, restDays = [5, 6] } = params; // Default: Friday & Saturday
-    
+    const { date, restDays } = params; // Default: Friday & Saturday
+
     const dateObj = new Date(date);
     const dayOfWeek = dateObj.getDay();
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+
     const isRestDay = restDays.includes(dayOfWeek);
-    
+
     return {
       date,
       dayOfWeek,
       dayName: dayNames[dayOfWeek],
       isRestDay,
-      configuredRestDays: restDays.map(d => dayNames[d]),
+      configuredRestDays: restDays.map((d) => dayNames[d]),
       penaltySuppression: isRestDay,
-      message: isRestDay 
+      message: isRestDay
         ? `${dayNames[dayOfWeek]} is a configured rest day - penalties suppressed`
         : `${dayNames[dayOfWeek]} is a working day`,
     };
@@ -1045,13 +1033,13 @@ export class PolicyConfigService {
       }>;
       year?: number;
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { holidays, year = new Date().getFullYear() } = params;
-    
+    const { holidays, year } = params;
+
     const createdHolidays: any[] = [];
     const failedHolidays: any[] = [];
-    
+
     for (const holiday of holidays) {
       try {
         const newHoliday = new this.holidayModel({
@@ -1076,7 +1064,7 @@ export class PolicyConfigService {
         });
       }
     }
-    
+
     return {
       success: failedHolidays.length === 0,
       year,
@@ -1103,14 +1091,14 @@ export class PolicyConfigService {
       includeRestDays?: boolean;
       restDays?: number[];
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { year = new Date().getFullYear(), month, includeRestDays = true, restDays = [5, 6] } = params;
-    
+    const { year, month, includeRestDays, restDays } = params;
+
     // Build date range
     let startDate: Date;
     let endDate: Date;
-    
+
     if (month !== undefined) {
       startDate = new Date(year, month - 1, 1);
       endDate = new Date(year, month, 0); // Last day of month
@@ -1118,7 +1106,7 @@ export class PolicyConfigService {
       startDate = new Date(year, 0, 1);
       endDate = new Date(year, 11, 31);
     }
-    
+
     // Get holidays in range
     const holidays = await this.holidayModel
       .find({
@@ -1131,15 +1119,15 @@ export class PolicyConfigService {
       })
       .sort({ startDate: 1 })
       .exec();
-    
+
     // Group by type
     const byType: Record<string, any[]> = {
       NATIONAL: [],
       ORGANIZATIONAL: [],
       WEEKLY_REST: [],
     };
-    
-    holidays.forEach(h => {
+
+    holidays.forEach((h) => {
       const type = h.type || 'ORGANIZATIONAL';
       if (!byType[type]) byType[type] = [];
       byType[type].push({
@@ -1150,13 +1138,21 @@ export class PolicyConfigService {
         type: h.type,
       });
     });
-    
+
     // Calculate rest days in period if requested
-    let restDaysInPeriod: any[] = [];
+    const restDaysInPeriod: any[] = [];
     if (includeRestDays) {
       const current = new Date(startDate);
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      
+      const dayNames = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
+
       while (current <= endDate) {
         if (restDays.includes(current.getDay())) {
           restDaysInPeriod.push({
@@ -1167,7 +1163,7 @@ export class PolicyConfigService {
         current.setDate(current.getDate() + 1);
       }
     }
-    
+
     return {
       period: {
         year,
@@ -1182,14 +1178,24 @@ export class PolicyConfigService {
         restDaysCount: restDaysInPeriod.length,
       },
       holidays: byType,
-      restDays: includeRestDays ? {
-        configuredDays: restDays.map(d => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]),
-        count: restDaysInPeriod.length,
-        // Only include first few and last few to avoid huge response
-        sample: restDaysInPeriod.length > 10 
-          ? [...restDaysInPeriod.slice(0, 5), { note: `...${restDaysInPeriod.length - 10} more...` }, ...restDaysInPeriod.slice(-5)]
-          : restDaysInPeriod,
-      } : undefined,
+      restDays: includeRestDays
+        ? {
+            configuredDays: restDays.map(
+              (d) =>
+                ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
+            ),
+            count: restDaysInPeriod.length,
+            // Only include first few and last few to avoid huge response
+            sample:
+              restDaysInPeriod.length > 10
+                ? [
+                    ...restDaysInPeriod.slice(0, 5),
+                    { note: `...${restDaysInPeriod.length - 10} more...` },
+                    ...restDaysInPeriod.slice(-5),
+                  ]
+                : restDaysInPeriod,
+          }
+        : undefined,
       generatedAt: new Date(),
     };
   }
@@ -1204,18 +1210,18 @@ export class PolicyConfigService {
       date: Date;
       restDays?: number[];
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { employeeId, date, restDays = [5, 6] } = params;
-    
+    const { employeeId, date, restDays } = params;
+
     // Check if it's a holiday
     const holidayCheck = await this.checkHoliday({ date }, currentUserId);
-    
+
     // Check if it's a rest day
     const restDayCheck = await this.checkRestDay({ date, restDays }, currentUserId);
-    
+
     const shouldSuppressPenalty = holidayCheck.isHoliday || restDayCheck.isRestDay;
-    
+
     let suppressionReason = '';
     if (holidayCheck.isHoliday && restDayCheck.isRestDay) {
       suppressionReason = `${holidayCheck.holiday?.name || 'Holiday'} (also a rest day)`;
@@ -1224,7 +1230,7 @@ export class PolicyConfigService {
     } else if (restDayCheck.isRestDay) {
       suppressionReason = `Rest day (${restDayCheck.dayName})`;
     }
-    
+
     return {
       employeeId,
       date,
@@ -1256,38 +1262,39 @@ export class PolicyConfigService {
       holidayIds: string[];
       action: 'NO_WORK' | 'OPTIONAL' | 'OVERTIME_ELIGIBLE';
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { shiftId, holidayIds, action } = params;
-    
+
     // Validate holidays exist
     const holidays = await this.holidayModel
       .find({ _id: { $in: holidayIds }, active: true })
       .exec();
-    
+
     if (holidays.length === 0) {
       return {
         success: false,
         message: 'No valid holidays found',
       };
     }
-    
-    const linkedHolidays = holidays.map(h => ({
+
+    const linkedHolidays = holidays.map((h) => ({
       holidayId: (h as any)._id,
       name: h.name,
       startDate: h.startDate,
       type: h.type,
     }));
-    
+
     return {
       success: true,
       shiftId,
       action,
-      actionDescription: action === 'NO_WORK' 
-        ? 'Employees are not expected to work'
-        : action === 'OPTIONAL'
-          ? 'Work is optional with no penalty for absence'
-          : 'Work is overtime-eligible with premium rates',
+      actionDescription:
+        action === 'NO_WORK'
+          ? 'Employees are not expected to work'
+          : action === 'OPTIONAL'
+            ? 'Work is optional with no penalty for absence'
+            : 'Work is overtime-eligible with premium rates',
       linkedHolidays,
       holidayCount: linkedHolidays.length,
       linkedAt: new Date(),
@@ -1306,10 +1313,10 @@ export class PolicyConfigService {
       endDate: Date;
       restDays?: number[];
     },
-    currentUserId: string,
+    currentUserId: string
   ) {
-    const { employeeId, startDate, endDate, restDays = [5, 6] } = params;
-    
+    const { employeeId, startDate, endDate, restDays } = params;
+
     // Get holidays in range
     const holidays = await this.holidayModel
       .find({
@@ -1322,16 +1329,16 @@ export class PolicyConfigService {
       })
       .sort({ startDate: 1 })
       .exec();
-    
+
     // Calculate all non-working days
     const nonWorkingDays: any[] = [];
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+
     // Add holidays
-    holidays.forEach(h => {
+    holidays.forEach((h) => {
       const hStart = new Date(h.startDate);
       const hEnd = h.endDate ? new Date(h.endDate) : new Date(h.startDate);
-      
+
       const current = new Date(hStart);
       while (current <= hEnd) {
         if (current >= startDate && current <= endDate) {
@@ -1345,14 +1352,14 @@ export class PolicyConfigService {
         current.setDate(current.getDate() + 1);
       }
     });
-    
+
     // Add rest days
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
       if (restDays.includes(currentDate.getDay())) {
         // Check if not already a holiday
         const isHoliday = nonWorkingDays.some(
-          d => d.type === 'HOLIDAY' && d.date.toDateString() === currentDate.toDateString()
+          (d) => d.type === 'HOLIDAY' && d.date.toDateString() === currentDate.toDateString()
         );
         if (!isHoliday) {
           nonWorkingDays.push({
@@ -1364,14 +1371,15 @@ export class PolicyConfigService {
       }
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     // Sort by date
     nonWorkingDays.sort((a, b) => a.date.getTime() - b.date.getTime());
-    
+
     // Calculate working days
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalDays =
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const workingDays = totalDays - nonWorkingDays.length;
-    
+
     return {
       employeeId,
       period: { startDate, endDate },
@@ -1379,17 +1387,16 @@ export class PolicyConfigService {
         totalDays,
         workingDays,
         nonWorkingDays: nonWorkingDays.length,
-        holidays: nonWorkingDays.filter(d => d.type === 'HOLIDAY').length,
-        restDays: nonWorkingDays.filter(d => d.type === 'REST_DAY').length,
+        holidays: nonWorkingDays.filter((d) => d.type === 'HOLIDAY').length,
+        restDays: nonWorkingDays.filter((d) => d.type === 'REST_DAY').length,
       },
-      configuredRestDays: restDays.map(d => dayNames[d]),
+      configuredRestDays: restDays.map((d) => dayNames[d]),
       nonWorkingDays,
       generatedAt: new Date(),
     };
   }
 
   // ===== HOLIDAY VALIDATION METHODS =====
-
 
   // Check if a specific date is a holiday
   async checkHoliday(checkHolidayDto: CheckHolidayDto, currentUserId: string) {
@@ -1431,7 +1438,7 @@ export class PolicyConfigService {
   // Validate attendance against holidays (suppress penalty if holiday)
   async validateAttendanceHoliday(
     validateAttendanceHolidayDto: ValidateAttendanceHolidayDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const { employeeId, date, suppressPenalty } = validateAttendanceHolidayDto;
 

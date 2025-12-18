@@ -7,19 +7,22 @@ import { EmployeeProfileService } from '../../employee-profile/employee-profile.
 import { EmployeeStatus, SystemRole } from '../../employee-profile/enums/employee-profile.enums';
 import { TerminationRequest } from '../models/termination-request.schema';
 import { TerminationStatus } from '../enums/termination-status.enum';
-import { EmployeeProfile, EmployeeProfileDocument } from '../../employee-profile/models/employee-profile.schema';
+import {
+  EmployeeProfile,
+  EmployeeProfileDocument,
+} from '../../employee-profile/models/employee-profile.schema';
 
 /**
  * ONB-013: Automated Account Provisioning and Revocation Scheduler
- * 
- * User Story: As a HR Manager, I want automated account provisioning (SSO/email/tools) 
+ *
+ * User Story: As a HR Manager, I want automated account provisioning (SSO/email/tools)
  * on start date and scheduled revocation on exit, so access is consistent and secure.
- * 
+ *
  * This service runs daily to:
- * 1. Automatically provision system access (SSO/email/tools) for employees 
+ * 1. Automatically provision system access (SSO/email/tools) for employees
  *    whose start date (dateOfHire or contractStartDate) is TODAY
  * 2. Automatically revoke system access for employees whose termination/end date is TODAY
- * 
+ *
  * BR: Provisioning and security must be consistent
  */
 @Injectable()
@@ -30,7 +33,7 @@ export class AccessProvisioningSchedulerService {
     @InjectModel(TerminationRequest.name)
     private terminationModel: Model<TerminationRequest>,
     @InjectModel(EmployeeProfile.name)
-    private employeeModel: Model<EmployeeProfileDocument>,
+    private employeeModel: Model<EmployeeProfileDocument>
   ) {}
 
   /**
@@ -40,7 +43,7 @@ export class AccessProvisioningSchedulerService {
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async processScheduledAccessProvisioning() {
     console.log(
-      `[ONB-013] Starting scheduled access provisioning/revocation at ${new Date().toISOString()}`,
+      `[ONB-013] Starting scheduled access provisioning/revocation at ${new Date().toISOString()}`
     );
 
     const today = new Date();
@@ -56,13 +59,10 @@ export class AccessProvisioningSchedulerService {
       await this.revokeAccessForTerminatedEmployees(today);
 
       console.log(
-        `[ONB-013] Completed scheduled access provisioning/revocation at ${new Date().toISOString()}`,
+        `[ONB-013] Completed scheduled access provisioning/revocation at ${new Date().toISOString()}`
       );
     } catch (error) {
-      console.error(
-        `[ONB-013] Error in scheduled access provisioning/revocation:`,
-        error,
-      );
+      console.error(`[ONB-013] Error in scheduled access provisioning/revocation:`, error);
     }
   }
 
@@ -96,7 +96,7 @@ export class AccessProvisioningSchedulerService {
           // Check if employee has onboarding with IT tasks
           try {
             const onboarding = await this.recruitmentService.getOnboardingByEmployeeId(
-              (employee as any)._id.toString(),
+              (employee as any)._id.toString()
             );
 
             if (onboarding && onboarding.tasks) {
@@ -105,7 +105,7 @@ export class AccessProvisioningSchedulerService {
                 (task: any) =>
                   task.department === 'IT' &&
                   task.status !== 'COMPLETED' &&
-                  task.status !== 'completed',
+                  task.status !== 'completed'
               );
 
               // Provision IT tasks (SSO/email/tools) as per ONB-013
@@ -128,42 +128,38 @@ export class AccessProvisioningSchedulerService {
       for (const { employee, onboarding, itTasks } of employeesToProvision) {
         try {
           console.log(
-            `[ONB-013] Auto-provisioning access for employee ${employee.employeeNumber} (start date: ${employee.contractStartDate || employee.dateOfHire})`,
+            `[ONB-013] Auto-provisioning access for employee ${employee.employeeNumber} (start date: ${employee.contractStartDate || employee.dateOfHire})`
           );
 
           // ONB-013: Provision IT tasks (SSO/email/tools/clock access)
           for (const task of itTasks) {
             const taskIndex = onboarding.tasks.findIndex(
-              (t: any) =>
-                t.name === task.name && t.department === task.department,
+              (t: any) => t.name === task.name && t.department === task.department
             );
 
             if (taskIndex >= 0) {
               await this.recruitmentService.provisionSystemAccess(
-                (employee as any)._id.toString(),
-                taskIndex,
+                employee._id.toString(),
+                taskIndex
               );
               console.log(
-                `[ONB-013] ✅ Auto-provisioned IT access (SSO/email/tools): ${task.name} for ${employee.employeeNumber}`,
+                `[ONB-013] ✅ Auto-provisioned IT access (SSO/email/tools): ${task.name} for ${employee.employeeNumber}`
               );
             }
           }
         } catch (error) {
           console.error(
             `[ONB-013] ❌ Failed to auto-provision access for ${employee.employeeNumber}:`,
-            error,
+            error
           );
         }
       }
 
       console.log(
-        `[ONB-013] Auto-provisioned access for ${employeesToProvision.length} employee(s)`,
+        `[ONB-013] Auto-provisioned access for ${employeesToProvision.length} employee(s)`
       );
     } catch (error) {
-      console.error(
-        '[ONB-013] Error in provisionAccessForNewEmployees:',
-        error,
-      );
+      console.error('[ONB-013] Error in provisionAccessForNewEmployees:', error);
     }
   }
 
@@ -178,7 +174,7 @@ export class AccessProvisioningSchedulerService {
         {
           status: EmployeeStatus.ACTIVE, // Only active employees need revocation
         },
-        undefined,
+        undefined
       );
 
       const employeesToRevoke: any[] = [];
@@ -191,7 +187,7 @@ export class AccessProvisioningSchedulerService {
         try {
           const termination = await this.terminationModel
             .findOne({
-              employeeId: new Types.ObjectId((employee as any)._id.toString()),
+              employeeId: new Types.ObjectId(employee._id.toString()),
               terminationDate: {
                 $gte: today,
                 $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Within today
@@ -232,7 +228,7 @@ export class AccessProvisioningSchedulerService {
       for (const { employee, reason } of employeesToRevoke) {
         try {
           console.log(
-            `[ONB-013] Auto-revoking access for employee ${employee.employeeNumber}: ${reason}`,
+            `[ONB-013] Auto-revoking access for employee ${employee.employeeNumber}: ${reason}`
           );
 
           await this.recruitmentService.revokeSystemAccess(
@@ -244,28 +240,21 @@ export class AccessProvisioningSchedulerService {
               id: 'SYSTEM',
               roles: [SystemRole.SYSTEM_ADMIN],
               employeeNumber: 'SYSTEM',
-            },
+            }
           );
 
-          console.log(
-            `[ONB-013] ✅ Auto-revoked access for ${employee.employeeNumber}`,
-          );
+          console.log(`[ONB-013] ✅ Auto-revoked access for ${employee.employeeNumber}`);
         } catch (error) {
           console.error(
             `[ONB-013] ❌ Failed to auto-revoke access for ${employee.employeeNumber}:`,
-            error,
+            error
           );
         }
       }
 
-      console.log(
-        `[ONB-013] Auto-revoked access for ${employeesToRevoke.length} employee(s)`,
-      );
+      console.log(`[ONB-013] Auto-revoked access for ${employeesToRevoke.length} employee(s)`);
     } catch (error) {
-      console.error(
-        '[ONB-013] Error in revokeAccessForTerminatedEmployees:',
-        error,
-      );
+      console.error('[ONB-013] Error in revokeAccessForTerminatedEmployees:', error);
     }
   }
 
@@ -282,4 +271,3 @@ export class AccessProvisioningSchedulerService {
     };
   }
 }
-

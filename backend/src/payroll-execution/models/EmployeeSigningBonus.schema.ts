@@ -4,8 +4,7 @@ import { signingBonus } from '../../payroll-configuration/models/signingBonus.sc
 import { EmployeeProfile as Employee } from '../../employee-profile/models/employee-profile.schema';
 import { BonusStatus } from '../enums/payroll-execution-enum';
 
-export type employeeSigningBonusDocument =
-  HydratedDocument<employeeSigningBonus>;
+export type employeeSigningBonusDocument = HydratedDocument<employeeSigningBonus>;
 
 @Schema({ timestamps: true })
 export class employeeSigningBonus {
@@ -33,5 +32,4 @@ export class employeeSigningBonus {
   status: BonusStatus; // pending, paid, approved ,rejected
 }
 
-export const employeeSigningBonusSchema =
-  SchemaFactory.createForClass(employeeSigningBonus);
+export const employeeSigningBonusSchema = SchemaFactory.createForClass(employeeSigningBonus);

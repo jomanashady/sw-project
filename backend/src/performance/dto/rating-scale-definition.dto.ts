@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsArray,
-} from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
 import { AppraisalRatingScaleType } from '../enums/performance.enums';
 
 export class RatingScaleDefinitionDto {

@@ -39,7 +39,7 @@ export class NotificationsController {
       managerId: string;
       coordinatorId: string;
       leaveDetails?: any; // Optional - for backward compatibility
-    },
+    }
   ) {
     // If leaveDetails not provided, use minimal data
     const leaveDetails = body.leaveDetails || {
@@ -54,7 +54,7 @@ export class NotificationsController {
       body.employeeId,
       body.managerId,
       body.coordinatorId,
-      leaveDetails,
+      leaveDetails
     );
   }
 
@@ -71,7 +71,7 @@ export class NotificationsController {
       employeeId: string;
       managerId: string;
       leaveDetails?: any; // Optional
-    },
+    }
   ) {
     const leaveDetails = body.leaveDetails || {
       employeeName: 'Employee',
@@ -83,7 +83,7 @@ export class NotificationsController {
       body.leaveRequestId,
       body.employeeId,
       body.managerId,
-      leaveDetails,
+      leaveDetails
     );
   }
 
@@ -99,12 +99,12 @@ export class NotificationsController {
       leaveRequestId: string;
       employeeId: string;
       status: 'APPROVED' | 'REJECTED' | 'RETURNED_FOR_CORRECTION' | 'MODIFIED';
-    },
+    }
   ) {
     return this.notificationsService.notifyLeaveRequestStatusChanged(
       body.leaveRequestId,
       body.employeeId,
-      body.status,
+      body.status
     );
   }
 
@@ -125,7 +125,7 @@ export class NotificationsController {
       endDate: Date;
       daysRemaining: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendShiftExpiryNotification(
       body.recipientId,
@@ -133,7 +133,7 @@ export class NotificationsController {
       body.employeeId,
       new Date(body.endDate),
       body.daysRemaining,
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -156,7 +156,7 @@ export class NotificationsController {
         daysRemaining: number;
       }>;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendBulkShiftExpiryNotifications(
       body.hrAdminIds,
@@ -164,7 +164,7 @@ export class NotificationsController {
         ...a,
         endDate: new Date(a.endDate),
       })),
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -189,13 +189,13 @@ export class NotificationsController {
       shiftAssignmentId: string;
       newEndDate: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendShiftRenewalConfirmation(
       body.recipientId,
       body.shiftAssignmentId,
       new Date(body.newEndDate),
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -211,13 +211,13 @@ export class NotificationsController {
       shiftAssignmentId: string;
       employeeId: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendShiftArchiveNotification(
       body.recipientId,
       body.shiftAssignmentId,
       body.employeeId,
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -239,7 +239,7 @@ export class NotificationsController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async sendMissedPunchAlertToEmployee(
     @Body()
@@ -249,14 +249,14 @@ export class NotificationsController {
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendMissedPunchAlertToEmployee(
       body.employeeId,
       body.attendanceRecordId,
       body.missedPunchType,
       new Date(body.date),
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -276,7 +276,7 @@ export class NotificationsController {
       missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT';
       date: Date;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.notificationsService.sendMissedPunchAlertToManager(
       body.managerId,
@@ -285,7 +285,7 @@ export class NotificationsController {
       body.attendanceRecordId,
       body.missedPunchType,
       new Date(body.date),
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -307,7 +307,7 @@ export class NotificationsController {
         date: Date;
       }>;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     const alerts = body.alerts.map((a) => ({
       ...a,
@@ -315,7 +315,7 @@ export class NotificationsController {
     }));
     return this.notificationsService.sendBulkMissedPunchAlerts(
       alerts,
-      user.userId || user._id || user.id,
+      user.userId || user._id || user.id
     );
   }
 
@@ -328,22 +328,17 @@ export class NotificationsController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getMissedPunchNotificationsByEmployee(
     @Param('employeeId') employeeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check
-    if (
-      user.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE) &&
-      user.userId !== employeeId
-    ) {
+    if (user.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE) && user.userId !== employeeId) {
       throw new Error('Access denied');
     }
-    return this.notificationsService.getMissedPunchNotificationsByEmployee(
-      employeeId,
-    );
+    return this.notificationsService.getMissedPunchNotificationsByEmployee(employeeId);
   }
 
   /**
@@ -354,22 +349,17 @@ export class NotificationsController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getMissedPunchNotificationsByManager(
     @Param('managerId') managerId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     // Self-access check for managers
-    if (
-      user.roles?.includes(SystemRole.DEPARTMENT_HEAD) &&
-      user.userId !== managerId
-    ) {
+    if (user.roles?.includes(SystemRole.DEPARTMENT_HEAD) && user.userId !== managerId) {
       throw new Error('Access denied');
     }
-    return this.notificationsService.getMissedPunchNotificationsByManager(
-      managerId,
-    );
+    return this.notificationsService.getMissedPunchNotificationsByManager(managerId);
   }
 
   /**
@@ -379,7 +369,7 @@ export class NotificationsController {
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER)
   async getAllMissedPunchNotifications(
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query('endDate') endDate?: string
   ) {
     const filters: { startDate?: Date; endDate?: Date } = {};
     if (startDate) filters.startDate = new Date(startDate);
@@ -400,13 +390,13 @@ export class NotificationsController {
       hrAdminId: string;
       employeeDetails: any;
       expiryDate: Date;
-    },
+    }
   ) {
     return this.notificationsService.notifyShiftAssignmentExpiry(
       body.shiftAssignmentId,
       body.hrAdminId,
       body.employeeDetails,
-      body.expiryDate,
+      body.expiryDate
     );
   }
 
@@ -423,13 +413,13 @@ export class NotificationsController {
       managerId: string;
       coordinatorId: string;
       attendanceDetails: any;
-    },
+    }
   ) {
     return this.notificationsService.notifyMissedPunch(
       body.employeeId,
       body.managerId,
       body.coordinatorId,
-      body.attendanceDetails,
+      body.attendanceDetails
     );
   }
 
@@ -493,7 +483,7 @@ export class NotificationsController {
         employeeName: 'John Doe',
         fromDate: '2025-12-20',
         toDate: '2025-12-25',
-      },
+      }
     );
   }
 
@@ -507,7 +497,7 @@ export class NotificationsController {
     return this.notificationsService.notifyLeaveRequestStatusChanged(
       new Types.ObjectId().toString(),
       userId,
-      'APPROVED',
+      'APPROVED'
     );
   }
 
@@ -520,7 +510,7 @@ export class NotificationsController {
     return this.notificationsService.notifyLeaveRequestStatusChanged(
       new Types.ObjectId().toString(),
       userId,
-      'REJECTED',
+      'REJECTED'
     );
   }
 
@@ -533,7 +523,7 @@ export class NotificationsController {
     return this.notificationsService.notifyLeaveRequestStatusChanged(
       new Types.ObjectId().toString(),
       userId,
-      'MODIFIED',
+      'MODIFIED'
     );
   }
 
@@ -546,7 +536,7 @@ export class NotificationsController {
     return this.notificationsService.notifyLeaveRequestStatusChanged(
       new Types.ObjectId().toString(),
       userId,
-      'RETURNED_FOR_CORRECTION',
+      'RETURNED_FOR_CORRECTION'
     );
   }
 
@@ -571,7 +561,7 @@ export class NotificationsController {
         fromDate: '2025-12-20',
         toDate: '2025-12-25',
         status: 'APPROVED',
-      },
+      }
     );
   }
 
@@ -588,12 +578,12 @@ export class NotificationsController {
       employeeId: string;
       changeRequestId: string;
       changeDescription: string;
-    },
+    }
   ) {
     return this.notificationsService.notifyProfileChangeRequestSubmitted(
       body.employeeId,
       body.changeRequestId,
-      body.changeDescription,
+      body.changeDescription
     );
   }
 
@@ -609,13 +599,13 @@ export class NotificationsController {
       changeRequestId: string;
       status: 'APPROVED' | 'REJECTED';
       reason?: string;
-    },
+    }
   ) {
     return this.notificationsService.notifyProfileChangeRequestProcessed(
       body.employeeId,
       body.changeRequestId,
       body.status,
-      body.reason,
+      body.reason
     );
   }
 
@@ -625,12 +615,12 @@ export class NotificationsController {
   @Post('profile/updated')
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async notifyProfileUpdated(
-    @Body() body: { employeeId: string; updatedBy: string; changes: string[] },
+    @Body() body: { employeeId: string; updatedBy: string; changes: string[] }
   ) {
     return this.notificationsService.notifyProfileUpdated(
       body.employeeId,
       body.updatedBy,
-      body.changes,
+      body.changes
     );
   }
 }

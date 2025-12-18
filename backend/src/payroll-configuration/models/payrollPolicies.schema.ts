@@ -1,11 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { EmployeeProfile as Employee } from '../../employee-profile/models/employee-profile.schema';
-import {
-  Applicability,
-  ConfigStatus,
-  PolicyType,
-} from '../enums/payroll-configuration-enums';
+import { Applicability, ConfigStatus, PolicyType } from '../enums/payroll-configuration-enums';
 
 export type payrollPoliciesDocument = HydratedDocument<payrollPolicies>;
 
@@ -56,5 +52,4 @@ export class payrollPolicies {
   approvedAt?: Date;
 }
 
-export const payrollPoliciesSchema =
-  SchemaFactory.createForClass(payrollPolicies);
+export const payrollPoliciesSchema = SchemaFactory.createForClass(payrollPolicies);

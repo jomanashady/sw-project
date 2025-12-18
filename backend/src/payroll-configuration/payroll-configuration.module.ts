@@ -7,17 +7,11 @@ import { ObjectIdPipe } from './common/pipes/object-id.pipe';
 
 // Import all schemas - make sure these paths are correct
 import { payGrade, payGradeSchema } from './models/payGrades.schema';
-import {
-  payrollPolicies,
-  payrollPoliciesSchema,
-} from './models/payrollPolicies.schema';
+import { payrollPolicies, payrollPoliciesSchema } from './models/payrollPolicies.schema';
 import { allowance, allowanceSchema } from './models/allowance.schema';
 import { payType, payTypeSchema } from './models/payType.schema';
 import { taxRules, taxRulesSchema } from './models/taxRules.schema';
-import {
-  insuranceBrackets,
-  insuranceBracketsSchema,
-} from './models/insuranceBrackets.schema';
+import { insuranceBrackets, insuranceBracketsSchema } from './models/insuranceBrackets.schema';
 import { signingBonus, signingBonusSchema } from './models/signingBonus.schema';
 import {
   terminationAndResignationBenefits,

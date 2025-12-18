@@ -32,5 +32,4 @@ export class StructureChangeLog {
   afterSnapshot?: Record<string, unknown>;
 }
 
-export const StructureChangeLogSchema =
-  SchemaFactory.createForClass(StructureChangeLog);
+export const StructureChangeLogSchema = SchemaFactory.createForClass(StructureChangeLog);

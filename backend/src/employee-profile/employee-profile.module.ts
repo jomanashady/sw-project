@@ -3,22 +3,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { EmployeeProfileController } from './employee-profile.controller';
 import { EmployeeProfileService } from './employee-profile.service';
 import { Candidate, CandidateSchema } from './models/candidate.schema';
-import {
-  EmployeeProfile,
-  EmployeeProfileSchema,
-} from './models/employee-profile.schema';
-import {
-  EmployeeSystemRole,
-  EmployeeSystemRoleSchema,
-} from './models/employee-system-role.schema';
+import { EmployeeProfile, EmployeeProfileSchema } from './models/employee-profile.schema';
+import { EmployeeSystemRole, EmployeeSystemRoleSchema } from './models/employee-system-role.schema';
 import {
   EmployeeProfileChangeRequest,
   EmployeeProfileChangeRequestSchema,
 } from './models/ep-change-request.schema';
-import {
-  EmployeeQualification,
-  EmployeeQualificationSchema,
-} from './models/qualification.schema';
+import { EmployeeQualification, EmployeeQualificationSchema } from './models/qualification.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({

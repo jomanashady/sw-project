@@ -19,4 +19,3 @@ export class CreateEmployeeTerminationBenefitDto {
   @IsEnum(BenefitStatus)
   status?: BenefitStatus; // Optional, defaults to PENDING
 }
-

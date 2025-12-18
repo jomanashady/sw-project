@@ -4,8 +4,7 @@ import { AttendanceRecord, Punch } from './attendance-record.schema';
 import { HydratedDocument } from 'mongoose';
 import { CorrectionRequestStatus } from './enums/index';
 
-export type AttendanceCorrectionRequestDocument =
-  HydratedDocument<AttendanceCorrectionRequest>;
+export type AttendanceCorrectionRequestDocument = HydratedDocument<AttendanceCorrectionRequest>;
 
 @Schema()
 export class AttendanceCorrectionRequest {
@@ -26,5 +25,5 @@ export class AttendanceCorrectionRequest {
 }
 
 export const AttendanceCorrectionRequestSchema = SchemaFactory.createForClass(
-  AttendanceCorrectionRequest,
+  AttendanceCorrectionRequest
 );

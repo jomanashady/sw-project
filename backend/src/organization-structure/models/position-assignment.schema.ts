@@ -34,5 +34,4 @@ export class PositionAssignment {
   notes?: string;
 }
 
-export const PositionAssignmentSchema =
-  SchemaFactory.createForClass(PositionAssignment);
+export const PositionAssignmentSchema = SchemaFactory.createForClass(PositionAssignment);

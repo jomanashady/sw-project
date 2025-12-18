@@ -26,7 +26,7 @@ export class ShiftScheduleService {
     @InjectModel(ShiftAssignment.name)
     private shiftAssignmentModel: Model<ShiftAssignment>,
     @InjectModel(ScheduleRule.name)
-    private scheduleRuleModel: Model<ScheduleRule>,
+    private scheduleRuleModel: Model<ScheduleRule>
   ) {}
 
   // ===== SHIFT TYPE SERVICE METHODS =====
@@ -47,10 +47,14 @@ export class ShiftScheduleService {
     if (!shiftType) {
       throw new NotFoundException('Shift type not found');
     }
-    return this.shiftTypeModel.findByIdAndUpdate(id, {
-      ...updateShiftTypeDto,
-      updatedBy: currentUserId,
-    }, { new: true });
+    return this.shiftTypeModel.findByIdAndUpdate(
+      id,
+      {
+        ...updateShiftTypeDto,
+        updatedBy: currentUserId,
+      },
+      { new: true }
+    );
   }
 
   // 3. Get all shift types
@@ -78,9 +82,13 @@ export class ShiftScheduleService {
       throw new NotFoundException('Shift type not found');
     }
     // Check if any shifts are using this type
-    const shiftsUsingType = await this.shiftModel.countDocuments({ shiftType: new Types.ObjectId(id) });
+    const shiftsUsingType = await this.shiftModel.countDocuments({
+      shiftType: new Types.ObjectId(id),
+    });
     if (shiftsUsingType > 0) {
-      throw new BadRequestException(`Cannot delete shift type. ${shiftsUsingType} shift(s) are using this type.`);
+      throw new BadRequestException(
+        `Cannot delete shift type. ${shiftsUsingType} shift(s) are using this type.`
+      );
     }
     await this.shiftTypeModel.findByIdAndDelete(id);
     return { message: 'Shift type deleted successfully' };
@@ -115,7 +123,7 @@ export class ShiftScheduleService {
         ...updateShiftDto,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
@@ -132,13 +140,16 @@ export class ShiftScheduleService {
       }
       query.shiftType = new Types.ObjectId(filters.shiftType);
     }
-    
+
     try {
       return await this.shiftModel.find(query).populate('shiftType').exec();
     } catch (error: any) {
       // If populate fails due to invalid references, return shifts without populate
       // This can happen if shiftType references are invalid
-      console.warn('Failed to populate shiftType, returning shifts without populate:', error.message);
+      console.warn(
+        'Failed to populate shiftType, returning shifts without populate:',
+        error.message
+      );
       return this.shiftModel.find(query).exec();
     }
   }
@@ -164,12 +175,14 @@ export class ShiftScheduleService {
       throw new NotFoundException('Shift not found');
     }
     // Check if any assignments are using this shift
-    const assignmentsUsingShift = await this.shiftAssignmentModel.countDocuments({ 
+    const assignmentsUsingShift = await this.shiftAssignmentModel.countDocuments({
       shiftId: new Types.ObjectId(id),
-      status: { $nin: [ShiftAssignmentStatus.CANCELLED, ShiftAssignmentStatus.EXPIRED] }
+      status: { $nin: [ShiftAssignmentStatus.CANCELLED, ShiftAssignmentStatus.EXPIRED] },
     });
     if (assignmentsUsingShift > 0) {
-      throw new BadRequestException(`Cannot delete shift. ${assignmentsUsingShift} active assignment(s) are using this shift.`);
+      throw new BadRequestException(
+        `Cannot delete shift. ${assignmentsUsingShift} active assignment(s) are using this shift.`
+      );
     }
     await this.shiftModel.findByIdAndDelete(id);
     return { message: 'Shift deleted successfully' };
@@ -180,7 +193,7 @@ export class ShiftScheduleService {
   // 12. Assign a shift to an employee
   async assignShiftToEmployee(
     assignShiftToEmployeeDto: AssignShiftToEmployeeDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     // Validate shift exists
     const shift = await this.shiftModel.findById(assignShiftToEmployeeDto.shiftId);
@@ -191,14 +204,14 @@ export class ShiftScheduleService {
     const newShiftAssignment = new this.shiftAssignmentModel({
       employeeId: new Types.ObjectId(assignShiftToEmployeeDto.employeeId),
       shiftId: new Types.ObjectId(assignShiftToEmployeeDto.shiftId),
-      departmentId: assignShiftToEmployeeDto.departmentId 
-        ? new Types.ObjectId(assignShiftToEmployeeDto.departmentId) 
+      departmentId: assignShiftToEmployeeDto.departmentId
+        ? new Types.ObjectId(assignShiftToEmployeeDto.departmentId)
         : undefined,
-      positionId: assignShiftToEmployeeDto.positionId 
-        ? new Types.ObjectId(assignShiftToEmployeeDto.positionId) 
+      positionId: assignShiftToEmployeeDto.positionId
+        ? new Types.ObjectId(assignShiftToEmployeeDto.positionId)
         : undefined,
-      scheduleRuleId: assignShiftToEmployeeDto.scheduleRuleId 
-        ? new Types.ObjectId(assignShiftToEmployeeDto.scheduleRuleId) 
+      scheduleRuleId: assignShiftToEmployeeDto.scheduleRuleId
+        ? new Types.ObjectId(assignShiftToEmployeeDto.scheduleRuleId)
         : undefined,
       startDate: assignShiftToEmployeeDto.startDate,
       endDate: assignShiftToEmployeeDto.endDate,
@@ -210,10 +223,7 @@ export class ShiftScheduleService {
   }
 
   // 8. Assign shift to all employees in a department
-  async assignShiftToDepartment(
-    dto: AssignShiftToDepartmentDto,
-    currentUserId: string,
-  ) {
+  async assignShiftToDepartment(dto: AssignShiftToDepartmentDto, currentUserId: string) {
     // Validate shift exists
     const shift = await this.shiftModel.findById(dto.shiftId);
     if (!shift) {
@@ -234,10 +244,7 @@ export class ShiftScheduleService {
   }
 
   // 9. Assign shift to all employees in a position
-  async assignShiftToPosition(
-    dto: AssignShiftToPositionDto,
-    currentUserId: string,
-  ) {
+  async assignShiftToPosition(dto: AssignShiftToPositionDto, currentUserId: string) {
     // Validate shift exists
     const shift = await this.shiftModel.findById(dto.shiftId);
     if (!shift) {
@@ -261,7 +268,7 @@ export class ShiftScheduleService {
   async updateShiftAssignment(
     id: string,
     updateShiftAssignmentDto: UpdateShiftAssignmentDto,
-    currentUserId: string,
+    currentUserId: string
   ) {
     const assignment = await this.shiftAssignmentModel.findById(id);
     if (!assignment) {
@@ -274,7 +281,7 @@ export class ShiftScheduleService {
         ...updateShiftAssignmentDto,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
@@ -311,7 +318,7 @@ export class ShiftScheduleService {
       throw new NotFoundException('Shift assignment not found');
     }
 
-    return { 
+    return {
       assignmentId: shiftAssignmentId,
       status: assignment.status,
       startDate: assignment.startDate,
@@ -320,19 +327,16 @@ export class ShiftScheduleService {
   }
 
   // 15. Renew a shift assignment (extend end date)
-  async renewShiftAssignment(
-    dto: RenewShiftAssignmentDto,
-    currentUserId: string,
-  ) {
+  async renewShiftAssignment(dto: RenewShiftAssignmentDto, currentUserId: string) {
     const assignment = await this.shiftAssignmentModel.findById(dto.assignmentId);
     if (!assignment) {
       throw new NotFoundException('Shift assignment not found');
     }
 
     // If no new end date provided, extend by 1 month from current end date
-    const newEndDate = dto.newEndDate || new Date(
-      (assignment.endDate || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000
-    );
+    const newEndDate =
+      dto.newEndDate ||
+      new Date((assignment.endDate || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000);
 
     return this.shiftAssignmentModel.findByIdAndUpdate(
       dto.assignmentId,
@@ -341,15 +345,12 @@ export class ShiftScheduleService {
         status: ShiftAssignmentStatus.APPROVED,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
   // 16. Cancel a shift assignment
-  async cancelShiftAssignment(
-    dto: CancelShiftAssignmentDto,
-    currentUserId: string,
-  ) {
+  async cancelShiftAssignment(dto: CancelShiftAssignmentDto, currentUserId: string) {
     const assignment = await this.shiftAssignmentModel.findById(dto.assignmentId);
     if (!assignment) {
       throw new NotFoundException('Shift assignment not found');
@@ -361,15 +362,12 @@ export class ShiftScheduleService {
         status: ShiftAssignmentStatus.CANCELLED,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
   // 17. Postpone a shift assignment
-  async postponeShiftAssignment(
-    dto: PostponeShiftAssignmentDto,
-    currentUserId: string,
-  ) {
+  async postponeShiftAssignment(dto: PostponeShiftAssignmentDto, currentUserId: string) {
     const assignment = await this.shiftAssignmentModel.findById(dto.assignmentId);
     if (!assignment) {
       throw new NotFoundException('Shift assignment not found');
@@ -382,7 +380,7 @@ export class ShiftScheduleService {
         status: ShiftAssignmentStatus.PENDING,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
@@ -396,7 +394,7 @@ export class ShiftScheduleService {
       },
       {
         $set: { status: ShiftAssignmentStatus.EXPIRED },
-      },
+      }
     );
     return {
       message: 'Expired assignments updated',
@@ -459,9 +457,9 @@ export class ShiftScheduleService {
     // Filter out assignments with invalid ObjectIds before populating
     // This prevents errors when trying to populate with invalid reference IDs
     const assignments = await this.shiftAssignmentModel.find(query).lean().exec();
-    
+
     // Filter out assignments with invalid ObjectIds
-    const validAssignments = assignments.filter(assignment => {
+    const validAssignments = assignments.filter((assignment) => {
       return (
         (!assignment.shiftId || isValidObjectId(assignment.shiftId)) &&
         (!assignment.employeeId || isValidObjectId(assignment.employeeId)) &&
@@ -471,7 +469,7 @@ export class ShiftScheduleService {
     });
 
     // Convert back to Mongoose documents and populate
-    const assignmentIds = validAssignments.map(a => {
+    const assignmentIds = validAssignments.map((a) => {
       // Handle both string and ObjectId _id formats
       return typeof a._id === 'string' ? new Types.ObjectId(a._id) : a._id;
     });
@@ -517,24 +515,26 @@ export class ShiftScheduleService {
     // BR-TM-04: Validate pattern format for scheduling rules
     const validPatterns = [
       // Standard patterns
-      'STANDARD',           // Standard 5-day work week
-      'FLEXIBLE',           // Flex-in/flex-out hours
-      'ROTATIONAL',         // Rotating shifts
-      'COMPRESSED',         // Compressed work week (4x10)
-      'SPLIT',              // Split shifts
+      'STANDARD', // Standard 5-day work week
+      'FLEXIBLE', // Flex-in/flex-out hours
+      'ROTATIONAL', // Rotating shifts
+      'COMPRESSED', // Compressed work week (4x10)
+      'SPLIT', // Split shifts
       // Custom patterns (regex-like format for days)
       /^(\d+)-ON\/(\d+)-OFF$/, // e.g., "4-ON/3-OFF"
       /^FLEX:([\d:]+)-([\d:]+)$/, // e.g., "FLEX:07:00-10:00" for flex start window
     ];
 
     const pattern = createScheduleRuleDto.pattern?.toUpperCase();
-    const isValidPattern = validPatterns.some(p => 
+    const isValidPattern = validPatterns.some((p) =>
       typeof p === 'string' ? p === pattern : p.test(pattern)
     );
 
     if (!isValidPattern && pattern) {
       // If pattern doesn't match predefined, allow custom but log warning
-      console.warn(`Custom pattern used: ${pattern}. Ensure it's properly validated in attendance.`);
+      console.warn(
+        `Custom pattern used: ${pattern}. Ensure it's properly validated in attendance.`
+      );
     }
 
     const newScheduleRule = new this.scheduleRuleModel({
@@ -578,7 +578,7 @@ export class ShiftScheduleService {
         ...updateScheduleRuleDto,
         updatedBy: currentUserId,
       },
-      { new: true },
+      { new: true }
     );
   }
 
@@ -597,7 +597,7 @@ export class ShiftScheduleService {
 
     if (assignmentsUsingRule > 0) {
       throw new BadRequestException(
-        `Cannot delete schedule rule. ${assignmentsUsingRule} active shift assignment(s) are using this rule.`,
+        `Cannot delete schedule rule. ${assignmentsUsingRule} active shift assignment(s) are using this rule.`
       );
     }
 
@@ -609,14 +609,15 @@ export class ShiftScheduleService {
   // This is an alias for createScheduleRule but specifically for flexible patterns
   async defineFlexibleSchedulingRules(
     defineFlexibleSchedulingRulesDto: any,
-    currentUserId: string,
+    currentUserId: string
   ) {
     // Ensure pattern indicates flexibility
     const pattern = defineFlexibleSchedulingRulesDto.pattern?.toUpperCase();
-    
+
     // BR-TM-04: Validate flexible pattern types
     const flexiblePatterns = ['FLEXIBLE', 'COMPRESSED', 'ROTATIONAL'];
-    const isFlexPattern = flexiblePatterns.some(p => pattern?.includes(p)) ||
+    const isFlexPattern =
+      flexiblePatterns.some((p) => pattern?.includes(p)) ||
       /^(\d+)-ON\/(\d+)-OFF$/.test(pattern) ||
       /^FLEX:/.test(pattern);
 
@@ -642,7 +643,7 @@ export class ShiftScheduleService {
 
     const pattern = scheduleRule.pattern?.toUpperCase();
     const checkDate = assignmentDate || new Date();
-    
+
     // Parse and validate pattern
     const validationResult = {
       scheduleRuleId,
@@ -696,7 +697,7 @@ export class ShiftScheduleService {
   async applyScheduleRuleToShiftAssignment(
     shiftAssignmentId: string,
     scheduleRuleId: string,
-    currentUserId: string,
+    currentUserId: string
   ) {
     // Validate shift assignment exists
     const assignment = await this.shiftAssignmentModel.findById(shiftAssignmentId);
@@ -715,20 +716,22 @@ export class ShiftScheduleService {
     }
 
     // Update the shift assignment with the schedule rule
-    return this.shiftAssignmentModel.findByIdAndUpdate(
-      shiftAssignmentId,
-      {
-        scheduleRuleId: new Types.ObjectId(scheduleRuleId),
-        updatedBy: currentUserId,
-      },
-      { new: true },
-    ).populate('scheduleRuleId');
+    return this.shiftAssignmentModel
+      .findByIdAndUpdate(
+        shiftAssignmentId,
+        {
+          scheduleRuleId: new Types.ObjectId(scheduleRuleId),
+          updatedBy: currentUserId,
+        },
+        { new: true }
+      )
+      .populate('scheduleRuleId');
   }
 
   // 29. Get shift assignments by schedule rule
   async getShiftAssignmentsByScheduleRule(scheduleRuleId: string) {
     return this.shiftAssignmentModel
-      .find({ 
+      .find({
         scheduleRuleId: new Types.ObjectId(scheduleRuleId),
         status: { $nin: [ShiftAssignmentStatus.CANCELLED, ShiftAssignmentStatus.EXPIRED] },
       })
@@ -744,7 +747,7 @@ export class ShiftScheduleService {
   async isWorkingDayPerScheduleRule(
     scheduleRuleId: string,
     checkDate: Date,
-    cycleStartDate?: Date,
+    cycleStartDate?: Date
   ): Promise<{ isWorkingDay: boolean; reason: string }> {
     const scheduleRule = await this.scheduleRuleModel.findById(scheduleRuleId);
     if (!scheduleRule) {
@@ -773,15 +776,15 @@ export class ShiftScheduleService {
       // Calculate day in cycle
       const startDate = cycleStartDate || new Date(checkDate.getFullYear(), 0, 1); // Default to Jan 1
       const daysSinceStart = Math.floor(
-        (checkDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+        (checkDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       );
       const dayInCycle = daysSinceStart % cycleLength;
 
       const isWorkingDay = dayInCycle < daysOn;
       return {
         isWorkingDay,
-        reason: isWorkingDay 
-          ? `Day ${dayInCycle + 1} of ${daysOn} working days` 
+        reason: isWorkingDay
+          ? `Day ${dayInCycle + 1} of ${daysOn} working days`
           : `Day ${dayInCycle - daysOn + 1} of ${daysOff} off days`,
       };
     }

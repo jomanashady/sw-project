@@ -32,5 +32,4 @@ export class JobRequisition {
 }
 
 export type JobRequisitionDocument = HydratedDocument<JobRequisition>;
-export const JobRequisitionSchema =
-  SchemaFactory.createForClass(JobRequisition);
+export const JobRequisitionSchema = SchemaFactory.createForClass(JobRequisition);

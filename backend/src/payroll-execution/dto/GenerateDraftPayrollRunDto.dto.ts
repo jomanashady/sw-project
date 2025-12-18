@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsMongoId,
-  IsISO8601,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsMongoId, IsISO8601, IsOptional } from 'class-validator';
 
 export class GenerateDraftPayrollRunDto {
   @IsISO8601()
@@ -23,4 +18,3 @@ export class GenerateDraftPayrollRunDto {
   @IsMongoId()
   payrollManagerId?: string; // Optional - if not provided, system will find a default payroll manager
 }
-

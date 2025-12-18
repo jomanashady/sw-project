@@ -26,5 +26,4 @@ export class employeePenalties {
   @Prop({ type: [penaltySchema] })
   penalties?: penalty[];
 }
-export const employeePenaltiesSchema =
-  SchemaFactory.createForClass(employeePenalties);
+export const employeePenaltiesSchema = SchemaFactory.createForClass(employeePenalties);

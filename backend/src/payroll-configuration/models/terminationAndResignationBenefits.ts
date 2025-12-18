@@ -30,5 +30,6 @@ export class terminationAndResignationBenefits {
   approvedAt?: Date;
 }
 
-export const terminationAndResignationBenefitsSchema =
-  SchemaFactory.createForClass(terminationAndResignationBenefits);
+export const terminationAndResignationBenefitsSchema = SchemaFactory.createForClass(
+  terminationAndResignationBenefits
+);

@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsMongoId,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsMongoId, IsNumber, IsOptional, IsString } from 'class-validator';
 import { BankStatus } from '../enums/payroll-execution-enum';
 
 export class EmployeePayrollDetailsUpsertDto {

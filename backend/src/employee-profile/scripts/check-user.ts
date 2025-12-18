@@ -47,9 +47,7 @@ async function checkUser() {
       console.log(`   ID: ${(employee as any)._id}`);
       console.log('');
       console.log('✅ The /me endpoint should work!');
-      console.log(
-        "   If it doesn't, the issue is with token validation, not the user.",
-      );
+      console.log("   If it doesn't, the issue is with token validation, not the user.");
     } catch (error: any) {
       console.log(`❌ User NOT FOUND in database!`);
       console.log(`   Error: ${error.message}`);

@@ -1,16 +1,6 @@
 // src/performance/performance.controller.ts
 
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, Req } from '@nestjs/common';
 import { PerformanceService } from './performance.service';
 
 // --------- AUTH / ROLES ---------
@@ -56,7 +46,7 @@ export class PerformanceController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   findAllTemplates() {
     return this.performanceService.findAllTemplates();
@@ -67,7 +57,7 @@ export class PerformanceController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   findTemplateById(@Param('id') id: string) {
     return this.performanceService.findTemplateById(id);
@@ -75,10 +65,7 @@ export class PerformanceController {
 
   @Patch('templates/:id')
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  updateTemplate(
-    @Param('id') id: string,
-    @Body() dto: UpdateAppraisalTemplateDto,
-  ) {
+  updateTemplate(@Param('id') id: string, @Body() dto: UpdateAppraisalTemplateDto) {
     return this.performanceService.updateTemplate(id, dto);
   }
 
@@ -88,11 +75,7 @@ export class PerformanceController {
   // Step 2 – Cycle Creation & Setup (REQ-PP-02, REQ-PP-05)
 
   @Post('cycles')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.HR_ADMIN)
   createCycle(@Body() dto: CreateAppraisalCycleDto) {
     return this.performanceService.createCycle(dto);
   }
@@ -102,7 +85,7 @@ export class PerformanceController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   findAllCycles() {
     return this.performanceService.findAllCycles();
@@ -113,7 +96,7 @@ export class PerformanceController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   findCycleById(@Param('id') id: string) {
     return this.performanceService.findCycleById(id);
@@ -148,22 +131,14 @@ export class PerformanceController {
   // --- HR monitoring & reminders (Step 4, REQ-AE-06, REQ-AE-10) ---
 
   @Get('cycles/:id/progress')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.HR_ADMIN)
   getCycleProgress(@Param('id') id: string) {
     // Should return completion stats by department/team
     return this.performanceService.getCycleProgress(id);
   }
 
   @Post('cycles/:id/reminders')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.HR_ADMIN)
   sendCycleReminders(@Param('id') id: string) {
     // Should trigger reminder notifications for pending assignments
     return this.performanceService.sendCycleReminders(id);
@@ -180,16 +155,13 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   getAssignmentsForManager(
     @Param('managerProfileId') managerProfileId: string,
-    @Query('cycleId') cycleId?: string,
+    @Query('cycleId') cycleId?: string
   ) {
-    return this.performanceService.getAssignmentsForManager(
-      managerProfileId,
-      cycleId,
-    );
+    return this.performanceService.getAssignmentsForManager(managerProfileId, cycleId);
   }
 
   // Convenience endpoint for “current” manager
@@ -198,17 +170,11 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  getAssignmentsForCurrentManager(
-    @Req() req: any,
-    @Query('cycleId') cycleId?: string,
-  ) {
+  getAssignmentsForCurrentManager(@Req() req: any, @Query('cycleId') cycleId?: string) {
     const managerProfileId = req.user?.employeeProfileId;
-    return this.performanceService.getAssignmentsForManager(
-      managerProfileId,
-      cycleId,
-    );
+    return this.performanceService.getAssignmentsForManager(managerProfileId, cycleId);
   }
 
   // For HR / employee to query assignments of a specific employee
@@ -218,16 +184,13 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   getAssignmentsForEmployee(
     @Param('employeeProfileId') employeeProfileId: string,
-    @Query('cycleId') cycleId?: string,
+    @Query('cycleId') cycleId?: string
   ) {
-    return this.performanceService.getAssignmentsForEmployee(
-      employeeProfileId,
-      cycleId,
-    );
+    return this.performanceService.getAssignmentsForEmployee(employeeProfileId, cycleId);
   }
 
   // Convenience endpoint: current logged-in employee
@@ -237,17 +200,11 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  getAssignmentsForCurrentEmployee(
-    @Req() req: any,
-    @Query('cycleId') cycleId?: string,
-  ) {
+  getAssignmentsForCurrentEmployee(@Req() req: any, @Query('cycleId') cycleId?: string) {
     const employeeProfileId = req.user?.employeeProfileId;
-    return this.performanceService.getAssignmentsForEmployee(
-      employeeProfileId,
-      cycleId,
-    );
+    return this.performanceService.getAssignmentsForEmployee(employeeProfileId, cycleId);
   }
 
   // ============================================================
@@ -262,18 +219,14 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   upsertAppraisalRecord(
     @Param('assignmentId') assignmentId: string,
     @Query('managerProfileId') managerProfileId: string,
-    @Body() dto: UpsertAppraisalRecordDto,
+    @Body() dto: UpsertAppraisalRecordDto
   ) {
-    return this.performanceService.upsertAppraisalRecord(
-      assignmentId,
-      managerProfileId,
-      dto,
-    );
+    return this.performanceService.upsertAppraisalRecord(assignmentId, managerProfileId, dto);
   }
 
   // Manager submits completed appraisal record
@@ -282,16 +235,13 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   submitAppraisalRecord(
     @Param('id') id: string,
-    @Query('managerProfileId') managerProfileId: string,
+    @Query('managerProfileId') managerProfileId: string
   ) {
-    return this.performanceService.submitAppraisalRecord(
-      id,
-      managerProfileId,
-    );
+    return this.performanceService.submitAppraisalRecord(id, managerProfileId);
   }
 
   // HR / Manager / Employee view a single appraisal record
@@ -301,7 +251,7 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   getAppraisalById(@Param('id') id: string) {
     return this.performanceService.getAppraisalById(id);
@@ -314,14 +264,10 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  getEmployeeAppraisals(
-    @Param('employeeProfileId') employeeProfileId: string,
-  ) {
-    return this.performanceService.getEmployeeAppraisals(
-      employeeProfileId,
-    );
+  getEmployeeAppraisals(@Param('employeeProfileId') employeeProfileId: string) {
+    return this.performanceService.getEmployeeAppraisals(employeeProfileId);
   }
 
   // Convenience endpoint: current logged-in employee’s history
@@ -331,13 +277,11 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   getCurrentEmployeeAppraisals(@Req() req: any) {
     const employeeProfileId = req.user?.employeeProfileId;
-    return this.performanceService.getEmployeeAppraisals(
-      employeeProfileId,
-    );
+    return this.performanceService.getEmployeeAppraisals(employeeProfileId);
   }
 
   // HR analytics / reports entry point (REQ-OD-06, REQ-OD-08)
@@ -346,7 +290,7 @@ export class PerformanceController {
   getAppraisalsForReporting(
     @Query('cycleId') cycleId?: string,
     @Query('departmentId') departmentId?: string,
-    @Query('status') status?: string,
+    @Query('status') status?: string
   ) {
     return this.performanceService.getAppraisalsForReporting({
       cycleId,
@@ -367,18 +311,14 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_EMPLOYEE,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   submitDispute(
     @Param('appraisalId') appraisalId: string,
     @Query('employeeProfileId') employeeProfileId: string,
-    @Body() dto: SubmitDisputeDto,
+    @Body() dto: SubmitDisputeDto
   ) {
-    return this.performanceService.submitDispute(
-      appraisalId,
-      employeeProfileId,
-      dto,
-    );
+    return this.performanceService.submitDispute(appraisalId, employeeProfileId, dto);
   }
 
   // View disputes for a given appraisal (HR / Manager view)
@@ -387,7 +327,7 @@ export class PerformanceController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   getDisputesForAppraisal(@Param('appraisalId') appraisalId: string) {
     return this.performanceService.getDisputesForAppraisal(appraisalId);
@@ -396,10 +336,7 @@ export class PerformanceController {
   // List all disputes (for HR dashboard / filters by cycle, status)
   @Get('disputes')
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  getDisputes(
-    @Query('cycleId') cycleId?: string,
-    @Query('status') status?: string,
-  ) {
+  getDisputes(@Query('cycleId') cycleId?: string, @Query('status') status?: string) {
     return this.performanceService.getDisputes({ cycleId, status });
   }
 
@@ -415,12 +352,8 @@ export class PerformanceController {
   resolveDispute(
     @Param('id') id: string,
     @Query('resolverEmployeeId') resolverEmployeeId: string,
-    @Body() dto: ResolveDisputeDto,
+    @Body() dto: ResolveDisputeDto
   ) {
-    return this.performanceService.resolveDispute(
-      id,
-      resolverEmployeeId,
-      dto,
-    );
+    return this.performanceService.resolveDispute(id, resolverEmployeeId, dto);
   }
 }

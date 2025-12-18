@@ -1,7 +1,4 @@
-import {
-  IsMongoId,
-  IsString,
-} from 'class-validator';
+import { IsMongoId, IsString } from 'class-validator';
 
 export class ResolveIrregularityDto {
   @IsMongoId()
@@ -19,4 +16,3 @@ export class ResolveIrregularityDto {
   @IsMongoId()
   managerId: string; // MongoDB ObjectId of Payroll Manager resolving the irregularity
 }
-

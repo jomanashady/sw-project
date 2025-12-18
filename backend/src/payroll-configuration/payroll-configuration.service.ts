@@ -182,7 +182,7 @@ export class PayrollConfigurationService {
     @InjectModel(terminationAndResignationBenefits.name)
     private terminationBenefitsModel: Model<terminationAndResignationBenefits>,
     @InjectModel(CompanyWideSettings.name)
-    private companySettingsModel: Model<CompanyWideSettings>,
+    private companySettingsModel: Model<CompanyWideSettings>
   ) {}
 
   // ============================================================================
@@ -195,16 +195,12 @@ export class PayrollConfigurationService {
   async createPayGrade(createDto: CreatePayGradeDto, userId: string) {
     // Business Rule: Validate gross salary >= base salary
     if (createDto.grossSalary < createDto.baseSalary) {
-      throw new BadRequestException(
-        'Gross salary must be greater than or equal to base salary',
-      );
+      throw new BadRequestException('Gross salary must be greater than or equal to base salary');
     }
 
     // Business Rule: Check minimum salary threshold (6000)
     if (createDto.baseSalary < 6000 || createDto.grossSalary < 6000) {
-      throw new BadRequestException(
-        'Base salary and gross salary must be at least 6000',
-      );
+      throw new BadRequestException('Base salary and gross salary must be at least 6000');
     }
 
     const payGrade = new this.payGradeModel({
@@ -219,11 +215,7 @@ export class PayrollConfigurationService {
   /**
    * Update a pay grade - only allowed in DRAFT status
    */
-  async updatePayGrade(
-    id: string,
-    updateDto: UpdatePayGradeDto,
-    userId: string,
-  ) {
+  async updatePayGrade(id: string, updateDto: UpdatePayGradeDto, userId: string) {
     const payGrade = await this.payGradeModel.findById(id);
 
     if (!payGrade) {
@@ -233,7 +225,7 @@ export class PayrollConfigurationService {
     // Draft-only edit enforcement
     if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update pay grade with status ${payGrade.status}. Only DRAFT items can be edited.`,
+        `Cannot update pay grade with status ${payGrade.status}. Only DRAFT items can be edited.`
       );
     }
 
@@ -242,16 +234,12 @@ export class PayrollConfigurationService {
     const newBaseSalary = updateDto.baseSalary ?? payGrade.baseSalary;
 
     if (newGrossSalary < newBaseSalary) {
-      throw new BadRequestException(
-        'Gross salary must be greater than or equal to base salary',
-      );
+      throw new BadRequestException('Gross salary must be greater than or equal to base salary');
     }
 
     // Business Rule: Check minimum salary threshold
     if (newBaseSalary < 6000 || newGrossSalary < 6000) {
-      throw new BadRequestException(
-        'Base salary and gross salary must be at least 6000',
-      );
+      throw new BadRequestException('Base salary and gross salary must be at least 6000');
     }
 
     Object.assign(payGrade, updateDto);
@@ -262,7 +250,7 @@ export class PayrollConfigurationService {
    * Get all pay grades with optional filtering
    */
   async findAllPayGrades(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -322,7 +310,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve pay grade with status ${payGrade.status}. Only DRAFT items can be approved.`,
+        `Cannot approve pay grade with status ${payGrade.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -345,7 +333,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(payGrade.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject pay grade with status ${payGrade.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject pay grade with status ${payGrade.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -367,9 +355,7 @@ export class PayrollConfigurationService {
     }
 
     if (this.normalizeStatus(payGrade.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
-      throw new BadRequestException(
-        `Cannot delete pay grade with status ${payGrade.status}.`,
-      );
+      throw new BadRequestException(`Cannot delete pay grade with status ${payGrade.status}.`);
     }
 
     await this.payGradeModel.findByIdAndDelete(id);
@@ -394,11 +380,7 @@ export class PayrollConfigurationService {
     return await allowance.save();
   }
 
-  async updateAllowance(
-    id: string,
-    updateDto: UpdateAllowanceDto,
-    userId: string,
-  ) {
+  async updateAllowance(id: string, updateDto: UpdateAllowanceDto, userId: string) {
     const allowance = await this.allowanceModel.findById(id);
 
     if (!allowance) {
@@ -407,7 +389,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update allowance with status ${allowance.status}. Only DRAFT items can be edited.`,
+        `Cannot update allowance with status ${allowance.status}. Only DRAFT items can be edited.`
       );
     }
 
@@ -420,7 +402,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllAllowances(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -474,7 +456,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve allowance with status ${allowance.status}. Only DRAFT items can be approved.`,
+        `Cannot approve allowance with status ${allowance.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -485,11 +467,7 @@ export class PayrollConfigurationService {
     return await allowance.save();
   }
 
-  async rejectAllowance(
-    id: string,
-    rejectionDto: RejectionDto,
-    userId: string,
-  ) {
+  async rejectAllowance(id: string, rejectionDto: RejectionDto, userId: string) {
     const allowance = await this.allowanceModel.findById(id);
 
     if (!allowance) {
@@ -498,7 +476,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(allowance.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject allowance with status ${allowance.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject allowance with status ${allowance.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -520,9 +498,7 @@ export class PayrollConfigurationService {
     }
 
     if (this.normalizeStatus(allowance.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
-      throw new BadRequestException(
-        `Cannot delete allowance with status ${allowance.status}.`,
-      );
+      throw new BadRequestException(`Cannot delete allowance with status ${allowance.status}.`);
     }
 
     await this.allowanceModel.findByIdAndDelete(id);
@@ -556,7 +532,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update pay type with status ${payType.status}. Only DRAFT items can be edited.`,
+        `Cannot update pay type with status ${payType.status}. Only DRAFT items can be edited.`
       );
     }
 
@@ -569,7 +545,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllPayTypes(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -623,7 +599,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve pay type with status ${payType.status}. Only DRAFT items can be approved.`,
+        `Cannot approve pay type with status ${payType.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -643,7 +619,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(payType.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject pay type with status ${payType.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject pay type with status ${payType.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -662,9 +638,7 @@ export class PayrollConfigurationService {
     }
 
     if (this.normalizeStatus(payType.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
-      throw new BadRequestException(
-        `Cannot delete pay type with status ${payType.status}.`,
-      );
+      throw new BadRequestException(`Cannot delete pay type with status ${payType.status}.`);
     }
 
     await this.payTypeModel.findByIdAndDelete(id);
@@ -698,14 +672,15 @@ export class PayrollConfigurationService {
 
     // Special case: Tax rules can be edited even when APPROVED (for legal updates)
     // When edited, approved tax rules should go back to DRAFT for re-approval
-    const wasApproved = this.normalizeStatus(taxRule.status) === this.normalizeStatus(ConfigStatus.APPROVED);
-    
+    const wasApproved =
+      this.normalizeStatus(taxRule.status) === this.normalizeStatus(ConfigStatus.APPROVED);
+
     if (
       this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT) &&
       !wasApproved
     ) {
       throw new BadRequestException(
-        `Cannot update tax rule with status ${taxRule.status}. Only DRAFT items can be edited.`,
+        `Cannot update tax rule with status ${taxRule.status}. Only DRAFT items can be edited.`
       );
     }
 
@@ -726,7 +701,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllTaxRules(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -780,7 +755,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve tax rule with status ${taxRule.status}. Only DRAFT items can be approved.`,
+        `Cannot approve tax rule with status ${taxRule.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -800,7 +775,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(taxRule.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject tax rule with status ${taxRule.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject tax rule with status ${taxRule.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -819,9 +794,7 @@ export class PayrollConfigurationService {
     }
 
     if (this.normalizeStatus(taxRule.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
-      throw new BadRequestException(
-        `Cannot delete tax rule with status ${taxRule.status}.`,
-      );
+      throw new BadRequestException(`Cannot delete tax rule with status ${taxRule.status}.`);
     }
 
     await this.taxRulesModel.findByIdAndDelete(id);
@@ -832,10 +805,7 @@ export class PayrollConfigurationService {
   // INSURANCE BRACKETS OPERATIONS
   // ============================================================================
 
-  async createInsuranceBracket(
-    createDto: CreateInsuranceBracketDto,
-    userId: string,
-  ) {
+  async createInsuranceBracket(createDto: CreateInsuranceBracketDto, userId: string) {
     // Validation
     // if (createDto.amount < 0) {
     //   throw new BadRequestException('Insurance amount must be non-negative');
@@ -866,20 +836,18 @@ export class PayrollConfigurationService {
     return await insuranceBracket.save();
   }
 
-  async updateInsuranceBracket(
-    id: string,
-    updateDto: UpdateInsuranceBracketDto,
-    userId: string,
-  ) {
+  async updateInsuranceBracket(id: string, updateDto: UpdateInsuranceBracketDto, userId: string) {
     const insuranceBracket = await this.insuranceBracketsModel.findById(id);
 
     if (!insuranceBracket) {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
+    if (
+      this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)
+    ) {
       throw new BadRequestException(
-        `Cannot update insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be edited.`,
+        `Cannot update insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be edited.`
       );
     }
 
@@ -893,17 +861,13 @@ export class PayrollConfigurationService {
 
     if (updateDto.employeeRate !== undefined) {
       if (updateDto.employeeRate < 0 || updateDto.employeeRate > 100) {
-        throw new BadRequestException(
-          'Employee rate must be between 0 and 100',
-        );
+        throw new BadRequestException('Employee rate must be between 0 and 100');
       }
     }
 
     if (updateDto.employerRate !== undefined) {
       if (updateDto.employerRate < 0 || updateDto.employerRate > 100) {
-        throw new BadRequestException(
-          'Employer rate must be between 0 and 100',
-        );
+        throw new BadRequestException('Employer rate must be between 0 and 100');
       }
     }
 
@@ -912,7 +876,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllInsuranceBrackets(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -957,20 +921,18 @@ export class PayrollConfigurationService {
     return insuranceBracket;
   }
 
-  async approveInsuranceBracket(
-    id: string,
-    approvalDto: ApprovalDto,
-    userId: string,
-  ) {
+  async approveInsuranceBracket(id: string, approvalDto: ApprovalDto, userId: string) {
     const insuranceBracket = await this.insuranceBracketsModel.findById(id);
 
     if (!insuranceBracket) {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
+    if (
+      this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)
+    ) {
       throw new BadRequestException(
-        `Cannot approve insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be approved.`,
+        `Cannot approve insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -984,20 +946,18 @@ export class PayrollConfigurationService {
     return await insuranceBracket.save();
   }
 
-  async rejectInsuranceBracket(
-    id: string,
-    rejectionDto: RejectionDto,
-    userId: string,
-  ) {
+  async rejectInsuranceBracket(id: string, rejectionDto: RejectionDto, userId: string) {
     const insuranceBracket = await this.insuranceBracketsModel.findById(id);
 
     if (!insuranceBracket) {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
+    if (
+      this.normalizeStatus(insuranceBracket.status) !== this.normalizeStatus(ConfigStatus.DRAFT)
+    ) {
       throw new BadRequestException(
-        `Cannot reject insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject insurance bracket with status ${insuranceBracket.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -1015,9 +975,11 @@ export class PayrollConfigurationService {
       throw new NotFoundException(`Insurance bracket with ID ${id} not found`);
     }
 
-    if (this.normalizeStatus(insuranceBracket.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
+    if (
+      this.normalizeStatus(insuranceBracket.status) === this.normalizeStatus(ConfigStatus.REJECTED)
+    ) {
       throw new BadRequestException(
-        `Cannot delete insurance bracket with status ${insuranceBracket.status}.`,
+        `Cannot delete insurance bracket with status ${insuranceBracket.status}.`
       );
     }
 
@@ -1031,9 +993,7 @@ export class PayrollConfigurationService {
 
   async createSigningBonus(createDto: CreateSigningBonusDto, userId: string) {
     if (createDto.amount < 0) {
-      throw new BadRequestException(
-        'Signing bonus amount must be non-negative',
-      );
+      throw new BadRequestException('Signing bonus amount must be non-negative');
     }
 
     const signingBonus = new this.signingBonusModel({
@@ -1045,11 +1005,7 @@ export class PayrollConfigurationService {
     return await signingBonus.save();
   }
 
-  async updateSigningBonus(
-    id: string,
-    updateDto: UpdateSigningBonusDto,
-    userId: string,
-  ) {
+  async updateSigningBonus(id: string, updateDto: UpdateSigningBonusDto, userId: string) {
     const signingBonus = await this.signingBonusModel.findById(id);
 
     if (!signingBonus) {
@@ -1058,14 +1014,12 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update signing bonus with status ${signingBonus.status}. Only DRAFT items can be edited.`,
+        `Cannot update signing bonus with status ${signingBonus.status}. Only DRAFT items can be edited.`
       );
     }
 
     if (updateDto.amount !== undefined && updateDto.amount < 0) {
-      throw new BadRequestException(
-        'Signing bonus amount must be non-negative',
-      );
+      throw new BadRequestException('Signing bonus amount must be non-negative');
     }
 
     Object.assign(signingBonus, updateDto);
@@ -1073,7 +1027,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllSigningBonuses(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -1118,11 +1072,7 @@ export class PayrollConfigurationService {
     return signingBonus;
   }
 
-  async approveSigningBonus(
-    id: string,
-    approvalDto: ApprovalDto,
-    userId: string,
-  ) {
+  async approveSigningBonus(id: string, approvalDto: ApprovalDto, userId: string) {
     const signingBonus = await this.signingBonusModel.findById(id);
 
     if (!signingBonus) {
@@ -1131,7 +1081,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve signing bonus with status ${signingBonus.status}. Only DRAFT items can be approved.`,
+        `Cannot approve signing bonus with status ${signingBonus.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -1142,11 +1092,7 @@ export class PayrollConfigurationService {
     return await signingBonus.save();
   }
 
-  async rejectSigningBonus(
-    id: string,
-    rejectionDto: RejectionDto,
-    userId: string,
-  ) {
+  async rejectSigningBonus(id: string, rejectionDto: RejectionDto, userId: string) {
     const signingBonus = await this.signingBonusModel.findById(id);
 
     if (!signingBonus) {
@@ -1155,7 +1101,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject signing bonus with status ${signingBonus.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject signing bonus with status ${signingBonus.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -1175,7 +1121,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(signingBonus.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot delete signing bonus with status ${signingBonus.status}. Only DRAFT items can be deleted.`,
+        `Cannot delete signing bonus with status ${signingBonus.status}. Only DRAFT items can be deleted.`
       );
     }
 
@@ -1187,14 +1133,9 @@ export class PayrollConfigurationService {
   // TERMINATION BENEFITS OPERATIONS
   // ============================================================================
 
-  async createTerminationBenefit(
-    createDto: CreateTerminationBenefitDto,
-    userId: string,
-  ) {
+  async createTerminationBenefit(createDto: CreateTerminationBenefitDto, userId: string) {
     if (createDto.amount < 0) {
-      throw new BadRequestException(
-        'Termination benefit amount must be non-negative',
-      );
+      throw new BadRequestException('Termination benefit amount must be non-negative');
     }
 
     const benefit = new this.terminationBenefitsModel({
@@ -1209,26 +1150,22 @@ export class PayrollConfigurationService {
   async updateTerminationBenefit(
     id: string,
     updateDto: UpdateTerminationBenefitDto,
-    userId: string,
+    userId: string
   ) {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(
-        `Termination benefit with ID ${id} not found`,
-      );
+      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
     }
 
     if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update termination benefit with status ${benefit.status}. Only DRAFT items can be edited.`,
+        `Cannot update termination benefit with status ${benefit.status}. Only DRAFT items can be edited.`
       );
     }
 
     if (updateDto.amount !== undefined && updateDto.amount < 0) {
-      throw new BadRequestException(
-        'Termination benefit amount must be non-negative',
-      );
+      throw new BadRequestException('Termination benefit amount must be non-negative');
     }
 
     Object.assign(benefit, updateDto);
@@ -1236,7 +1173,7 @@ export class PayrollConfigurationService {
   }
 
   async findAllTerminationBenefits(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -1275,30 +1212,22 @@ export class PayrollConfigurationService {
       .exec();
 
     if (!benefit) {
-      throw new NotFoundException(
-        `Termination benefit with ID ${id} not found`,
-      );
+      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
     }
 
     return benefit;
   }
 
-  async approveTerminationBenefit(
-    id: string,
-    approvalDto: ApprovalDto,
-    userId: string,
-  ) {
+  async approveTerminationBenefit(id: string, approvalDto: ApprovalDto, userId: string) {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(
-        `Termination benefit with ID ${id} not found`,
-      );
+      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
     }
 
     if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve termination benefit with status ${benefit.status}. Only DRAFT items can be approved.`,
+        `Cannot approve termination benefit with status ${benefit.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -1309,22 +1238,16 @@ export class PayrollConfigurationService {
     return await benefit.save();
   }
 
-  async rejectTerminationBenefit(
-    id: string,
-    rejectionDto: RejectionDto,
-    userId: string,
-  ) {
+  async rejectTerminationBenefit(id: string, rejectionDto: RejectionDto, userId: string) {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(
-        `Termination benefit with ID ${id} not found`,
-      );
+      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
     }
 
     if (this.normalizeStatus(benefit.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject termination benefit with status ${benefit.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject termination benefit with status ${benefit.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -1339,14 +1262,12 @@ export class PayrollConfigurationService {
     const benefit = await this.terminationBenefitsModel.findById(id);
 
     if (!benefit) {
-      throw new NotFoundException(
-        `Termination benefit with ID ${id} not found`,
-      );
+      throw new NotFoundException(`Termination benefit with ID ${id} not found`);
     }
 
     if (this.normalizeStatus(benefit.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
       throw new BadRequestException(
-        `Cannot delete termination benefit with status ${benefit.status}.`,
+        `Cannot delete termination benefit with status ${benefit.status}.`
       );
     }
 
@@ -1384,11 +1305,7 @@ export class PayrollConfigurationService {
     return await policy.save();
   }
 
-  async updatePayrollPolicy(
-    id: string,
-    updateDto: UpdatePayrollPolicyDto,
-    userId: string,
-  ) {
+  async updatePayrollPolicy(id: string, updateDto: UpdatePayrollPolicyDto, userId: string) {
     const policy = await this.payrollPoliciesModel.findById(id);
 
     if (!policy) {
@@ -1397,14 +1314,13 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot update payroll policy with status ${policy.status}. Only DRAFT items can be edited.`,
+        `Cannot update payroll policy with status ${policy.status}. Only DRAFT items can be edited.`
       );
     }
 
     // Validation for rule definition if provided
     if (updateDto.ruleDefinition) {
-      const { percentage, fixedAmount, thresholdAmount } =
-        updateDto.ruleDefinition;
+      const { percentage, fixedAmount, thresholdAmount } = updateDto.ruleDefinition;
 
       if (percentage !== undefined && (percentage < 0 || percentage > 100)) {
         throw new BadRequestException('Percentage must be between 0 and 100');
@@ -1424,13 +1340,13 @@ export class PayrollConfigurationService {
     if (updateData.effectiveDate) {
       updateData.effectiveDate = new Date(updateData.effectiveDate);
     }
-    
+
     Object.assign(policy, updateData);
     return await policy.save();
   }
 
   async findAllPayrollPolicies(filterDto?: FilterDto) {
-    const { status, createdBy, page = 1, limit = 10 } = filterDto || {};
+    const { status, createdBy, page, limit } = filterDto || {};
     const filter: any = {};
 
     if (status) filter.status = status;
@@ -1475,11 +1391,7 @@ export class PayrollConfigurationService {
     return policy;
   }
 
-  async approvePayrollPolicy(
-    id: string,
-    approvalDto: ApprovalDto,
-    userId: string,
-  ) {
+  async approvePayrollPolicy(id: string, approvalDto: ApprovalDto, userId: string) {
     const policy = await this.payrollPoliciesModel.findById(id);
 
     if (!policy) {
@@ -1488,7 +1400,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot approve payroll policy with status ${policy.status}. Only DRAFT items can be approved.`,
+        `Cannot approve payroll policy with status ${policy.status}. Only DRAFT items can be approved.`
       );
     }
 
@@ -1499,11 +1411,7 @@ export class PayrollConfigurationService {
     return await policy.save();
   }
 
-  async rejectPayrollPolicy(
-    id: string,
-    rejectionDto: RejectionDto,
-    userId: string,
-  ) {
+  async rejectPayrollPolicy(id: string, rejectionDto: RejectionDto, userId: string) {
     const policy = await this.payrollPoliciesModel.findById(id);
 
     if (!policy) {
@@ -1512,7 +1420,7 @@ export class PayrollConfigurationService {
 
     if (this.normalizeStatus(policy.status) !== this.normalizeStatus(ConfigStatus.DRAFT)) {
       throw new BadRequestException(
-        `Cannot reject payroll policy with status ${policy.status}. Only DRAFT items can be rejected.`,
+        `Cannot reject payroll policy with status ${policy.status}. Only DRAFT items can be rejected.`
       );
     }
 
@@ -1531,9 +1439,7 @@ export class PayrollConfigurationService {
     }
 
     if (this.normalizeStatus(policy.status) === this.normalizeStatus(ConfigStatus.REJECTED)) {
-      throw new BadRequestException(
-        `Cannot delete payroll policy with status ${policy.status}.`,
-      );
+      throw new BadRequestException(`Cannot delete payroll policy with status ${policy.status}.`);
     }
 
     await this.payrollPoliciesModel.findByIdAndDelete(id);
@@ -1544,17 +1450,12 @@ export class PayrollConfigurationService {
   // COMPANY WIDE SETTINGS OPERATIONS (No approval workflow needed)
   // ============================================================================
 
-  async createCompanySettings(
-    createDto: CreateCompanySettingsDto,
-    userId: string,
-  ) {
+  async createCompanySettings(createDto: CreateCompanySettingsDto, userId: string) {
     // Check if settings already exist (only one record should exist)
     const existingSettings = await this.companySettingsModel.findOne();
 
     if (existingSettings) {
-      throw new ConflictException(
-        'Company settings already exist. Use update instead.',
-      );
+      throw new ConflictException('Company settings already exist. Use update instead.');
     }
 
     // Validate currency is EGP
@@ -1570,16 +1471,11 @@ export class PayrollConfigurationService {
     return await settings.save();
   }
 
-  async updateCompanySettings(
-    updateDto: UpdateCompanySettingsDto,
-    userId: string,
-  ) {
+  async updateCompanySettings(updateDto: UpdateCompanySettingsDto, userId: string) {
     const settings = await this.companySettingsModel.findOne();
 
     if (!settings) {
-      throw new NotFoundException(
-        'Company settings not found. Create them first.',
-      );
+      throw new NotFoundException('Company settings not found. Create them first.');
     }
 
     // Validate currency if provided
@@ -1592,7 +1488,7 @@ export class PayrollConfigurationService {
     if (updateData.payDate) {
       updateData.payDate = new Date(updateData.payDate);
     }
-    
+
     Object.assign(settings, {
       ...updateData,
       updatedBy: new Types.ObjectId(userId),
@@ -1689,30 +1585,14 @@ export class PayrollConfigurationService {
       terminationBenefits,
       policies,
     ] = await Promise.all([
-      this.payGradeModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.allowanceModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.payTypeModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.taxRulesModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.insuranceBracketsModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.signingBonusModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.terminationBenefitsModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
-      this.payrollPoliciesModel
-        .find(filter)
-        .populate('createdBy', 'firstName lastName email'),
+      this.payGradeModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.allowanceModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.payTypeModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.taxRulesModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.insuranceBracketsModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.signingBonusModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.terminationBenefitsModel.find(filter).populate('createdBy', 'firstName lastName email'),
+      this.payrollPoliciesModel.find(filter).populate('createdBy', 'firstName lastName email'),
     ]);
 
     return {

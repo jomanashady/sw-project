@@ -1,9 +1,4 @@
-import {
-  IsBoolean,
-  IsMongoId,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
 
 export class ReviewPayrollInitiationDto {
   @IsBoolean()
@@ -16,4 +11,3 @@ export class ReviewPayrollInitiationDto {
   @IsString()
   rejectionReason?: string; // Required if approved is false
 }
-

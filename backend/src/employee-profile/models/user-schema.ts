@@ -68,5 +68,4 @@ export class UserProfileBase {
   accessProfileId?: Types.ObjectId;
 }
 
-export const UserProfileBaseSchema =
-  SchemaFactory.createForClass(UserProfileBase);
+export const UserProfileBaseSchema = SchemaFactory.createForClass(UserProfileBase);

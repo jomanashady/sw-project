@@ -3,32 +3,20 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RecruitmentController } from './recruitment.controller';
 import { RecruitmentService } from './recruitment.service';
 import { JobTemplate, JobTemplateSchema } from './models/job-template.schema';
-import {
-  JobRequisition,
-  JobRequisitionSchema,
-} from './models/job-requisition.schema';
+import { JobRequisition, JobRequisitionSchema } from './models/job-requisition.schema';
 import { Application, ApplicationSchema } from './models/application.schema';
 import {
   ApplicationStatusHistory,
   ApplicationStatusHistorySchema,
 } from './models/application-history.schema';
 import { Interview, InterviewSchema } from './models/interview.schema';
-import {
-  AssessmentResult,
-  AssessmentResultSchema,
-} from './models/assessment-result.schema';
+import { AssessmentResult, AssessmentResultSchema } from './models/assessment-result.schema';
 import { Referral, ReferralSchema } from './models/referral.schema';
 import { Offer, OfferSchema } from './models/offer.schema';
 import { Contract, ContractSchema } from './models/contract.schema';
 import { Document, DocumentSchema } from './models/document.schema';
-import {
-  TerminationRequest,
-  TerminationRequestSchema,
-} from './models/termination-request.schema';
-import {
-  ClearanceChecklist,
-  ClearanceChecklistSchema,
-} from './models/clearance-checklist.schema';
+import { TerminationRequest, TerminationRequestSchema } from './models/termination-request.schema';
+import { ClearanceChecklist, ClearanceChecklistSchema } from './models/clearance-checklist.schema';
 import { Onboarding, OnboardingSchema } from './models/onboarding.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import {
@@ -43,10 +31,7 @@ import {
   AppraisalRecord,
   AppraisalRecordSchema,
 } from '../performance/models/appraisal-record.schema';
-import {
-  Candidate,
-  CandidateSchema,
-} from '../employee-profile/models/candidate.schema';
+import { Candidate, CandidateSchema } from '../employee-profile/models/candidate.schema';
 import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
 import { TimeManagementModule } from '../time-management/time-management.module';
 import { PayrollConfigurationModule } from '../payroll-configuration/payroll-configuration.module';

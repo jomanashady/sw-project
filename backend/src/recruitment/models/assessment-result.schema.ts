@@ -17,5 +17,4 @@ export class AssessmentResult {
 }
 
 export type AssessmentResultDocument = HydratedDocument<AssessmentResult>;
-export const AssessmentResultSchema =
-  SchemaFactory.createForClass(AssessmentResult);
+export const AssessmentResultSchema = SchemaFactory.createForClass(AssessmentResult);

@@ -18,13 +18,25 @@ import {
 } from '../employee-profile/models/employee-profile.schema';
 import { paySlip, paySlipSchema } from '../payroll-execution/models/payslip.schema';
 import { payrollRuns, payrollRunsSchema } from '../payroll-execution/models/payrollRuns.schema';
-import { LeaveEntitlement, LeaveEntitlementSchema } from '../leaves/models/leave-entitlement.schema';
+import {
+  LeaveEntitlement,
+  LeaveEntitlementSchema,
+} from '../leaves/models/leave-entitlement.schema';
 import { LeaveRequest, LeaveRequestSchema } from '../leaves/models/leave-request.schema';
-import { AttendanceRecord, AttendanceRecordSchema } from '../time-management/models/attendance-record.schema';
-import { TimeException, TimeExceptionSchema } from '../time-management/models/time-exception.schema';
+import {
+  AttendanceRecord,
+  AttendanceRecordSchema,
+} from '../time-management/models/attendance-record.schema';
+import {
+  TimeException,
+  TimeExceptionSchema,
+} from '../time-management/models/time-exception.schema';
 import { Department, DepartmentSchema } from '../organization-structure/models/department.schema';
 import { Position, PositionSchema } from '../organization-structure/models/position.schema';
-import { PositionAssignment, PositionAssignmentSchema } from '../organization-structure/models/position-assignment.schema';
+import {
+  PositionAssignment,
+  PositionAssignmentSchema,
+} from '../organization-structure/models/position-assignment.schema';
 import {
   EmployeeSystemRole,
   EmployeeSystemRoleSchema,

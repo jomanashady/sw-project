@@ -1,39 +1,18 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import {
-  NotificationLogSchema,
-  NotificationLog,
-} from './models/notification-log.schema';
+import { NotificationLogSchema, NotificationLog } from './models/notification-log.schema';
 import {
   AttendanceCorrectionRequestSchema,
   AttendanceCorrectionRequest,
 } from './models/attendance-correction-request.schema';
 import { ShiftTypeSchema, ShiftType } from './models/shift-type.schema';
-import {
-  ScheduleRuleSchema,
-  ScheduleRule,
-} from './models/schedule-rule.schema';
-import {
-  AttendanceRecordSchema,
-  AttendanceRecord,
-} from './models/attendance-record.schema';
-import {
-  TimeExceptionSchema,
-  TimeException,
-} from './models/time-exception.schema';
+import { ScheduleRuleSchema, ScheduleRule } from './models/schedule-rule.schema';
+import { AttendanceRecordSchema, AttendanceRecord } from './models/attendance-record.schema';
+import { TimeExceptionSchema, TimeException } from './models/time-exception.schema';
 import { ShiftSchema, Shift } from './models/shift.schema';
-import {
-  ShiftAssignmentSchema,
-  ShiftAssignment,
-} from './models/shift-assignment.schema';
-import {
-  OvertimeRuleSchema,
-  OvertimeRule,
-} from './models/overtime-rule.schema';
-import {
-  latenessRuleSchema,
-  LatenessRule,
-} from './models/lateness-rule.schema';
+import { ShiftAssignmentSchema, ShiftAssignment } from './models/shift-assignment.schema';
+import { OvertimeRuleSchema, OvertimeRule } from './models/overtime-rule.schema';
+import { latenessRuleSchema, LatenessRule } from './models/lateness-rule.schema';
 import { HolidaySchema, Holiday } from './models/holiday.schema';
 
 // ===== CONSOLIDATED CONTROLLERS =====

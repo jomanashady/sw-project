@@ -13,13 +13,11 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { HolidayType } from '../models/enums';  // Importing existing enums
+import { HolidayType } from '../models/enums'; // Importing existing enums
 
 // Custom validator to ensure endDate >= startDate
 @ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
-export class IsEndDateAfterStartDateConstraint
-  implements ValidatorConstraintInterface
-{
+export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInterface {
   validate(endDate: any, args: ValidationArguments) {
     const obj = args.object as any;
     const startDate = obj.startDate;
@@ -38,38 +36,38 @@ export class IsEndDateAfterStartDateConstraint
 export class CreateOvertimeRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the overtime rule (required)
+  name: string; // Name of the overtime rule (required)
 
   @IsNotEmpty()
   @IsString()
-  description: string;  // Description of the rule (required)
+  description: string; // Description of the rule (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the rule is active (required)
+  active: boolean; // Whether the rule is active (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  approved: boolean;  // Whether the rule is approved (required)
+  approved: boolean; // Whether the rule is approved (required)
 }
 
 // DTO for updating an overtime rule - ALL FIELDS FROM SCHEMA
 export class UpdateOvertimeRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the overtime rule (required)
+  name: string; // Name of the overtime rule (required)
 
   @IsNotEmpty()
   @IsString()
-  description: string;  // Description of the rule (required)
+  description: string; // Description of the rule (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the rule is active (required)
+  active: boolean; // Whether the rule is active (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  approved: boolean;  // Whether the rule is approved (required)
+  approved: boolean; // Whether the rule is approved (required)
 }
 
 // ===== LATENESS RULE DTOs =====
@@ -78,48 +76,48 @@ export class UpdateOvertimeRuleDto {
 export class CreateLatenessRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the lateness rule (required)
+  name: string; // Name of the lateness rule (required)
 
   @IsNotEmpty()
   @IsString()
-  description: string;  // Description of the rule (required)
+  description: string; // Description of the rule (required)
 
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
-  gracePeriodMinutes: number;  // Grace period in minutes (required)
+  gracePeriodMinutes: number; // Grace period in minutes (required)
 
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
-  deductionForEachMinute: number;  // Deduction amount per minute late (required)
+  deductionForEachMinute: number; // Deduction amount per minute late (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the rule is active (required)
+  active: boolean; // Whether the rule is active (required)
 }
 
 // DTO for updating a lateness rule - ALL FIELDS FROM SCHEMA
 export class UpdateLatenessRuleDto {
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the lateness rule (required)
+  name: string; // Name of the lateness rule (required)
 
   @IsNotEmpty()
   @IsString()
-  description: string;  // Description of the rule (required)
+  description: string; // Description of the rule (required)
 
   @IsNotEmpty()
   @IsNumber()
-  gracePeriodMinutes: number;  // Grace period in minutes (required)
+  gracePeriodMinutes: number; // Grace period in minutes (required)
 
   @IsNotEmpty()
   @IsNumber()
-  deductionForEachMinute: number;  // Deduction amount per minute (required)
+  deductionForEachMinute: number; // Deduction amount per minute (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the rule is active (required)
+  active: boolean; // Whether the rule is active (required)
 }
 
 // ===== HOLIDAY DTOs =====
@@ -128,52 +126,52 @@ export class UpdateLatenessRuleDto {
 export class CreateHolidayDto {
   @IsNotEmpty()
   @IsEnum(HolidayType)
-  type: HolidayType;  // Type of holiday (required)
+  type: HolidayType; // Type of holiday (required)
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  startDate: Date;  // Start date of the holiday (required)
+  startDate: Date; // Start date of the holiday (required)
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate: Date;  // End date of the holiday (required)
+  endDate: Date; // End date of the holiday (required)
 
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the holiday (required)
+  name: string; // Name of the holiday (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the holiday is active (required)
+  active: boolean; // Whether the holiday is active (required)
 }
 
 // DTO for updating a holiday - ALL FIELDS FROM SCHEMA
 export class UpdateHolidayDto {
   @IsNotEmpty()
   @IsEnum(HolidayType)
-  type: HolidayType;  // Type of holiday (required)
+  type: HolidayType; // Type of holiday (required)
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  startDate: Date;  // Start date of the holiday (required)
+  startDate: Date; // Start date of the holiday (required)
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate: Date;  // End date of the holiday (required)
+  endDate: Date; // End date of the holiday (required)
 
   @IsNotEmpty()
   @IsString()
-  name: string;  // Name of the holiday (required)
+  name: string; // Name of the holiday (required)
 
   @IsNotEmpty()
   @IsBoolean()
-  active: boolean;  // Whether the holiday is active (required)
+  active: boolean; // Whether the holiday is active (required)
 }
 
 // DTO for getting holidays with filters
@@ -181,21 +179,21 @@ export class GetHolidaysDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  startDate?: Date;  // Filter: Start date range
+  startDate?: Date; // Filter: Start date range
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   @Validate(IsEndDateAfterStartDateConstraint)
-  endDate?: Date;  // Filter: End date range
+  endDate?: Date; // Filter: End date range
 
   @IsOptional()
   @IsEnum(HolidayType)
-  type?: HolidayType;  // Filter: Type of holiday
+  type?: HolidayType; // Filter: Type of holiday
 
   @IsOptional()
   @IsBoolean()
-  active?: boolean;  // Filter: Active holidays only
+  active?: boolean; // Filter: Active holidays only
 }
 
 // ===== GENERAL POLICY FILTER DTOs =====
@@ -204,11 +202,11 @@ export class GetHolidaysDto {
 export class GetPoliciesDto {
   @IsOptional()
   @IsBoolean()
-  active?: boolean;  // Filter: Active policies only
+  active?: boolean; // Filter: Active policies only
 
   @IsOptional()
   @IsBoolean()
-  approved?: boolean;  // Filter: Approved policies only
+  approved?: boolean; // Filter: Approved policies only
 }
 
 // DTO for checking if a date is a holiday
@@ -216,21 +214,21 @@ export class CheckHolidayDto {
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  date: Date;  // Date to check for holiday
+  date: Date; // Date to check for holiday
 }
 
 // DTO for validating attendance against holiday
 export class ValidateAttendanceHolidayDto {
   @IsNotEmpty()
   @IsString()
-  employeeId: string;  // Employee ID
+  employeeId: string; // Employee ID
 
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
-  date: Date;  // Date to validate
+  date: Date; // Date to validate
 
   @IsOptional()
   @IsBoolean()
-  suppressPenalty?: boolean;  // Whether to suppress penalty if holiday
+  suppressPenalty?: boolean; // Whether to suppress penalty if holiday
 }

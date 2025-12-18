@@ -35,5 +35,4 @@ export class StructureApproval {
   comments?: string;
 }
 
-export const StructureApprovalSchema =
-  SchemaFactory.createForClass(StructureApproval);
+export const StructureApprovalSchema = SchemaFactory.createForClass(StructureApproval);

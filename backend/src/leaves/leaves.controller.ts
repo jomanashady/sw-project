@@ -46,15 +46,9 @@ import {
   FlagIrregularPatternDto,
   IrregularPatternAnalysisDto,
 } from './dto/FlagIrregularPattern.dto';
-import {
-  AutoAccrueLeaveDto,
-  AccrueAllEmployeesDto,
-} from './dto/AutoAccrueLeave.dto';
+import { AutoAccrueLeaveDto, AccrueAllEmployeesDto } from './dto/AutoAccrueLeave.dto';
 import { RunCarryForwardDto } from './dto/CarryForward.dto';
-import {
-  AccrualAdjustmentDto,
-  AccrualSuspensionDto,
-} from './dto/AccrualAdjustment.dto';
+import { AccrualAdjustmentDto, AccrualSuspensionDto } from './dto/AccrualAdjustment.dto';
 import { DelegateApprovalDto } from './dto/DelegateApproval.dto';
 
 import { Roles } from '../common/decorators/roles.decorator';
@@ -79,7 +73,7 @@ export class LeaveController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.DEPARTMENT_EMPLOYEE
   )
   async getCalendar(@Param('year') year: string) {
     return await this.leavesService.getCalendarByYear(Number(year));
@@ -88,10 +82,7 @@ export class LeaveController {
   @Put('calendar/:year')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
-  async updateCalendar(
-    @Param('year') year: string,
-    @Body() dto: CreateCalendarDto,
-  ) {
+  async updateCalendar(@Param('year') year: string, @Body() dto: CreateCalendarDto) {
     return await this.leavesService.updateCalendar(Number(year), dto);
   }
   constructor(private readonly leavesService: LeavesService) {}
@@ -122,7 +113,7 @@ export class LeaveController {
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
   async updateLeavePolicy(
     @Param('id') id: string,
-    @Body() updateLeavePolicyDto: UpdateLeavePolicyDto,
+    @Body() updateLeavePolicyDto: UpdateLeavePolicyDto
   ) {
     return await this.leavesService.updateLeavePolicy(id, updateLeavePolicyDto);
   }
@@ -148,11 +139,9 @@ export class LeaveController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.LEGAL_POLICY_ADMIN,
     SystemRole.FINANCE_STAFF,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  async createLeaveRequest(
-    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
-  ) {
+  async createLeaveRequest(@Body() createLeaveRequestDto: CreateLeaveRequestDto) {
     return await this.leavesService.createLeaveRequest(createLeaveRequestDto);
   }
 
@@ -163,7 +152,7 @@ export class LeaveController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_MANAGER,
+    SystemRole.HR_MANAGER
   )
   async getLeaveRequestById(@Param('id') id: string) {
     return await this.leavesService.getLeaveRequestById(id);
@@ -176,19 +165,15 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async updateLeaveRequest(
     @Param('id') id: string,
     @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     const userId = req.user?.userId || req.user?._id || req.user?.id;
-    return await this.leavesService.updateLeaveRequest(
-      id,
-      updateLeaveRequestDto,
-      userId,
-    );
+    return await this.leavesService.updateLeaveRequest(id, updateLeaveRequestDto, userId);
   }
 
   @Delete('request/:id')
@@ -202,12 +187,8 @@ export class LeaveController {
   @Post('entitlement')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
-  async createLeaveEntitlement(
-    @Body() createLeaveEntitlementDto: CreateLeaveEntitlementDto,
-  ) {
-    return await this.leavesService.createLeaveEntitlement(
-      createLeaveEntitlementDto,
-    );
+  async createLeaveEntitlement(@Body() createLeaveEntitlementDto: CreateLeaveEntitlementDto) {
+    return await this.leavesService.createLeaveEntitlement(createLeaveEntitlementDto);
   }
 
   @Get('entitlement/:employeeId/:leaveTypeId')
@@ -215,12 +196,9 @@ export class LeaveController {
   @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER, SystemRole.DEPARTMENT_HEAD)
   async getLeaveEntitlement(
     @Param('employeeId') employeeId: string,
-    @Param('leaveTypeId') leaveTypeId: string,
+    @Param('leaveTypeId') leaveTypeId: string
   ) {
-    return await this.leavesService.getLeaveEntitlement(
-      employeeId,
-      leaveTypeId,
-    );
+    return await this.leavesService.getLeaveEntitlement(employeeId, leaveTypeId);
   }
 
   @Put('entitlement/:id')
@@ -228,24 +206,17 @@ export class LeaveController {
   @Roles(SystemRole.HR_ADMIN)
   async updateLeaveEntitlement(
     @Param('id') id: string,
-    @Body() updateLeaveEntitlementDto: UpdateLeaveEntitlementDto,
+    @Body() updateLeaveEntitlementDto: UpdateLeaveEntitlementDto
   ) {
-    return await this.leavesService.updateLeaveEntitlement(
-      id,
-      updateLeaveEntitlementDto,
-    );
+    return await this.leavesService.updateLeaveEntitlement(id, updateLeaveEntitlementDto);
   }
 
   // Leave Adjustment Endpoints
   @Post('adjustment')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN)
-  async createLeaveAdjustment(
-    @Body() createLeaveAdjustmentDto: CreateLeaveAdjustmentDto,
-  ) {
-    return await this.leavesService.createLeaveAdjustment(
-      createLeaveAdjustmentDto,
-    );
+  async createLeaveAdjustment(@Body() createLeaveAdjustmentDto: CreateLeaveAdjustmentDto) {
+    return await this.leavesService.createLeaveAdjustment(createLeaveAdjustmentDto);
   }
 
   @Get('adjustment/:employeeId')
@@ -266,9 +237,7 @@ export class LeaveController {
   @Post('category')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async createLeaveCategory(
-    @Body() createLeaveCategoryDto: CreateLeaveCategoryDto,
-  ) {
+  async createLeaveCategory(@Body() createLeaveCategoryDto: CreateLeaveCategoryDto) {
     return await this.leavesService.createLeaveCategory(createLeaveCategoryDto);
   }
 
@@ -292,7 +261,7 @@ export class LeaveController {
     SystemRole.PAYROLL_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.LEGAL_POLICY_ADMIN,
-    SystemRole.FINANCE_STAFF,
+    SystemRole.FINANCE_STAFF
   )
   async getLeaveTypes() {
     return await this.leavesService.getLeaveTypes();
@@ -315,10 +284,7 @@ export class LeaveController {
   @Put('type/:id')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_ADMIN, SystemRole.LEGAL_POLICY_ADMIN)
-  async updateLeaveType(
-    @Param('id') id: string,
-    @Body() updateLeaveTypeDto: UpdateLeaveTypeDto,
-  ) {
+  async updateLeaveType(@Param('id') id: string, @Body() updateLeaveTypeDto: UpdateLeaveTypeDto) {
     return await this.leavesService.updateLeaveType(id, updateLeaveTypeDto);
   }
 
@@ -335,18 +301,18 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   @Post('request/:id/approve')
   async approveLeaveRequest(
     @Param('id') id: string,
     @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return this.leavesService.approveLeaveRequest(
       approveLeaveRequestDto,
       req.user.userId || req.user._id || req.user.id,
-      id,
+      id
     );
   }
 
@@ -356,17 +322,17 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async rejectLeaveRequest(
     @Param('id') id: string,
     @Body() rejectLeaveRequestDto: RejectLeaveRequestDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return await this.leavesService.rejectLeaveRequest(
       rejectLeaveRequestDto,
       req.user.userId || req.user._id || req.user.id,
-      id,
+      id
     );
   }
 
@@ -382,13 +348,10 @@ export class LeaveController {
   @Post('request/finalize')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async finalizeLeaveRequest(
-    @Body() finalizeDto: FinalizeLeaveRequestDto,
-    @Req() req: any,
-  ) {
+  async finalizeLeaveRequest(@Body() finalizeDto: FinalizeLeaveRequestDto, @Req() req: any) {
     return await this.leavesService.finalizeLeaveRequest(
       finalizeDto.leaveRequestId,
-      req.user.userId || req.user._id || req.user.id,
+      req.user.userId || req.user._id || req.user.id
     );
   }
 
@@ -400,20 +363,18 @@ export class LeaveController {
       overrideDto.leaveRequestId,
       overrideDto.hrUserId,
       overrideDto.overrideToApproved,
-      overrideDto.overrideReason,
+      overrideDto.overrideReason
     );
   }
 
   @Post('request/process-multiple')
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.HR_ADMIN)
-  async processMultipleLeaveRequests(
-    @Body() processDto: ProcessMultipleRequestsDto,
-  ) {
+  async processMultipleLeaveRequests(@Body() processDto: ProcessMultipleRequestsDto) {
     return await this.leavesService.processMultipleLeaveRequests(
       processDto.leaveRequestIds,
       processDto.hrUserId,
-      processDto.approved,
+      processDto.approved
     );
   }
 
@@ -431,16 +392,13 @@ export class LeaveController {
     SystemRole.PAYROLL_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.LEGAL_POLICY_ADMIN,
-    SystemRole.FINANCE_STAFF,
+    SystemRole.FINANCE_STAFF
   )
   async getEmployeeLeaveBalance(
     @Param('employeeId') employeeId: string,
-    @Query('leaveTypeId') leaveTypeId?: string,
+    @Query('leaveTypeId') leaveTypeId?: string
   ) {
-    return await this.leavesService.getEmployeeLeaveBalance(
-      employeeId,
-      leaveTypeId,
-    );
+    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId);
   }
 
   @Post('request/:id/cancel')
@@ -465,16 +423,13 @@ export class LeaveController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async getLeaveBalanceDetails(
     @Param('employeeId') employeeId: string,
-    @Query('leaveTypeId') leaveTypeId?: string,
+    @Query('leaveTypeId') leaveTypeId?: string
   ) {
-    return await this.leavesService.getEmployeeLeaveBalance(
-      employeeId,
-      leaveTypeId,
-    );
+    return await this.leavesService.getEmployeeLeaveBalance(employeeId, leaveTypeId);
   }
 
   // REQ-032: Get past leave requests
@@ -490,7 +445,7 @@ export class LeaveController {
     SystemRole.PAYROLL_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.LEGAL_POLICY_ADMIN,
-    SystemRole.FINANCE_STAFF,
+    SystemRole.FINANCE_STAFF
   )
   async getPastLeaveRequests(
     @Param('employeeId') employeeId: string,
@@ -498,22 +453,28 @@ export class LeaveController {
     @Query('toDate') toDate?: string,
     @Query('status') status?: string,
     @Query('leaveTypeId') leaveTypeId?: string,
-    @Req() req?: any, // Get current user to check if they're a delegate
+    @Req() req?: any // Get current user to check if they're a delegate
   ) {
     const userId = req?.user?.userId || req?.user?._id || req?.user?.id;
     // Normalize status: convert empty string to undefined, and normalize case
     let normalizedStatus: string | undefined = undefined;
     if (status && status.trim() !== '') {
       normalizedStatus = status.trim().toLowerCase();
-      console.log(`[Controller] Received status: "${status}", normalized to: "${normalizedStatus}"`);
+      console.log(
+        `[Controller] Received status: "${status}", normalized to: "${normalizedStatus}"`
+      );
     }
-    
-    return await this.leavesService.getPastLeaveRequests(employeeId, {
-      fromDate: fromDate && fromDate.trim() ? new Date(fromDate) : undefined,
-      toDate: toDate && toDate.trim() ? new Date(toDate) : undefined,
-      status: normalizedStatus,
-      leaveTypeId: leaveTypeId && leaveTypeId.trim() ? leaveTypeId.trim() : undefined,
-    }, userId);
+
+    return await this.leavesService.getPastLeaveRequests(
+      employeeId,
+      {
+        fromDate: fromDate && fromDate.trim() ? new Date(fromDate) : undefined,
+        toDate: toDate && toDate.trim() ? new Date(toDate) : undefined,
+        status: normalizedStatus,
+        leaveTypeId: leaveTypeId && leaveTypeId.trim() ? leaveTypeId.trim() : undefined,
+      },
+      userId
+    );
   }
 
   // REQ-033: Filter leave history
@@ -529,22 +490,25 @@ export class LeaveController {
     SystemRole.PAYROLL_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.LEGAL_POLICY_ADMIN,
-    SystemRole.FINANCE_STAFF,
+    SystemRole.FINANCE_STAFF
   )
   async filterLeaveHistory(@Body() filterDto: FilterLeaveHistoryDto) {
     // Normalize status to lowercase if provided
     const normalizedDto = { ...filterDto };
-    if (normalizedDto.status && typeof normalizedDto.status === 'string' && normalizedDto.status.trim() !== '') {
+    if (
+      normalizedDto.status &&
+      typeof normalizedDto.status === 'string' &&
+      normalizedDto.status.trim() !== ''
+    ) {
       normalizedDto.status = normalizedDto.status.trim().toLowerCase() as any;
-      console.log(`[Controller] filterLeaveHistory - Normalizing status: "${filterDto.status}" -> "${normalizedDto.status}"`);
+      console.log(
+        `[Controller] filterLeaveHistory - Normalizing status: "${filterDto.status}" -> "${normalizedDto.status}"`
+      );
     } else if (normalizedDto.status === '') {
       delete normalizedDto.status;
     }
-    
-    return await this.leavesService.filterLeaveHistory(
-      normalizedDto.employeeId,
-      normalizedDto,
-    );
+
+    return await this.leavesService.filterLeaveHistory(normalizedDto.employeeId, normalizedDto);
   }
 
   // REQ-034: View team leave balances and upcoming leaves
@@ -554,19 +518,19 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async getTeamLeaveBalances(
     @Param('managerId') managerId: string,
     @Query('upcomingFromDate') upcomingFromDate?: string,
     @Query('upcomingToDate') upcomingToDate?: string,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId') departmentId?: string
   ) {
     return await this.leavesService.getTeamLeaveBalances(
       managerId,
       upcomingFromDate && upcomingFromDate.trim() ? new Date(upcomingFromDate) : undefined,
       upcomingToDate && upcomingToDate.trim() ? new Date(upcomingToDate) : undefined,
-      departmentId && departmentId.trim() ? departmentId.trim() : undefined,
+      departmentId && departmentId.trim() ? departmentId.trim() : undefined
     );
   }
 
@@ -577,13 +541,10 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async filterTeamLeaveData(@Body() filterDto: FilterTeamLeaveDataDto) {
-    return await this.leavesService.filterTeamLeaveData(
-      filterDto.managerId,
-      filterDto,
-    );
+    return await this.leavesService.filterTeamLeaveData(filterDto.managerId, filterDto);
   }
 
   // REQ-039: Flag irregular pattern
@@ -593,24 +554,21 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async flagIrregularPattern(@Body() flagDto: FlagIrregularPatternDto) {
     return await this.leavesService.flagIrregularPattern(
       flagDto.leaveRequestId,
       flagDto.managerId,
       flagDto.flagReason,
-      flagDto.notes,
+      flagDto.notes
     );
   }
 
   // REQ-040: Auto accrue leave for single employee
   @Post('auto-accrue')
   @UseGuards(RolesGuard)
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async autoAccrueLeave(@Body() accrueDto: AutoAccrueLeaveDto) {
     return await this.leavesService.autoAccrueLeave(
       accrueDto.employeeId,
@@ -618,35 +576,27 @@ export class LeaveController {
       accrueDto.accrualAmount,
       accrueDto.accrualType,
       accrueDto.policyId,
-      accrueDto.notes,
+      accrueDto.notes
     );
   }
 
   // REQ-040: Auto accrue leave for all employees
   @Post('auto-accrue-all')
   @UseGuards(RolesGuard)
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async autoAccrueAllEmployees(@Body() accrueAllDto: AccrueAllEmployeesDto) {
     return await this.leavesService.autoAccrueAllEmployees(
       accrueAllDto.leaveTypeId,
       accrueAllDto.accrualAmount,
       accrueAllDto.accrualType,
-      accrueAllDto.departmentId,
+      accrueAllDto.departmentId
     );
   }
 
   // REQ-041: Run carry-forward
   @Post('carry-forward')
   @UseGuards(RolesGuard)
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async runCarryForward(@Body() carryForwardDto: RunCarryForwardDto) {
     console.log(`[Controller] runCarryForward called with:`, {
       leaveTypeId: carryForwardDto.leaveTypeId,
@@ -654,21 +604,21 @@ export class LeaveController {
       asOfDate: carryForwardDto.asOfDate,
       departmentId: carryForwardDto.departmentId,
     });
-    
+
     try {
       const result = await this.leavesService.runCarryForward(
         carryForwardDto.leaveTypeId,
         carryForwardDto.employeeId,
         carryForwardDto.asOfDate,
-        carryForwardDto.departmentId,
+        carryForwardDto.departmentId
       );
-      
+
       console.log(`[Controller] runCarryForward completed:`, {
         successful: result.successful,
         failed: result.failed,
         total: result.total,
       });
-      
+
       return result;
     } catch (error) {
       console.error(`[Controller] runCarryForward error:`, error);
@@ -679,11 +629,7 @@ export class LeaveController {
   // REQ-042: Adjust accruals
   @Post('adjust-accrual')
   @UseGuards(RolesGuard)
-  @Roles(
-    SystemRole.HR_ADMIN,
-    SystemRole.HR_MANAGER,
-    
-  )
+  @Roles(SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async adjustAccrual(@Body() adjustmentDto: AccrualAdjustmentDto) {
     return await this.leavesService.adjustAccrual(
       adjustmentDto.employeeId,
@@ -693,7 +639,7 @@ export class LeaveController {
       adjustmentDto.fromDate,
       adjustmentDto.toDate,
       adjustmentDto.reason,
-      adjustmentDto.notes,
+      adjustmentDto.notes
     );
   }
 
@@ -703,12 +649,12 @@ export class LeaveController {
   async assignPersonalizedEntitlement(
     @Param('employeeId') employeeId: string,
     @Param('leaveTypeId') leaveTypeId: string,
-    @Body('personalizedEntitlement') personalizedEntitlement: number,
+    @Body('personalizedEntitlement') personalizedEntitlement: number
   ) {
     return await this.leavesService.assignPersonalizedEntitlement(
       employeeId,
       leaveTypeId,
-      personalizedEntitlement,
+      personalizedEntitlement
     );
   }
   // Endpoint to reset leave balances for the new year
@@ -718,15 +664,11 @@ export class LeaveController {
   async resetLeaveBalancesForNewYear(
     @Body()
     body: {
-      criterion?:
-        | 'HIRE_DATE'
-        | 'FIRST_VACATION_DATE'
-        | 'REVISED_HIRE_DATE'
-        | 'WORK_RECEIVING_DATE';
+      criterion?: 'HIRE_DATE' | 'FIRST_VACATION_DATE' | 'REVISED_HIRE_DATE' | 'WORK_RECEIVING_DATE';
       force?: boolean; // Force reset regardless of date
-    },
+    }
   ) {
-    const { criterion = 'HIRE_DATE', force = false } = body;
+    const { criterion, force } = body;
 
     try {
       await this.leavesService.resetLeaveBalancesForNewYear(criterion, force);
@@ -745,16 +687,16 @@ export class LeaveController {
       console.log('[resetLeaveBalancesForTest] Endpoint called');
       const result = await this.leavesService.resetAllLeaveBalancesForTest();
       console.log('[resetLeaveBalancesForTest] Result:', result);
-      return { 
+      return {
         message: `All leave balances reset to zero for testing. Reset ${result.reset} of ${result.total} entitlements in ${result.duration}.`,
         success: true,
-        ...result
+        ...result,
       };
     } catch (error: any) {
       console.error('[resetLeaveBalancesForTest] Error:', error);
-      return { 
+      return {
         message: `Error resetting leave balances: ${error.message}`,
-        success: false 
+        success: false,
       };
     }
   }
@@ -771,13 +713,13 @@ export class LeaveController {
       return {
         message: `Successfully processed ${result.totalEmployees} employees. Created ${result.entitlementsCreated} entitlements, updated ${result.employeesUpdated} contract types.`,
         success: true,
-        ...result
+        ...result,
       };
     } catch (error: any) {
       console.error('[addAllEmployeesToEntitlements] Error:', error);
       return {
         message: `Error adding employees to entitlements: ${error.message}`,
-        success: false
+        success: false,
       };
     }
   }
@@ -789,17 +731,14 @@ export class LeaveController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  async delegateApprovalAuthority(
-    @Body() delegateDto: DelegateApprovalDto,
-    @Req() req: any,
-  ) {
+  async delegateApprovalAuthority(@Body() delegateDto: DelegateApprovalDto, @Req() req: any) {
     return await this.leavesService.delegateApprovalAuthority(
       req.user.userId || req.user._id || req.user.id,
       delegateDto.delegateId,
       delegateDto.startDate,
-      delegateDto.endDate,
+      delegateDto.endDate
     );
   }
 
@@ -811,7 +750,7 @@ export class LeaveController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   @UseInterceptors(
     FileInterceptor('file', {
@@ -842,7 +781,7 @@ export class LeaveController {
           cb(new BadRequestException('Invalid file type'), false);
         }
       },
-    }),
+    })
   )
   async uploadAttachment(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
@@ -859,12 +798,9 @@ export class LeaveController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  async downloadAttachment(
-    @Param('id') id: string,
-    @Res() res: Response,
-  ) {
+  async downloadAttachment(@Param('id') id: string, @Res() res: Response) {
     const attachment = await this.leavesService.getAttachmentById(id);
     if (!attachment) {
       throw new NotFoundException('Attachment not found');
@@ -876,11 +812,8 @@ export class LeaveController {
     }
 
     res.setHeader('Content-Type', attachment.fileType || 'application/octet-stream');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${attachment.originalName}"`,
-    );
-    return res.sendFile(path.resolve(filePath));
+    res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
+    res.sendFile(path.resolve(filePath));
   }
 
   // NEW CODE: Verify document
@@ -890,14 +823,10 @@ export class LeaveController {
   async verifyDocument(
     @Param('id') id: string,
     @Body() body: { verified: boolean; verificationNotes?: string },
-    @Req() req: any,
+    @Req() req: any
   ) {
     const hrUserId = req.user.userId || req.user._id || req.user.id;
-    return await this.leavesService.verifyDocument(
-      id,
-      hrUserId,
-      body.verificationNotes,
-    );
+    return await this.leavesService.verifyDocument(id, hrUserId, body.verificationNotes);
   }
 
   // NEW CODE: Reject document
@@ -907,13 +836,9 @@ export class LeaveController {
   async rejectDocument(
     @Param('id') id: string,
     @Body() body: { verified: boolean; rejectionReason: string },
-    @Req() req: any,
+    @Req() req: any
   ) {
     const hrUserId = req.user.userId || req.user._id || req.user.id;
-    return await this.leavesService.rejectDocument(
-      id,
-      hrUserId,
-      body.rejectionReason,
-    );
+    return await this.leavesService.rejectDocument(id, hrUserId, body.rejectionReason);
   }
 }

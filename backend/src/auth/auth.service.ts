@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -15,15 +11,9 @@ import {
   EmployeeSystemRole,
   EmployeeSystemRoleDocument,
 } from '../employee-profile/models/employee-system-role.schema';
-import {
-  Candidate,
-  CandidateDocument,
-} from '../employee-profile/models/candidate.schema';
+import { Candidate, CandidateDocument } from '../employee-profile/models/candidate.schema';
 import { RegisterCandidateDto } from '../employee-profile/dto/register-candidate.dto';
-import {
-  SystemRole,
-  CandidateStatus,
-} from '../employee-profile/enums/employee-profile.enums';
+import { SystemRole, CandidateStatus } from '../employee-profile/enums/employee-profile.enums';
 
 @Injectable()
 export class AuthService {
@@ -34,14 +24,12 @@ export class AuthService {
     private candidateModel: Model<CandidateDocument>,
     @InjectModel(EmployeeSystemRole.name)
     private systemRoleModel: Model<EmployeeSystemRoleDocument>,
-    private jwtService: JwtService,
+    private jwtService: JwtService
   ) {}
 
   async validateUser(employeeNumber: string, password: string): Promise<any> {
     // Try to find as employee first
-    const employee = await this.employeeModel
-      .findOne({ employeeNumber })
-      .exec();
+    const employee = await this.employeeModel.findOne({ employeeNumber }).exec();
 
     if (employee && employee.password) {
       return await this.validateEmployee(employee, password);
@@ -50,10 +38,7 @@ export class AuthService {
     // If not found as employee, try as candidate
     const candidate = await this.candidateModel
       .findOne({
-        $or: [
-          { candidateNumber: employeeNumber },
-          { personalEmail: employeeNumber },
-        ],
+        $or: [{ candidateNumber: employeeNumber }, { personalEmail: employeeNumber }],
       })
       .exec();
 
@@ -66,7 +51,7 @@ export class AuthService {
 
   private async validateEmployee(
     employee: EmployeeProfileDocument,
-    password: string,
+    password: string
   ): Promise<any> {
     // ========================================================================
     // RECRUITMENT SYSTEM - Employee Status Access Control
@@ -80,20 +65,20 @@ export class AuthService {
     // ========================================================================
     if (employee.status === 'RETIRED') {
       throw new UnauthorizedException(
-        'Your account has been retired due to resignation. System access has been revoked. Please contact HR for assistance.',
+        'Your account has been retired due to resignation. System access has been revoked. Please contact HR for assistance.'
       );
     }
-    
+
     if (employee.status === 'TERMINATED') {
       throw new UnauthorizedException(
-        'Your account has been terminated. System access has been revoked. Please contact HR for assistance.',
+        'Your account has been terminated. System access has been revoked. Please contact HR for assistance.'
       );
     }
-    
+
     // Backward compatibility: INACTIVE status (manual access revocation)
     if (employee.status === 'INACTIVE') {
       throw new UnauthorizedException(
-        'Your account has been deactivated. System access has been revoked. Please contact HR for assistance.',
+        'Your account has been deactivated. System access has been revoked. Please contact HR for assistance.'
       );
     }
 
@@ -119,10 +104,7 @@ export class AuthService {
     };
   }
 
-  private async validateCandidate(
-    candidate: CandidateDocument,
-    password: string,
-  ): Promise<any> {
+  private async validateCandidate(candidate: CandidateDocument, password: string): Promise<any> {
     const isPasswordValid = await bcrypt.compare(password, candidate.password);
 
     if (!isPasswordValid) {
@@ -147,13 +129,11 @@ export class AuthService {
 
   async login(user: any) {
     const payload = {
-      username:
-        user.employeeNumber || user.candidateNumber || user.personalEmail,
+      username: user.employeeNumber || user.candidateNumber || user.personalEmail,
       sub: user._id,
       roles: user.roles,
       permissions: user.permissions,
-      userType:
-        user.userType || (user.employeeNumber ? 'employee' : 'candidate'),
+      userType: user.userType || (user.employeeNumber ? 'employee' : 'candidate'),
       // ========================================================================
       // NEW CHANGES FOR OFFBOARDING: Added employeeNumber to JWT payload
       // Required for OFF-018 (Employee Resignation) and OFF-001 (HR Termination)
@@ -172,8 +152,7 @@ export class AuthService {
         workEmail: user.workEmail,
         personalEmail: user.personalEmail,
         roles: user.roles,
-        userType:
-          user.userType || (user.employeeNumber ? 'employee' : 'candidate'),
+        userType: user.userType || (user.employeeNumber ? 'employee' : 'candidate'),
         profilePictureUrl: user.profilePictureUrl, // ADDED
       },
     };
@@ -186,9 +165,7 @@ export class AuthService {
       .exec();
 
     if (existingCandidateByNationalId) {
-      throw new ConflictException(
-        'Candidate with this National ID already exists',
-      );
+      throw new ConflictException('Candidate with this National ID already exists');
     }
 
     // Check for duplicate national ID in employees
@@ -197,9 +174,7 @@ export class AuthService {
       .exec();
 
     if (existingEmployeeByNationalId) {
-      throw new ConflictException(
-        'Employee with this National ID already exists',
-      );
+      throw new ConflictException('Employee with this National ID already exists');
     }
 
     // Check for duplicate personal email in candidates
@@ -218,18 +193,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
     // Create full name
-    const fullName = [
-      registerDto.firstName,
-      registerDto.middleName,
-      registerDto.lastName,
-    ]
+    const fullName = [registerDto.firstName, registerDto.middleName, registerDto.lastName]
       .filter(Boolean)
       .join(' ');
 
     // Convert dateOfBirth string to Date object if provided
-    const dateOfBirth = registerDto.dateOfBirth
-      ? new Date(registerDto.dateOfBirth)
-      : undefined;
+    const dateOfBirth = registerDto.dateOfBirth ? new Date(registerDto.dateOfBirth) : undefined;
 
     const candidate = new this.candidateModel({
       firstName: registerDto.firstName,
@@ -276,8 +245,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     // Remove password from response
-    const { password: _, ...candidateWithoutPassword } =
-      savedCandidate.toObject();
+    const { password: _, ...candidateWithoutPassword } = savedCandidate.toObject();
 
     return {
       access_token: accessToken,
@@ -304,10 +272,7 @@ export class AuthService {
 
     let sequence = 1;
     if (lastCandidate) {
-      const lastSequence = parseInt(
-        lastCandidate.candidateNumber.split('-')[2],
-        10,
-      );
+      const lastSequence = parseInt(lastCandidate.candidateNumber.split('-')[2], 10);
       sequence = lastSequence + 1;
     }
 

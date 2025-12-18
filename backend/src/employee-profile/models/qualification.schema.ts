@@ -19,6 +19,4 @@ export class EmployeeQualification {
   graduationType: GraduationType;
 }
 
-export const EmployeeQualificationSchema = SchemaFactory.createForClass(
-  EmployeeQualification,
-);
+export const EmployeeQualificationSchema = SchemaFactory.createForClass(EmployeeQualification);

@@ -1,8 +1,4 @@
-import {
-  IsMongoId,
-  IsNumber,
-  Min,
-} from 'class-validator';
+import { IsMongoId, IsNumber, Min } from 'class-validator';
 
 export class ApplyStatutoryRulesDto {
   @IsNumber()
@@ -12,4 +8,3 @@ export class ApplyStatutoryRulesDto {
   @IsMongoId()
   employeeId: string; // MongoDB ObjectId - used to fetch employee-specific tax/insurance rules
 }
-

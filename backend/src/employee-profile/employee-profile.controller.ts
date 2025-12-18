@@ -42,7 +42,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class EmployeeProfileController {
   constructor(
     private readonly employeeProfileService: EmployeeProfileService,
-    private readonly notificationsService: NotificationsService, // Add this
+    private readonly notificationsService: NotificationsService // Add this
   ) {}
 
   // ==================== EMPLOYEE ROUTES ====================
@@ -51,8 +51,7 @@ export class EmployeeProfileController {
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createEmployeeDto: CreateEmployeeDto) {
-    const employee =
-      await this.employeeProfileService.create(createEmployeeDto);
+    const employee = await this.employeeProfileService.create(createEmployeeDto);
     return {
       message: 'Employee created successfully',
       data: employee,
@@ -68,13 +67,10 @@ export class EmployeeProfileController {
     SystemRole.HR_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.FINANCE_STAFF,
+    SystemRole.FINANCE_STAFF
   )
   async findAll(@Query() query: QueryEmployeeDto, @CurrentUser() user: any) {
-    const result = await this.employeeProfileService.findAll(
-      query,
-      user.userId,
-    );
+    const result = await this.employeeProfileService.findAll(query, user.userId);
     return {
       message: 'Employees retrieved successfully',
       ...result,
@@ -94,14 +90,8 @@ export class EmployeeProfileController {
   }
 
   @Patch('me')
-  async updateMyProfile(
-    @CurrentUser() user: any,
-    @Body() updateDto: UpdateEmployeeSelfServiceDto,
-  ) {
-    const employee = await this.employeeProfileService.updateSelfService(
-      user.userId,
-      updateDto,
-    );
+  async updateMyProfile(@CurrentUser() user: any, @Body() updateDto: UpdateEmployeeSelfServiceDto) {
+    const employee = await this.employeeProfileService.updateSelfService(user.userId, updateDto);
     return {
       message: 'Profile updated successfully',
       data: employee,
@@ -121,12 +111,9 @@ export class EmployeeProfileController {
         streetAddress?: string;
         country?: string;
       };
-    },
+    }
   ) {
-    const employee = await this.employeeProfileService.updateSelfService(
-      user.userId,
-      contactData,
-    );
+    const employee = await this.employeeProfileService.updateSelfService(user.userId, contactData);
     return {
       message: 'Contact information updated successfully',
       data: employee,
@@ -140,12 +127,9 @@ export class EmployeeProfileController {
     bankingData: {
       bankName?: string;
       bankAccountNumber?: string;
-    },
+    }
   ) {
-    const employee = await this.employeeProfileService.updateBankingInfo(
-      user.userId,
-      bankingData,
-    );
+    const employee = await this.employeeProfileService.updateBankingInfo(user.userId, bankingData);
     return {
       message: 'Banking information updated successfully',
       data: employee,
@@ -153,13 +137,10 @@ export class EmployeeProfileController {
   }
 
   @Patch('me/biography')
-  async updateMyBiography(
-    @CurrentUser() user: any,
-    @Body() biographyData: { biography?: string },
-  ) {
+  async updateMyBiography(@CurrentUser() user: any, @Body() biographyData: { biography?: string }) {
     const employee = await this.employeeProfileService.updateBiography(
       user.userId,
-      biographyData.biography,
+      biographyData.biography
     );
     return {
       message: 'Biography updated successfully',
@@ -169,12 +150,11 @@ export class EmployeeProfileController {
 
   @Post('me/photo')
   @UseInterceptors(FileInterceptor('photo'))
-  async uploadProfilePhoto(
-    @CurrentUser() user: any,
-    @UploadedFile() photo: Express.Multer.File,
-  ) {
-    const profilePictureUrl =
-      await this.employeeProfileService.uploadProfilePhoto(user.userId, photo);
+  async uploadProfilePhoto(@CurrentUser() user: any, @UploadedFile() photo: Express.Multer.File) {
+    const profilePictureUrl = await this.employeeProfileService.uploadProfilePhoto(
+      user.userId,
+      photo
+    );
     return {
       message: 'Profile photo uploaded successfully',
       data: { profilePictureUrl },
@@ -196,18 +176,16 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async findByDepartment(@Param('departmentId') departmentId: string) {
-    const employees =
-      await this.employeeProfileService.findByDepartment(departmentId);
+    const employees = await this.employeeProfileService.findByDepartment(departmentId);
     return {
       message: 'Department employees retrieved successfully',
       data: employees,
     };
   }
 
- 
   // CHANGED BY RECRUITMENT SUBSYSTEM - Talent Pool Feature (BR: Storage/upload of applications with resumes)
   // This route was moved here from after @Get(':id') to fix route matching conflicts.
   // The Talent Pool feature requires this endpoint to be accessible at /employee-profile/candidate
@@ -219,18 +197,16 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   async findAllCandidates(@Query() query: any) {
-    const candidates =
-      await this.employeeProfileService.findAllCandidatesWithFilters(query);
+    const candidates = await this.employeeProfileService.findAllCandidatesWithFilters(query);
     return {
       message: 'Candidates retrieved successfully',
       data: candidates,
     };
   }
-//lghayet hena
-
+  //lghayet hena
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -246,16 +222,10 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
-  async update(
-    @Param('id') id: string,
-    @Body() updateEmployeeDto: UpdateEmployeeDto,
-  ) {
-    const employee = await this.employeeProfileService.update(
-      id,
-      updateEmployeeDto,
-    );
+  async update(@Param('id') id: string, @Body() updateEmployeeDto: UpdateEmployeeDto) {
+    const employee = await this.employeeProfileService.update(id, updateEmployeeDto);
     return {
       message: 'Employee updated successfully',
       data: employee,
@@ -277,7 +247,7 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async exportToPdf(@Param('id') id: string) {
     const pdfBuffer = await this.employeeProfileService.exportToPdf(id);
@@ -292,7 +262,7 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async exportToExcel(@Query() query: QueryEmployeeDto) {
     const excelBuffer = await this.employeeProfileService.exportToExcel(query);
@@ -311,7 +281,7 @@ export class EmployeeProfileController {
     const systemRole = await this.employeeProfileService.assignSystemRoles(
       assignRoleDto.employeeProfileId,
       assignRoleDto.roles,
-      assignRoleDto.permissions,
+      assignRoleDto.permissions
     );
     return {
       message: 'Roles assigned successfully',
@@ -323,12 +293,12 @@ export class EmployeeProfileController {
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async assignRolesToEmployee(
     @Param('employeeId') employeeId: string,
-    @Body() assignRoleDto: Omit<AssignSystemRoleDto, 'employeeProfileId'>,
+    @Body() assignRoleDto: Omit<AssignSystemRoleDto, 'employeeProfileId'>
   ) {
     const systemRole = await this.employeeProfileService.assignSystemRoles(
       employeeId,
       assignRoleDto.roles,
-      assignRoleDto.permissions,
+      assignRoleDto.permissions
     );
     return {
       message: 'Roles assigned successfully',
@@ -354,12 +324,12 @@ export class EmployeeProfileController {
     updateRoleDto: {
       roles?: SystemRole[];
       permissions?: string[];
-    },
+    }
   ) {
     const systemRole = await this.employeeProfileService.updateSystemRoles(
       employeeId,
       updateRoleDto.roles,
-      updateRoleDto.permissions,
+      updateRoleDto.permissions
     );
     return {
       message: 'Roles updated successfully',
@@ -383,12 +353,11 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   @HttpCode(HttpStatus.CREATED)
   async createCandidate(@Body() createCandidateDto: CreateCandidateDto) {
-    const candidate =
-      await this.employeeProfileService.createCandidate(createCandidateDto);
+    const candidate = await this.employeeProfileService.createCandidate(createCandidateDto);
     return {
       message: 'Candidate created successfully',
       data: candidate,
@@ -416,7 +385,7 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   async findCandidateById(@Param('id') id: string) {
     const candidate = await this.employeeProfileService.findCandidateById(id);
@@ -431,16 +400,10 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
-  async updateCandidate(
-    @Param('id') id: string,
-    @Body() updateCandidateDto: UpdateCandidateDto,
-  ) {
-    const candidate = await this.employeeProfileService.updateCandidate(
-      id,
-      updateCandidateDto,
-    );
+  async updateCandidate(@Param('id') id: string, @Body() updateCandidateDto: UpdateCandidateDto) {
+    const candidate = await this.employeeProfileService.updateCandidate(id, updateCandidateDto);
     return {
       message: 'Candidate updated successfully',
       data: candidate,
@@ -471,13 +434,12 @@ export class EmployeeProfileController {
       password?: string;
       primaryDepartmentId?: string;
       primaryPositionId?: string;
-    },
+    }
   ) {
-    const employee =
-      await this.employeeProfileService.convertCandidateToEmployee(
-        candidateId,
-        employeeData,
-      );
+    const employee = await this.employeeProfileService.convertCandidateToEmployee(
+      candidateId,
+      employeeData
+    );
     return {
       message: 'Candidate converted to employee successfully',
       data: employee,
@@ -489,15 +451,15 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   async updateCandidateStatus(
     @Param('id') id: string,
-    @Body() statusData: { status: CandidateStatus },
+    @Body() statusData: { status: CandidateStatus }
   ) {
     const candidate = await this.employeeProfileService.updateCandidateStatus(
       id,
-      statusData.status,
+      statusData.status
     );
     return {
       message: 'Candidate status updated successfully',
@@ -510,11 +472,10 @@ export class EmployeeProfileController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   async findCandidatesByStatus(@Param('status') status: string) {
-    const candidates =
-      await this.employeeProfileService.findCandidatesByStatus(status);
+    const candidates = await this.employeeProfileService.findCandidatesByStatus(status);
     return {
       message: 'Candidates retrieved successfully',
       data: candidates,
@@ -528,18 +489,17 @@ export class EmployeeProfileController {
   @HttpCode(HttpStatus.CREATED)
   async createProfileChangeRequest(
     @CurrentUser() user: any,
-    @Body() createRequestDto: CreateProfileChangeRequestDto,
+    @Body() createRequestDto: CreateProfileChangeRequestDto
   ) {
-    const changeRequest =
-      await this.employeeProfileService.createProfileChangeRequest(
-        user.userId,
-        createRequestDto,
-      );
+    const changeRequest = await this.employeeProfileService.createProfileChangeRequest(
+      user.userId,
+      createRequestDto
+    );
     // N-040: Notify HR Manager/Admin
     await this.notificationsService.notifyProfileChangeRequestSubmitted(
       user.userId,
       changeRequest.requestId, // Using _id since requestId is the unique field
-      createRequestDto.requestDescription,
+      createRequestDto.requestDescription
     );
     return {
       message: 'Profile change request submitted successfully',
@@ -550,10 +510,9 @@ export class EmployeeProfileController {
   @Get('change-request/my-requests')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
   async getMyChangeRequests(@CurrentUser() user: any) {
-    const requests =
-      await this.employeeProfileService.getProfileChangeRequestsByEmployee(
-        user.userId,
-      );
+    const requests = await this.employeeProfileService.getProfileChangeRequestsByEmployee(
+      user.userId
+    );
     return {
       message: 'Your change requests retrieved successfully',
       data: requests,
@@ -570,15 +529,13 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async getAllChangeRequestsHR(@Query() query: GetChangeRequestsDto) {
     console.log('=== NEW ENDPOINT WITH SAME ROUTE ===');
 
     const requests =
-      await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
-        query,
-      );
+      await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(query);
 
     return {
       message: 'Change requests retrieved successfully',
@@ -591,7 +548,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async copyOfOriginal(@Query() query: GetChangeRequestsDto) {
     console.log('=== COPY OF ORIGINAL ENDPOINT ===');
@@ -600,9 +557,7 @@ export class EmployeeProfileController {
     try {
       // Call the EXACT SAME service method
       const requests =
-        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
-          query,
-        );
+        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(query);
 
       console.log('Copy successful! Found', requests.length, 'requests');
       return {
@@ -620,7 +575,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async testWithDto(@Query() query: GetChangeRequestsDto) {
     console.log('=== TEST WITH DTO ===');
@@ -644,10 +599,9 @@ export class EmployeeProfileController {
 
     try {
       // Call service with hardcoded valid parameters
-      const requests =
-        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
-          { status: 'PENDING', employeeId: '000000000000000000000001' }, // Valid ObjectId
-        );
+      const requests = await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
+        { status: 'PENDING', employeeId: '000000000000000000000001' } // Valid ObjectId
+      );
 
       return {
         message: 'Simple test successful',
@@ -685,9 +639,7 @@ export class EmployeeProfileController {
 
     try {
       const requests =
-        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
-          cleanedQuery,
-        );
+        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(cleanedQuery);
 
       return {
         message: 'Debug successful',
@@ -710,25 +662,20 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async diagnostic(@Query() query: any) {
     console.log('=== DIAGNOSTIC ENDPOINT ===');
     console.log('1. Query received in controller:', query);
     console.log('2. Type of employeeId:', typeof query?.employeeId);
     console.log('3. employeeId value:', query?.employeeId);
-    console.log(
-      '4. employeeId === undefined:',
-      query?.employeeId === undefined,
-    );
+    console.log('4. employeeId === undefined:', query?.employeeId === undefined);
     console.log('5. employeeId === "":', query?.employeeId === '');
 
     // Try calling the original endpoint's logic
     try {
       const requests =
-        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(
-          query,
-        );
+        await this.employeeProfileService.getAllProfileChangeRequestsWithFilters(query);
 
       return {
         message: 'Diagnostic successful',
@@ -754,11 +701,10 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async getChangeRequestById(@Param('id') id: string) {
-    const request =
-      await this.employeeProfileService.getProfileChangeRequestById(id);
+    const request = await this.employeeProfileService.getProfileChangeRequestById(id);
     return {
       message: 'Change request retrieved successfully',
       data: request,
@@ -769,13 +715,12 @@ export class EmployeeProfileController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async processChangeRequest(
     @Param('id') id: string,
-    @Body() processDto: ProcessProfileChangeRequestDto,
+    @Body() processDto: ProcessProfileChangeRequestDto
   ) {
-    const updatedRequest =
-      await this.employeeProfileService.processProfileChangeRequest(
-        id,
-        processDto,
-      );
+    const updatedRequest = await this.employeeProfileService.processProfileChangeRequest(
+      id,
+      processDto
+    );
     return {
       message: 'Change request processed successfully',
       data: updatedRequest,
@@ -787,13 +732,12 @@ export class EmployeeProfileController {
   async approveChangeRequest(
     @Param('id') id: string,
     @Body() approveDto: { reason?: string },
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: any
   ) {
-    const updatedRequest =
-      await this.employeeProfileService.processProfileChangeRequest(id, {
-        status: 'APPROVED',
-        reason: approveDto.reason,
-      });
+    const updatedRequest = await this.employeeProfileService.processProfileChangeRequest(id, {
+      status: 'APPROVED',
+      reason: approveDto.reason,
+    });
 
     // N-037: Notify employee
     // Use requestId and employeeProfileId
@@ -801,7 +745,7 @@ export class EmployeeProfileController {
       updatedRequest.employeeProfileId.toString(),
       updatedRequest.requestId, // Changed from _id to requestId
       'APPROVED',
-      approveDto.reason,
+      approveDto.reason
     );
 
     return {
@@ -815,13 +759,12 @@ export class EmployeeProfileController {
   async rejectChangeRequest(
     @Param('id') id: string,
     @Body() rejectDto: { reason?: string },
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: any
   ) {
-    const updatedRequest =
-      await this.employeeProfileService.processProfileChangeRequest(id, {
-        status: 'REJECTED',
-        reason: rejectDto.reason,
-      });
+    const updatedRequest = await this.employeeProfileService.processProfileChangeRequest(id, {
+      status: 'REJECTED',
+      reason: rejectDto.reason,
+    });
 
     // N-037: Notify employee
     // Use requestId and employeeProfileId
@@ -829,7 +772,7 @@ export class EmployeeProfileController {
       updatedRequest.employeeProfileId.toString(),
       updatedRequest.requestId, // Changed from _id to requestId
       'REJECTED',
-      rejectDto.reason,
+      rejectDto.reason
     );
 
     return {
@@ -841,11 +784,10 @@ export class EmployeeProfileController {
   @Patch('change-request/:id/cancel')
   @Roles(SystemRole.DEPARTMENT_EMPLOYEE)
   async cancelChangeRequest(@Param('id') id: string, @CurrentUser() user: any) {
-    const updatedRequest =
-      await this.employeeProfileService.cancelProfileChangeRequest(
-        id,
-        user.userId,
-      );
+    const updatedRequest = await this.employeeProfileService.cancelProfileChangeRequest(
+      id,
+      user.userId
+    );
     return {
       message: 'Change request cancelled successfully',
       data: updatedRequest,
@@ -859,7 +801,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async addQualification(
     @CurrentUser() user: any,
@@ -867,11 +809,11 @@ export class EmployeeProfileController {
     qualificationData: {
       establishmentName: string;
       graduationType: string;
-    },
+    }
   ) {
     const qualification = await this.employeeProfileService.addQualification(
       user.userId,
-      qualificationData,
+      qualificationData
     );
     return {
       message: 'Qualification added successfully',
@@ -884,7 +826,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async addQualificationForEmployee(
     @Param('employeeId') employeeId: string,
@@ -892,11 +834,11 @@ export class EmployeeProfileController {
     qualificationData: {
       establishmentName: string;
       graduationType: string;
-    },
+    }
   ) {
     const qualification = await this.employeeProfileService.addQualification(
       employeeId,
-      qualificationData,
+      qualificationData
     );
     return {
       message: 'Qualification added successfully',
@@ -910,13 +852,12 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getMyQualifications(@CurrentUser() user: any) {
-    const qualifications =
-      await this.employeeProfileService.getQualificationsByEmployee(
-        user.userId,
-      );
+    const qualifications = await this.employeeProfileService.getQualificationsByEmployee(
+      user.userId
+    );
     return {
       message: 'Your qualifications retrieved successfully',
       data: qualifications,
@@ -928,7 +869,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async getEmployeeQualifications(@Param('employeeId') employeeId: string) {
     const qualifications =
@@ -945,7 +886,7 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   async updateQualification(
     @Param('qualId') qualificationId: string,
@@ -954,12 +895,12 @@ export class EmployeeProfileController {
     qualificationData: {
       establishmentName?: string;
       graduationType?: string;
-    },
+    }
   ) {
     const qualification = await this.employeeProfileService.updateQualification(
       qualificationId,
       user.userId,
-      qualificationData,
+      qualificationData
     );
     return {
       message: 'Qualification updated successfully',
@@ -973,17 +914,11 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_ADMIN,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   @HttpCode(HttpStatus.NO_CONTENT)
-  async removeQualification(
-    @Param('qualId') qualificationId: string,
-    @CurrentUser() user: any,
-  ) {
-    await this.employeeProfileService.removeQualification(
-      qualificationId,
-      user.userId,
-    );
+  async removeQualification(@Param('qualId') qualificationId: string, @CurrentUser() user: any) {
+    await this.employeeProfileService.removeQualification(qualificationId, user.userId);
     return {
       message: 'Qualification removed successfully',
     };
@@ -996,11 +931,10 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async advancedSearch(@Body() searchCriteria: any) {
-    const results =
-      await this.employeeProfileService.advancedSearch(searchCriteria);
+    const results = await this.employeeProfileService.advancedSearch(searchCriteria);
     return {
       message: 'Search completed successfully',
       data: results,
@@ -1013,11 +947,10 @@ export class EmployeeProfileController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async findByEmployeeNumber(@Param('employeeNumber') employeeNumber: string) {
-    const employee =
-      await this.employeeProfileService.findByEmployeeNumber(employeeNumber);
+    const employee = await this.employeeProfileService.findByEmployeeNumber(employeeNumber);
     return {
       message: 'Employee retrieved successfully',
       data: employee,
@@ -1027,8 +960,7 @@ export class EmployeeProfileController {
   @Get('search/by-national-id/:nationalId')
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async findByNationalId(@Param('nationalId') nationalId: string) {
-    const employee =
-      await this.employeeProfileService.findByNationalId(nationalId);
+    const employee = await this.employeeProfileService.findByNationalId(nationalId);
     return {
       message: 'Employee retrieved successfully',
       data: employee,
@@ -1042,12 +974,10 @@ export class EmployeeProfileController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.HR_ADMIN,
+    SystemRole.HR_ADMIN
   )
   async getTeamMembers(@CurrentUser() user: any) {
-    const members = await this.employeeProfileService.getTeamMembers(
-      user.userId,
-    );
+    const members = await this.employeeProfileService.getTeamMembers(user.userId);
     return {
       message: 'Team members retrieved successfully',
       data: members,
@@ -1055,15 +985,9 @@ export class EmployeeProfileController {
   }
 
   @Get('team/statistics')
-  @Roles(
-    SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.DEPARTMENT_HEAD, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   async getTeamStatistics(@CurrentUser() user: any) {
-    const stats = await this.employeeProfileService.getTeamStatistics(
-      user.userId,
-    );
+    const stats = await this.employeeProfileService.getTeamStatistics(user.userId);
     return {
       message: 'Team statistics retrieved successfully',
       data: stats,
@@ -1073,8 +997,7 @@ export class EmployeeProfileController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async registerCandidate(@Body() registerDto: RegisterCandidateDto) {
-    const candidate =
-      await this.employeeProfileService.registerCandidate(registerDto);
+    const candidate = await this.employeeProfileService.registerCandidate(registerDto);
 
     const { password, ...candidateWithoutPassword } = candidate;
 

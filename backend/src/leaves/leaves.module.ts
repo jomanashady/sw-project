@@ -9,13 +9,19 @@ import { LeavePolicy, LeavePolicySchema } from './models/leave-policy.schema';
 import { LeaveEntitlement, LeaveEntitlementSchema } from './models/leave-entitlement.schema';
 import { LeaveCategory, LeaveCategorySchema } from './models/leave-category.schema';
 import { LeaveAdjustment, LeaveAdjustmentSchema } from './models/leave-adjustment.schema';
-import { Calendar, CalendarSchema} from './models/calendar.schema';
-import { Attachment,AttachmentSchema } from './models/attachment.schema';
+import { Calendar, CalendarSchema } from './models/calendar.schema';
+import { Attachment, AttachmentSchema } from './models/attachment.schema';
 import { EmployeeProfileModule } from '../employee-profile/employee-profile.module';
 import { forwardRef } from '@nestjs/common';
 import { TimeManagementModule } from '../time-management/time-management.module';
-import { EmployeeProfile, EmployeeProfileSchema } from '../employee-profile/models/employee-profile.schema';
-import { EmployeeSystemRole, EmployeeSystemRoleSchema } from '../employee-profile/models/employee-system-role.schema';
+import {
+  EmployeeProfile,
+  EmployeeProfileSchema,
+} from '../employee-profile/models/employee-profile.schema';
+import {
+  EmployeeSystemRole,
+  EmployeeSystemRoleSchema,
+} from '../employee-profile/models/employee-system-role.schema';
 import { NotificationLogSchema } from '../time-management/models/notification-log.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 // import { PositionAssignment, PositionAssignmentSchema } from '../organization-structure/models/position-assignment.schema';
@@ -45,6 +51,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   controllers: [LeaveController],
   providers: [LeavesService],
-  exports:[LeavesService]
+  exports: [LeavesService],
 })
 export class LeavesModule {}

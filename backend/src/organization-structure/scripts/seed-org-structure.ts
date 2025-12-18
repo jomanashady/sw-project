@@ -16,9 +16,7 @@ async function seedOrgStructure() {
   console.log('🏗️  Seeding Organization Structure...\n');
 
   const app = await NestFactory.createApplicationContext(AppModule);
-  const departmentModel = app.get<Model<Department>>(
-    getModelToken(Department.name),
-  );
+  const departmentModel = app.get<Model<Department>>(getModelToken(Department.name));
   const positionModel = app.get<Model<Position>>(getModelToken(Position.name));
 
   try {
@@ -54,20 +52,14 @@ async function seedOrgStructure() {
     const createdDepartments: any[] = [];
     for (const deptData of departments) {
       try {
-        const dept = await departmentModel.findOneAndUpdate(
-          { code: deptData.code },
-          deptData,
-          { upsert: true, new: true },
-        );
+        const dept = await departmentModel.findOneAndUpdate({ code: deptData.code }, deptData, {
+          upsert: true,
+          new: true,
+        });
         createdDepartments.push(dept);
-        console.log(
-          `✅ Created/Updated department: ${dept.name} (${dept.code})`,
-        );
+        console.log(`✅ Created/Updated department: ${dept.name} (${dept.code})`);
       } catch (error: any) {
-        console.error(
-          `❌ Error creating department ${deptData.code}:`,
-          error.message,
-        );
+        console.error(`❌ Error creating department ${deptData.code}:`, error.message);
       }
     }
 
@@ -114,24 +106,18 @@ async function seedOrgStructure() {
     const createdPositions: any[] = [];
     for (const posData of positions) {
       if (!posData.departmentId) {
-        console.log(
-          `⚠️  Skipping position ${posData.code} - department not found`,
-        );
+        console.log(`⚠️  Skipping position ${posData.code} - department not found`);
         continue;
       }
       try {
-        const pos = await positionModel.findOneAndUpdate(
-          { code: posData.code },
-          posData,
-          { upsert: true, new: true },
-        );
+        const pos = await positionModel.findOneAndUpdate({ code: posData.code }, posData, {
+          upsert: true,
+          new: true,
+        });
         createdPositions.push(pos);
         console.log(`✅ Created/Updated position: ${pos.title} (${pos.code})`);
       } catch (error: any) {
-        console.error(
-          `❌ Error creating position ${posData.code}:`,
-          error.message,
-        );
+        console.error(`❌ Error creating position ${posData.code}:`, error.message);
       }
     }
 
@@ -163,8 +149,8 @@ async function seedOrgStructure() {
             primaryDepartmentId: createdDepartments[0]._id.toString(),
           },
           null,
-          2,
-        ),
+          2
+        )
       );
     }
   } catch (error) {

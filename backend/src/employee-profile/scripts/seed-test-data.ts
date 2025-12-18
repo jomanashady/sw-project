@@ -19,7 +19,7 @@ async function seedTestData() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const employeeService = app.get(EmployeeProfileService);
   const systemRoleModel = app.get<Model<EmployeeSystemRole>>(
-    getModelToken(EmployeeSystemRole.name),
+    getModelToken(EmployeeSystemRole.name)
   );
 
   try {
@@ -76,9 +76,7 @@ async function seedTestData() {
       try {
         const employee = await employeeService.create(empData as any);
         createdEmployees.push(employee);
-        console.log(
-          `✅ Created employee: ${employee.fullName} (${employee.employeeNumber})`,
-        );
+        console.log(`✅ Created employee: ${employee.fullName} (${employee.employeeNumber})`);
 
         // Assign roles
         const employeeId = (employee as any)._id;
@@ -91,7 +89,7 @@ async function seedTestData() {
               permissions: ['*'],
               isActive: true,
             },
-            { upsert: true, new: true },
+            { upsert: true, new: true }
           );
           console.log(`   → Assigned SYSTEM_ADMIN role`);
         } else if (employee.fullName?.includes('Jane')) {
@@ -103,27 +101,25 @@ async function seedTestData() {
               permissions: ['read:employees', 'write:employees'],
               isActive: true,
             },
-            { upsert: true, new: true },
+            { upsert: true, new: true }
           );
           console.log(`   → Assigned HR_MANAGER role`);
         }
       } catch (error: any) {
         if (error.message?.includes('already exists')) {
           console.log(
-            `⚠️  Employee with nationalId ${empData.nationalId} already exists, skipping...`,
+            `⚠️  Employee with nationalId ${empData.nationalId} already exists, skipping...`
           );
         } else {
           console.error(
             `❌ Error creating employee ${empData.firstName} ${empData.lastName}:`,
-            error.message,
+            error.message
           );
         }
       }
     }
 
-    console.log(
-      `\n✅ Seeding complete! Created ${createdEmployees.length} employees.`,
-    );
+    console.log(`\n✅ Seeding complete! Created ${createdEmployees.length} employees.`);
     console.log('\n📋 Login Credentials:');
     console.log('   Default password for all employees: password123\n');
     createdEmployees.forEach((emp) => {
@@ -131,15 +127,13 @@ async function seedTestData() {
       console.log(`      Employee Number: ${emp.employeeNumber}`);
       console.log(`      Password: password123`);
       console.log(
-        `      Role: ${emp.fullName?.includes('Admin') ? 'SYSTEM_ADMIN' : emp.fullName?.includes('Jane') ? 'HR_MANAGER' : 'DEPARTMENT_EMPLOYEE'}`,
+        `      Role: ${emp.fullName?.includes('Admin') ? 'SYSTEM_ADMIN' : emp.fullName?.includes('Jane') ? 'HR_MANAGER' : 'DEPARTMENT_EMPLOYEE'}`
       );
       console.log(`      ID: ${emp._id}\n`);
     });
     console.log('\n🔐 To login, use:');
     console.log('   POST /api/v1/auth/login');
-    console.log(
-      '   Body: { "employeeNumber": "EMP-XXXX-XXXX", "password": "password123" }',
-    );
+    console.log('   Body: { "employeeNumber": "EMP-XXXX-XXXX", "password": "password123" }');
   } catch (error) {
     console.error('❌ Error seeding data:', error);
   } finally {

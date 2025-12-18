@@ -18,11 +18,7 @@ import {
   UpdateDepartmentDto,
   DepartmentResponseDto,
 } from './dto/department.dto';
-import {
-  CreatePositionDto,
-  UpdatePositionDto,
-  PositionResponseDto,
-} from './dto/position.dto';
+import { CreatePositionDto, UpdatePositionDto, PositionResponseDto } from './dto/position.dto';
 import {
   CreatePositionAssignmentDto,
   UpdatePositionAssignmentDto,
@@ -49,9 +45,7 @@ import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 @Controller('organization-structure')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrganizationStructureController {
-  constructor(
-    private readonly structureService: OrganizationStructureService,
-  ) {}
+  constructor(private readonly structureService: OrganizationStructureService) {}
 
   // ============ DEPARTMENT ENDPOINTS ============
 
@@ -61,10 +55,7 @@ export class OrganizationStructureController {
    */
   @Post('departments')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  async createDepartment(
-    @Body() dto: CreateDepartmentDto,
-    @CurrentUser() user: any,
-  ) {
+  async createDepartment(@Body() dto: CreateDepartmentDto, @CurrentUser() user: any) {
     return this.structureService.createDepartment(dto);
   }
 
@@ -78,15 +69,10 @@ export class OrganizationStructureController {
     SystemRole.HR_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
-  async getAllDepartments(
-    @CurrentUser() user: any,
-    @Query('isActive') isActive?: boolean,
-  ) {
-    return this.structureService.getAllDepartments(
-      isActive !== undefined ? isActive === true : undefined,
-    );
+  async getAllDepartments(@CurrentUser() user: any, @Query('isActive') isActive?: boolean) {
+    return this.structureService.getAllDepartments(isActive !== undefined ? isActive : undefined);
   }
 
   /**
@@ -94,10 +80,7 @@ export class OrganizationStructureController {
    */
   @Get('departments/:id')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
-  async getDepartmentById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getDepartmentById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.getDepartmentById(id);
   }
 
@@ -110,7 +93,7 @@ export class OrganizationStructureController {
   async updateDepartment(
     @Param('id') id: string,
     @Body() dto: UpdateDepartmentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.updateDepartment(id, dto);
   }
@@ -121,10 +104,7 @@ export class OrganizationStructureController {
    */
   @Delete('departments/:id')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  async deactivateDepartment(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async deactivateDepartment(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.deactivateDepartment(id);
   }
 
@@ -146,10 +126,7 @@ export class OrganizationStructureController {
    */
   @Post('positions')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  async createPosition(
-    @Body() dto: CreatePositionDto,
-    @CurrentUser() user: any,
-  ) {
+  async createPosition(@Body() dto: CreatePositionDto, @CurrentUser() user: any) {
     return this.structureService.createPosition(dto);
   }
 
@@ -161,11 +138,11 @@ export class OrganizationStructureController {
   async getAllPositions(
     @CurrentUser() user: any,
     @Query('departmentId') departmentId?: string,
-    @Query('isActive') isActive?: boolean,
+    @Query('isActive') isActive?: boolean
   ) {
     return this.structureService.getAllPositions(
       departmentId,
-      isActive !== undefined ? isActive === true : undefined,
+      isActive !== undefined ? isActive : undefined
     );
   }
 
@@ -174,10 +151,7 @@ export class OrganizationStructureController {
    */
   @Get('positions/:id')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
-  async getPositionById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getPositionById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.getPositionById(id);
   }
 
@@ -190,7 +164,7 @@ export class OrganizationStructureController {
   async updatePosition(
     @Param('id') id: string,
     @Body() dto: UpdatePositionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.updatePosition(id, dto);
   }
@@ -201,10 +175,7 @@ export class OrganizationStructureController {
    */
   @Delete('positions/:id')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  async deactivatePosition(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async deactivatePosition(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.deactivatePosition(id);
   }
 
@@ -214,10 +185,7 @@ export class OrganizationStructureController {
    */
   @Get('positions/:id/hierarchy')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
-  async getPositionHierarchy(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getPositionHierarchy(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.getPositionHierarchy(id);
   }
 
@@ -230,7 +198,7 @@ export class OrganizationStructureController {
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async createPositionAssignment(
     @Body() dto: CreatePositionAssignmentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.createPositionAssignment(dto);
   }
@@ -245,13 +213,10 @@ export class OrganizationStructureController {
   async getEmployeeAssignments(
     @Param('employeeProfileId') employeeProfileId: string,
     @CurrentUser() user: any,
-    @Query('activeOnly') activeOnly?: boolean,
+    @Query('activeOnly') activeOnly?: boolean
   ) {
     // Add service-level check to ensure employees can only see their own
-    return this.structureService.getEmployeeAssignments(
-      employeeProfileId,
-      activeOnly === true,
-    );
+    return this.structureService.getEmployeeAssignments(employeeProfileId, activeOnly);
   }
 
   /**
@@ -259,10 +224,7 @@ export class OrganizationStructureController {
    */
   @Get('assignments/position/:positionId')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
-  async getPositionAssignments(
-    @Param('positionId') positionId: string,
-    @CurrentUser() user: any,
-  ) {
+  async getPositionAssignments(@Param('positionId') positionId: string, @CurrentUser() user: any) {
     return this.structureService.getPositionAssignments(positionId);
   }
 
@@ -274,7 +236,7 @@ export class OrganizationStructureController {
   async updatePositionAssignment(
     @Param('id') id: string,
     @Body() dto: UpdatePositionAssignmentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.updatePositionAssignment(id, dto);
   }
@@ -287,7 +249,7 @@ export class OrganizationStructureController {
   async endPositionAssignment(
     @Param('id') id: string,
     @Body('endDate') endDate: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.endPositionAssignment(id, new Date(endDate));
   }
@@ -303,7 +265,7 @@ export class OrganizationStructureController {
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
   async createChangeRequest(
     @Body() dto: CreateStructureChangeRequestDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.createChangeRequest(dto);
   }
@@ -316,7 +278,7 @@ export class OrganizationStructureController {
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async getAllChangeRequests(
     @CurrentUser() user: any,
-    @Query('status') status?: StructureRequestStatus,
+    @Query('status') status?: StructureRequestStatus
   ) {
     return this.structureService.getAllChangeRequests(status);
   }
@@ -326,10 +288,7 @@ export class OrganizationStructureController {
    */
   @Get('change-requests/:id')
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
-  async getChangeRequestById(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async getChangeRequestById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.getChangeRequestById(id);
   }
 
@@ -342,7 +301,7 @@ export class OrganizationStructureController {
   async updateChangeRequest(
     @Param('id') id: string,
     @Body() dto: UpdateStructureChangeRequestDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.updateChangeRequest(id, dto);
   }
@@ -357,7 +316,7 @@ export class OrganizationStructureController {
   async submitChangeRequest(
     @Param('id') id: string,
     @Body() dto: SubmitChangeRequestDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.submitChangeRequest(id, dto);
   }
@@ -368,10 +327,7 @@ export class OrganizationStructureController {
   @Post('change-requests/:id/cancel')
   @HttpCode(HttpStatus.OK)
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN)
-  async cancelChangeRequest(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
+  async cancelChangeRequest(@Param('id') id: string, @CurrentUser() user: any) {
     return this.structureService.cancelChangeRequest(id);
   }
 
@@ -383,10 +339,7 @@ export class OrganizationStructureController {
    */
   @Post('approvals')
   @Roles(SystemRole.SYSTEM_ADMIN)
-  async createApproval(
-    @Body() dto: CreateStructureApprovalDto,
-    @CurrentUser() user: any,
-  ) {
+  async createApproval(@Body() dto: CreateStructureApprovalDto, @CurrentUser() user: any) {
     return this.structureService.createApproval(dto);
   }
 
@@ -400,7 +353,7 @@ export class OrganizationStructureController {
   async updateApprovalDecision(
     @Param('id') id: string,
     @Body() dto: UpdateApprovalDecisionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.updateApprovalDecision(id, dto);
   }
@@ -412,7 +365,7 @@ export class OrganizationStructureController {
   @Roles(SystemRole.SYSTEM_ADMIN, SystemRole.HR_ADMIN, SystemRole.HR_MANAGER)
   async getRequestApprovals(
     @Param('changeRequestId') changeRequestId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.getRequestApprovals(changeRequestId);
   }
@@ -429,7 +382,7 @@ export class OrganizationStructureController {
   async getChangeLogs(
     @CurrentUser() user: any,
     @Query('entityType') entityType?: string,
-    @Query('entityId') entityId?: string,
+    @Query('entityId') entityId?: string
   ) {
     return this.structureService.getChangeLogs(entityType, entityId);
   }
@@ -443,7 +396,7 @@ export class OrganizationStructureController {
   async getEntityChangeLogs(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.structureService.getChangeLogs(entityType, entityId);
   }

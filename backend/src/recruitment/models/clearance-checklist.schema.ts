@@ -46,5 +46,4 @@ export class ClearanceChecklist {
 }
 
 export type ClearanceChecklistDocument = HydratedDocument<ClearanceChecklist>;
-export const ClearanceChecklistSchema =
-  SchemaFactory.createForClass(ClearanceChecklist);
+export const ClearanceChecklistSchema = SchemaFactory.createForClass(ClearanceChecklist);

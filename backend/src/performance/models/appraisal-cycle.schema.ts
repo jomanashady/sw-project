@@ -1,9 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import {
-  AppraisalCycleStatus,
-  AppraisalTemplateType,
-} from '../enums/performance.enums';
+import { AppraisalCycleStatus, AppraisalTemplateType } from '../enums/performance.enums';
 import { Department } from '../../organization-structure/models/department.schema';
 import { AppraisalTemplate } from './appraisal-template.schema';
 
@@ -18,9 +15,7 @@ export class CycleTemplateAssignment {
   departmentIds: Types.ObjectId[];
 }
 
-export const CycleTemplateAssignmentSchema = SchemaFactory.createForClass(
-  CycleTemplateAssignment,
-);
+export const CycleTemplateAssignmentSchema = SchemaFactory.createForClass(CycleTemplateAssignment);
 
 @Schema({ collection: 'appraisal_cycles', timestamps: true })
 export class AppraisalCycle {
@@ -69,5 +64,4 @@ export class AppraisalCycle {
   archivedAt?: Date;
 }
 
-export const AppraisalCycleSchema =
-  SchemaFactory.createForClass(AppraisalCycle);
+export const AppraisalCycleSchema = SchemaFactory.createForClass(AppraisalCycle);

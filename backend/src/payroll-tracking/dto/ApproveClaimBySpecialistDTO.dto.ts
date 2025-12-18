@@ -1,11 +1,4 @@
-import {
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsMongoId,
-  IsNotEmpty,
-  Min,
-} from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsMongoId, IsNotEmpty, Min } from 'class-validator';
 
 /**
  * DTO for Payroll Specialist to approve expense claims

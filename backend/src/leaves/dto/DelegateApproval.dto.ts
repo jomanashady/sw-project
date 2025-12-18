@@ -10,4 +10,3 @@ export class DelegateApprovalDto {
   @IsDate()
   endDate: Date;
 }
-

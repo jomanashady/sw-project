@@ -54,5 +54,4 @@ export class AppraisalDispute {
   resolvedByEmployeeId?: Types.ObjectId;
 }
 
-export const AppraisalDisputeSchema =
-  SchemaFactory.createForClass(AppraisalDispute);
+export const AppraisalDisputeSchema = SchemaFactory.createForClass(AppraisalDispute);

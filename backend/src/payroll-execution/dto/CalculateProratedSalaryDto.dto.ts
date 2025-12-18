@@ -1,9 +1,4 @@
-import {
-  IsMongoId,
-  IsNumber,
-  IsISO8601,
-  Min,
-} from 'class-validator';
+import { IsMongoId, IsNumber, IsISO8601, Min } from 'class-validator';
 
 export class CalculateProratedSalaryDto {
   @IsMongoId()
@@ -22,4 +17,3 @@ export class CalculateProratedSalaryDto {
   @IsISO8601()
   payrollPeriodEnd: string; // ISO 8601 date string - end of payroll period
 }
-

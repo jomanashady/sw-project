@@ -29,5 +29,4 @@ export class EmployeeSystemRole {
   isActive: boolean;
 }
 
-export const EmployeeSystemRoleSchema =
-  SchemaFactory.createForClass(EmployeeSystemRole);
+export const EmployeeSystemRoleSchema = SchemaFactory.createForClass(EmployeeSystemRole);

@@ -70,5 +70,5 @@ export class CreateCandidateDto {
 }
 
 export class UpdateCandidateDto extends PartialType(
-  OmitType(CreateCandidateDto, ['nationalId'] as const),
+  OmitType(CreateCandidateDto, ['nationalId'] as const)
 ) {}

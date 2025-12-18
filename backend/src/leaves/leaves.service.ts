@@ -12,25 +12,13 @@ import { HydratedDocument } from 'mongoose';
 import { NotFoundException } from '@nestjs/common';
 
 import { LeavePolicy, LeavePolicyDocument } from './models/leave-policy.schema';
-import {
-  LeaveRequest,
-  LeaveRequestDocument,
-} from './models/leave-request.schema';
-import {
-  LeaveEntitlement,
-  LeaveEntitlementDocument,
-} from './models/leave-entitlement.schema';
-import {
-  LeaveAdjustment,
-  LeaveAdjustmentDocument,
-} from './models/leave-adjustment.schema';
+import { LeaveRequest, LeaveRequestDocument } from './models/leave-request.schema';
+import { LeaveEntitlement, LeaveEntitlementDocument } from './models/leave-entitlement.schema';
+import { LeaveAdjustment, LeaveAdjustmentDocument } from './models/leave-adjustment.schema';
 import { LeaveType, LeaveTypeDocument } from './models/leave-type.schema';
 import { Attachment, AttachmentDocument } from './models/attachment.schema';
 import { Calendar, CalendarDocument } from './models/calendar.schema';
-import {
-  LeaveCategory,
-  LeaveCategoryDocument,
-} from './models/leave-category.schema';
+import { LeaveCategory, LeaveCategoryDocument } from './models/leave-category.schema';
 
 import {
   EmployeeProfile,
@@ -40,7 +28,11 @@ import {
   EmployeeSystemRole,
   EmployeeSystemRoleDocument,
 } from '../employee-profile/models/employee-system-role.schema';
-import { EmployeeStatus, SystemRole, ContractType } from '../employee-profile/enums/employee-profile.enums';
+import {
+  EmployeeStatus,
+  SystemRole,
+  ContractType,
+} from '../employee-profile/enums/employee-profile.enums';
 // import { PositionAssignment, PositionAssignmentDocument } from '../organization-structure/models/position-assignment.schema';
 // import { Position, PositionDocument } from '../organization-structure/models/position.schema';
 
@@ -67,10 +59,7 @@ import { FilterLeaveHistoryDto } from './dto/FilterLeaveHistory.dto';
 import { ViewTeamLeaveBalancesDto } from './dto/ViewTeamLeaveBalances.dto';
 import { FilterTeamLeaveDataDto } from './dto/FilterTeamLeaveData.dto';
 import { FlagIrregularPatternDto } from './dto/FlagIrregularPattern.dto';
-import {
-  AutoAccrueLeaveDto,
-  AccrueAllEmployeesDto,
-} from './dto/AutoAccrueLeave.dto';
+import { AutoAccrueLeaveDto, AccrueAllEmployeesDto } from './dto/AutoAccrueLeave.dto';
 import { RunCarryForwardDto } from './dto/CarryForward.dto';
 import { AccrualAdjustmentDto } from './dto/AccrualAdjustment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -79,14 +68,10 @@ import { NotificationType } from '../notifications/enums/notification-type.enum'
 @Injectable()
 export class LeavesService {
   // Helper: convert string or ObjectId-like to Types.ObjectId
-  private toObjectId(
-    id: string | Types.ObjectId | undefined | null,
-  ): Types.ObjectId | undefined {
+  private toObjectId(id: string | Types.ObjectId | undefined | null): Types.ObjectId | undefined {
     if (!id) return undefined;
     try {
-      return id instanceof Types.ObjectId
-        ? id
-        : new Types.ObjectId(id as string);
+      return id instanceof Types.ObjectId ? id : new Types.ObjectId(id);
     } catch (err) {
       throw new Error(`Invalid id provided: ${id}`);
     }
@@ -127,10 +112,7 @@ export class LeavesService {
             continue;
           } catch (err) {
             // if creation failed, skip this holiday
-            console.warn(
-              'Failed to create Holiday document for calendar import:',
-              err,
-            );
+            console.warn('Failed to create Holiday document for calendar import:', err);
           }
         }
 
@@ -153,16 +135,10 @@ export class LeavesService {
 
   async getCalendarByYear(year: number): Promise<CalendarDocument | null> {
     // Populate holidays so callers receive full holiday documents (dates/names)
-    return await this.calendarModel
-      .findOne({ year })
-      .populate('holidays')
-      .exec();
+    return await this.calendarModel.findOne({ year }).populate('holidays').exec();
   }
 
-  async updateCalendar(
-    year: number,
-    dto: CreateCalendarDto,
-  ): Promise<CalendarDocument | null> {
+  async updateCalendar(year: number, dto: CreateCalendarDto): Promise<CalendarDocument | null> {
     const holidayIds: Types.ObjectId[] = [];
     if (dto.holidays && Array.isArray(dto.holidays)) {
       let HolidayModel: any = null;
@@ -191,10 +167,7 @@ export class LeavesService {
             holidayIds.push(created._id);
             continue;
           } catch (err) {
-            console.warn(
-              'Failed to create Holiday document for calendar update:',
-              err,
-            );
+            console.warn('Failed to create Holiday document for calendar update:', err);
           }
         }
       }
@@ -214,7 +187,7 @@ export class LeavesService {
               })) || [],
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, new: true }
       )
       .exec();
   }
@@ -243,7 +216,7 @@ export class LeavesService {
     // @InjectModel(Position.name) private positionModel: mongoose.Model<PositionDocument>,
     @InjectModel(LeaveCategory.name)
     private leaveCategoryModel: mongoose.Model<LeaveCategoryDocument>,
-    private notificationsService: NotificationsService,
+    private notificationsService: NotificationsService
   ) {}
 
   // In-memory storage for delegation records (Map<managerId, Array<delegation>>)
@@ -259,7 +232,7 @@ export class LeavesService {
 
   // LeavePolicy
   async createLeavePolicy(
-    createLeavePolicyDto: CreateLeavePolicyDto,
+    createLeavePolicyDto: CreateLeavePolicyDto
   ): Promise<LeavePolicyDocument> {
     const newLeavePolicy = new this.leavePolicyModel(createLeavePolicyDto);
     return await newLeavePolicy.save();
@@ -279,7 +252,7 @@ export class LeavesService {
 
   async updateLeavePolicy(
     id: string,
-    updateLeavePolicyDto: UpdateLeavePolicyDto,
+    updateLeavePolicyDto: UpdateLeavePolicyDto
   ): Promise<LeavePolicyDocument> {
     const updatedLeavePolicy = await this.leavePolicyModel
       .findByIdAndUpdate(id, updateLeavePolicyDto, { new: true })
@@ -312,14 +285,12 @@ export class LeavesService {
       throw new Error(`LeavePolicy with ID ${id} not found`);
     }
 
-    return (await this.leavePolicyModel
-      .findByIdAndDelete(id)
-      .exec()) as LeavePolicyDocument;
+    return (await this.leavePolicyModel.findByIdAndDelete(id).exec()) as LeavePolicyDocument;
   }
 
   // Leave Category
   async createLeaveCategory(
-    createLeaveCategoryDto: CreateLeaveCategoryDto,
+    createLeaveCategoryDto: CreateLeaveCategoryDto
   ): Promise<LeaveCategoryDocument> {
     const newCategory = new this.leaveCategoryModel(createLeaveCategoryDto);
     return await newCategory.save();
@@ -336,13 +307,7 @@ export class LeavesService {
     const year = new Date(from).getFullYear();
     const calendar = await this.calendarModel.findOne({ year }).exec();
     if (!calendar) {
-      console.warn(
-        'Calendar for year',
-        year,
-        'not found; treating date as not blocked:',
-        from,
-        to,
-      );
+      console.warn('Calendar for year', year, 'not found; treating date as not blocked:', from, to);
       return false;
     }
     const start = new Date(from);
@@ -357,7 +322,7 @@ export class LeavesService {
 
   // Phase 2: REQ-015 - Create leave request with validation and routing
   async createLeaveRequest(
-    createLeaveRequestDto: CreateLeaveRequestDto,
+    createLeaveRequestDto: CreateLeaveRequestDto
   ): Promise<LeaveRequestDocument> {
     const {
       dates,
@@ -375,21 +340,17 @@ export class LeavesService {
     today.setHours(0, 0, 0, 0);
 
     // Business Rule: Calculate leave duration net of non-working days (weekends and holidays)
-    const calculatedDurationDays = await this.calculateWorkingDays(
-      startDate,
-      endDate,
-      employeeId,
-    );
+    const calculatedDurationDays = await this.calculateWorkingDays(startDate, endDate, employeeId);
     const durationDays = providedDurationDays || calculatedDurationDays;
 
     // REQ-031: Check post-leave grace period
     const maxGracePeriodDays = 7; // Should come from configuration
     const daysSinceEndDate = Math.floor(
-      (today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24),
+      (today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (daysSinceEndDate > maxGracePeriodDays && daysSinceEndDate > 0) {
       throw new Error(
-        `Post-leave requests must be submitted within ${maxGracePeriodDays} days after the leave end date.`,
+        `Post-leave requests must be submitted within ${maxGracePeriodDays} days after the leave end date.`
       );
     }
 
@@ -415,7 +376,7 @@ export class LeavesService {
     if (leaveType.code === 'SICK_LEAVE' && durationDays > 1) {
       if (!attachmentId) {
         throw new BadRequestException(
-          'Medical certificate is required for sick leave exceeding one day. Please upload a medical certificate before submitting your request.',
+          'Medical certificate is required for sick leave exceeding one day. Please upload a medical certificate before submitting your request.'
         );
       }
     }
@@ -423,63 +384,58 @@ export class LeavesService {
     // REQ-016: Validate attachment requirement
     if (leaveType.requiresAttachment && !attachmentId) {
       throw new BadRequestException(
-        `Attachment is required for ${leaveType.name} leave requests. Please upload the required supporting document before submitting.`,
+        `Attachment is required for ${leaveType.name} leave requests. Please upload the required supporting document before submitting.`
       );
     }
 
     if (attachmentId) {
-      const attachment = await this.attachmentModel
-        .findById(attachmentId)
-        .exec();
+      const attachment = await this.attachmentModel.findById(attachmentId).exec();
       if (!attachment) {
-        throw new NotFoundException(`Attachment with ID '${attachmentId}' not found. Please upload a new attachment or verify the attachment ID.`);
+        throw new NotFoundException(
+          `Attachment with ID '${attachmentId}' not found. Please upload a new attachment or verify the attachment ID.`
+        );
       }
     }
 
     // Check if any date in the requested range falls on a blocked period
-    const isBlocked = await this.isBlockedDateRange(
-      startDate.toISOString(),
-      endDate.toISOString(),
-    );
+    const isBlocked = await this.isBlockedDateRange(startDate.toISOString(), endDate.toISOString());
     if (isBlocked) {
-      throw new BadRequestException(
-        'The requested leave dates fall on blocked periods.',
-      );
+      throw new BadRequestException('The requested leave dates fall on blocked periods.');
     }
 
     // Convert employeeId and leaveTypeId to ObjectId using the helper
-    const employeeObjectId = this.toObjectId(employeeId) as Types.ObjectId;
-    const leaveTypeObjectId = this.toObjectId(leaveTypeId) as Types.ObjectId;
+    const employeeObjectId = this.toObjectId(employeeId);
+    const leaveTypeObjectId = this.toObjectId(leaveTypeId);
 
     // Fetch leave type using ObjectId
-    const leaveTypeDoc = await this.leaveTypeModel
-      .findById(leaveTypeObjectId)
-      .exec();
+    const leaveTypeDoc = await this.leaveTypeModel.findById(leaveTypeObjectId).exec();
     if (!leaveTypeDoc) {
-      throw new NotFoundException(`Leave type with ID '${leaveTypeId}' not found. Please select a valid leave type.`);
+      throw new NotFoundException(
+        `Leave type with ID '${leaveTypeId}' not found. Please select a valid leave type.`
+      );
     }
 
     // REQ-016 validations remain the same (use original attachmentId variable)
     if (leaveTypeDoc.code === 'SICK_LEAVE' && durationDays > 1) {
       if (!attachmentId) {
         throw new BadRequestException(
-          'Medical certificate is required for sick leave exceeding one day. Please upload a medical certificate before submitting your request.',
+          'Medical certificate is required for sick leave exceeding one day. Please upload a medical certificate before submitting your request.'
         );
       }
     }
 
     if (leaveTypeDoc.requiresAttachment && !attachmentId) {
       throw new BadRequestException(
-        `Attachment is required for ${leaveTypeDoc.name} leave requests. Please upload the required supporting document before submitting.`,
+        `Attachment is required for ${leaveTypeDoc.name} leave requests. Please upload the required supporting document before submitting.`
       );
     }
 
     if (attachmentId) {
-      const attachment = await this.attachmentModel
-        .findById(this.toObjectId(attachmentId))
-        .exec();
+      const attachment = await this.attachmentModel.findById(this.toObjectId(attachmentId)).exec();
       if (!attachment) {
-        throw new NotFoundException(`Attachment with ID '${attachmentId}' not found. Please upload a new attachment or verify the attachment ID.`);
+        throw new NotFoundException(
+          `Attachment with ID '${attachmentId}' not found. Please upload a new attachment or verify the attachment ID.`
+        );
       }
     }
 
@@ -492,17 +448,21 @@ export class LeavesService {
       endDate,
       durationDays,
       undefined,
-      leaveTypeDoc.deductible !== false, // Only check balance if deductible
+      leaveTypeDoc.deductible // Only check balance if deductible
     );
     if (!validationResult.isValid) {
-      throw new BadRequestException(validationResult.errorMessage || 'Invalid leave request. Please check your input and try again.');
+      throw new BadRequestException(
+        validationResult.errorMessage ||
+          'Invalid leave request. Please check your input and try again.'
+      );
     }
 
     // Check if employee is a department head, HR Manager, or HR Admin
     const employeeSystemRole = await this.systemRoleModel
       .findOne({ employeeProfileId: employeeObjectId, isActive: true })
       .exec();
-    const isDepartmentHead = employeeSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+    const isDepartmentHead =
+      employeeSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
     const isHRManager = employeeSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
     const isHRAdmin = employeeSystemRole?.roles?.includes(SystemRole.HR_ADMIN) || false;
 
@@ -518,13 +478,13 @@ export class LeavesService {
     } else if (isHRManager) {
       // Find CEO (John Doe) by name
       const ceo = await this.employeeProfileModel
-        .findOne({ 
-          firstName: 'John', 
+        .findOne({
+          firstName: 'John',
           lastName: 'Doe',
-          status: { $ne: 'TERMINATED' } // Only active employees
+          status: { $ne: 'TERMINATED' }, // Only active employees
         })
         .exec();
-      
+
       if (ceo) {
         approvalRole = 'CEO';
       } else {
@@ -554,27 +514,23 @@ export class LeavesService {
 
     // Update pending balance atomically using ObjectIds
     // Only increment pending if the leave type is deductible (non-deductible leaves don't reserve or deduct from balance)
-    if (leaveTypeDoc.deductible !== false) {
+    if (leaveTypeDoc.deductible) {
       const entitlement = await this.getLeaveEntitlement(
         employeeObjectId as any,
-        leaveTypeObjectId as any,
+        leaveTypeObjectId as any
       );
       await this.leaveEntitlementModel
-        .findByIdAndUpdate(
-          entitlement._id,
-          { $inc: { pending: durationDays } },
-          { new: true },
-        )
+        .findByIdAndUpdate(entitlement._id, { $inc: { pending: durationDays } }, { new: true })
         .exec();
     }
     // Note: Non-deductible leaves (deductible = false) don't affect balance at all
     // They are tracked in the leave request but don't reserve or deduct from entitlement balance
 
     const savedLeaveRequest = await leaveRequest.save();
-    
+
     // Notify manager when new leave request is created
     await this.notifyStakeholders(savedLeaveRequest, 'created');
-    
+
     return savedLeaveRequest;
   }
 
@@ -586,7 +542,7 @@ export class LeavesService {
     endDate: Date,
     durationDays: number,
     excludeRequestId?: string, // 👈 NEW optional param
-    checkBalance: boolean = true, // 👈 NEW param to control balance checking
+    checkBalance: boolean = true // 👈 NEW param to control balance checking
   ): Promise<{ isValid: boolean; errorMessage?: string }> {
     // Only check balance if checkBalance is true (for deductible leave types)
     if (checkBalance) {
@@ -623,8 +579,7 @@ export class LeavesService {
     if (overlappingRequests.length > 0) {
       return {
         isValid: false,
-        errorMessage:
-          'Leave request overlaps with existing approved or pending leave requests.',
+        errorMessage: 'Leave request overlaps with existing approved or pending leave requests.',
       };
     }
 
@@ -639,23 +594,27 @@ export class LeavesService {
       .populate('leaveTypeId', 'name code')
       .exec();
     if (!leaveRequest) {
-      throw new NotFoundException(`Leave request with ID ${id} not found. Please verify the request ID and try again.`);
+      throw new NotFoundException(
+        `Leave request with ID ${id} not found. Please verify the request ID and try again.`
+      );
     }
-    
+
     // Handle case where leaveTypeId is not populated or populate returned null (leave type was deleted)
-    const leaveTypeIdValue = leaveRequest.leaveTypeId instanceof Types.ObjectId 
-      ? leaveRequest.leaveTypeId 
-      : (typeof leaveRequest.leaveTypeId === 'string' 
-          ? new Types.ObjectId(leaveRequest.leaveTypeId) 
-          : (leaveRequest.leaveTypeId as any)?._id || leaveRequest.leaveTypeId);
-    
+    const leaveTypeIdValue =
+      leaveRequest.leaveTypeId instanceof Types.ObjectId
+        ? leaveRequest.leaveTypeId
+        : typeof leaveRequest.leaveTypeId === 'string'
+          ? new Types.ObjectId(leaveRequest.leaveTypeId)
+          : (leaveRequest.leaveTypeId as any)?._id || leaveRequest.leaveTypeId;
+
     // Check if populate succeeded (has name property) or if it's still an ObjectId (not populated)
-    const isPopulated = leaveRequest.leaveTypeId && 
-      typeof leaveRequest.leaveTypeId === 'object' && 
+    const isPopulated =
+      leaveRequest.leaveTypeId &&
+      typeof leaveRequest.leaveTypeId === 'object' &&
       leaveRequest.leaveTypeId !== null &&
       !(leaveRequest.leaveTypeId instanceof Types.ObjectId) &&
       (leaveRequest.leaveTypeId as any).name;
-    
+
     if (!isPopulated && leaveTypeIdValue) {
       // Populate failed or returned null - fetch the leave type separately
       try {
@@ -684,7 +643,7 @@ export class LeavesService {
         };
       }
     }
-    
+
     return leaveRequest;
   }
 
@@ -693,7 +652,7 @@ export class LeavesService {
   async updateLeaveRequest(
     id: string,
     updateLeaveRequestDto: UpdateLeaveRequestDto,
-    userId?: string, // Optional: user ID to validate ownership
+    userId?: string // Optional: user ID to validate ownership
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel.findById(id).exec();
 
@@ -705,17 +664,16 @@ export class LeavesService {
     if (userId) {
       const requestEmployeeId = leaveRequest.employeeId.toString();
       if (requestEmployeeId !== userId) {
-        throw new BadRequestException(
-          'You can only edit your own leave requests.'
-        );
+        throw new BadRequestException('You can only edit your own leave requests.');
       }
     }
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      const statusDisplay = leaveRequest.status.charAt(0).toUpperCase() + leaveRequest.status.slice(1).toLowerCase();
+      const statusDisplay =
+        leaveRequest.status.charAt(0).toUpperCase() + leaveRequest.status.slice(1).toLowerCase();
       throw new BadRequestException(
         `Only pending leave requests can be edited. This request has been ${statusDisplay.toLowerCase()} and cannot be modified. ` +
-        `If you need to make changes, please cancel this request (if still pending) or contact HR for assistance.`
+          `If you need to make changes, please cancel this request (if still pending) or contact HR for assistance.`
       );
     }
 
@@ -723,8 +681,7 @@ export class LeavesService {
     const newDates = updateLeaveRequestDto.dates ?? leaveRequest.dates;
     const newStartDate = new Date(newDates.from);
     const newEndDate = new Date(newDates.to);
-    const newDurationDays =
-      updateLeaveRequestDto.durationDays ?? leaveRequest.durationDays;
+    const newDurationDays = updateLeaveRequestDto.durationDays ?? leaveRequest.durationDays;
 
     // 🔹 Re-validate balance + overlapping requests, excluding this request's own id
     const validationResult = await this.validateLeaveRequest(
@@ -733,11 +690,14 @@ export class LeavesService {
       newStartDate,
       newEndDate,
       newDurationDays,
-      leaveRequest._id.toString(), // 👈 exclude this request from overlap query
+      leaveRequest._id.toString() // 👈 exclude this request from overlap query
     );
 
     if (!validationResult.isValid) {
-      throw new BadRequestException(validationResult.errorMessage || 'Invalid leave request update. Please check your input and try again.');
+      throw new BadRequestException(
+        validationResult.errorMessage ||
+          'Invalid leave request update. Please check your input and try again.'
+      );
     }
 
     // 🔹 If duration changed, update pending balance atomically
@@ -747,16 +707,11 @@ export class LeavesService {
     ) {
       const entitlement = await this.getLeaveEntitlement(
         leaveRequest.employeeId.toString(),
-        leaveRequest.leaveTypeId.toString(),
+        leaveRequest.leaveTypeId.toString()
       );
-      const delta =
-        updateLeaveRequestDto.durationDays - leaveRequest.durationDays; // positive => increase pending
+      const delta = updateLeaveRequestDto.durationDays - leaveRequest.durationDays; // positive => increase pending
       await this.leaveEntitlementModel
-        .findByIdAndUpdate(
-          entitlement._id,
-          { $inc: { pending: delta } },
-          { new: true },
-        )
+        .findByIdAndUpdate(entitlement._id, { $inc: { pending: delta } }, { new: true })
         .exec();
     }
 
@@ -784,9 +739,7 @@ export class LeavesService {
       throw new Error(`LeaveRequest with ID ${id} not found`);
     }
 
-    return (await this.leaveRequestModel
-      .findByIdAndDelete(id)
-      .exec()) as LeaveRequestDocument;
+    return (await this.leaveRequestModel.findByIdAndDelete(id).exec()) as LeaveRequestDocument;
   }
 
   // Phase 2: REQ-018 - Cancel a leave request before final approval
@@ -801,30 +754,29 @@ export class LeavesService {
     if (userId) {
       const requestEmployeeId = leaveRequest.employeeId.toString();
       if (requestEmployeeId !== userId) {
-        throw new BadRequestException(
-          'You can only cancel your own leave requests.'
-        );
+        throw new BadRequestException('You can only cancel your own leave requests.');
       }
     }
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      const statusDisplay = leaveRequest.status.charAt(0).toUpperCase() + leaveRequest.status.slice(1).toLowerCase();
+      const statusDisplay =
+        leaveRequest.status.charAt(0).toUpperCase() + leaveRequest.status.slice(1).toLowerCase();
       throw new BadRequestException(
         `Only pending leave requests can be canceled. This request has been ${statusDisplay.toLowerCase()} and cannot be canceled. ` +
-        `If you need to make changes to an approved request, please contact HR for assistance.`
+          `If you need to make changes to an approved request, please contact HR for assistance.`
       );
     }
 
     // Release pending balance atomically (and clamp to 0 if negative)
     const entitlement = await this.getLeaveEntitlement(
       leaveRequest.employeeId.toString(),
-      leaveRequest.leaveTypeId.toString(),
+      leaveRequest.leaveTypeId.toString()
     );
     const updated = await this.leaveEntitlementModel
       .findByIdAndUpdate(
         entitlement._id,
         { $inc: { pending: -leaveRequest.durationDays } },
-        { new: true },
+        { new: true }
       )
       .exec();
     if (updated && updated.pending < 0) {
@@ -847,7 +799,7 @@ export class LeavesService {
   async approveLeaveRequest(
     approveDto: ApproveLeaveRequestDto,
     managerId: string,
-    leaveRequestId?: string,
+    leaveRequestId?: string
   ): Promise<LeaveRequestDocument> {
     const { status } = approveDto;
     // Use route parameter if provided, otherwise fall back to DTO
@@ -855,22 +807,16 @@ export class LeavesService {
     const leaveRequestObjectId = new Types.ObjectId(requestId);
 
     // Step 1: Fetch the leave request by ID
-    const leaveRequest = await this.leaveRequestModel
-      .findById(leaveRequestObjectId)
-      .exec();
+    const leaveRequest = await this.leaveRequestModel.findById(leaveRequestObjectId).exec();
 
     // Step 2: If leave request doesn't exist, throw NotFoundException
     if (!leaveRequest) {
-      throw new NotFoundException(
-        `Leave request with ID ${leaveRequestObjectId} not found`,
-      );
+      throw new NotFoundException(`Leave request with ID ${leaveRequestObjectId} not found`);
     }
 
     // Step 3: Ensure the leave request is in PENDING status before approval
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      throw new BadRequestException(
-        `Leave request has already been ${leaveRequest.status}`,
-      );
+      throw new BadRequestException(`Leave request has already been ${leaveRequest.status}`);
     }
 
     // Step 3.5: Prevent department head from approving their own leave requests
@@ -881,18 +827,19 @@ export class LeavesService {
       const managerSystemRole = await this.systemRoleModel
         .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
         .exec();
-      const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+      const isDepartmentHead =
+        managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
 
       if (isDepartmentHead) {
         throw new BadRequestException(
-          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.',
+          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.'
         );
       }
     }
 
     // Step 4: Check the approval flow role to determine who should approve
     const pendingApproval = leaveRequest.approvalFlow.find(
-      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING,
+      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING
     );
     const approvalRole = pendingApproval?.role || 'Manager';
 
@@ -903,7 +850,7 @@ export class LeavesService {
 
     // The actual manager ID (either the approver themselves or the manager they're delegated for)
     // This is used for tracking purposes, but decidedBy will always record who actually made the decision
-    const actualManagerId = isDelegate ? delegatedManagerId! : managerId;
+    const actualManagerId = isDelegate ? delegatedManagerId : managerId;
 
     // Step 6: If approval role is HR Manager, verify the approver is an HR Manager
     // If approval role is CEO, verify the approver is CEO (John Doe)
@@ -915,30 +862,31 @@ export class LeavesService {
 
       if (!isHRManager) {
         throw new BadRequestException(
-          'Only HR Managers can approve/reject department head and HR Admin leave requests.',
+          'Only HR Managers can approve/reject department head and HR Admin leave requests.'
         );
       }
     } else if (approvalRole === 'CEO') {
       // Verify approver is CEO (John Doe) - HR Admin can no longer approve
       const approver = await this.employeeProfileModel.findById(managerId).exec();
       const isCEO = approver && approver.firstName === 'John' && approver.lastName === 'Doe';
-      
+
       if (!isCEO) {
         throw new BadRequestException(
-          'Only CEO (John Doe) can approve/reject HR Manager leave requests.',
+          'Only CEO (John Doe) can approve/reject HR Manager leave requests.'
         );
       }
     }
-    
+
     // Prevent HR Admin from approving any requests (they can only view)
     const approverSystemRoleCheck = await this.systemRoleModel
       .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
       .exec();
-    const isApproverHRAdmin = approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
-    
+    const isApproverHRAdmin =
+      approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
+
     if (isApproverHRAdmin) {
       throw new BadRequestException(
-        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.',
+        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.'
       );
     }
 
@@ -947,11 +895,11 @@ export class LeavesService {
     if (pendingApproval) {
       // Find the index of the pending approval in the array by matching role and status
       const pendingIndex = leaveRequest.approvalFlow.findIndex(
-        (approval) => 
-          approval.role === approvalRole && 
+        (approval) =>
+          approval.role === approvalRole &&
           (approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING)
       );
-      
+
       if (pendingIndex !== -1) {
         // Update the existing pending approval entry
         leaveRequest.approvalFlow[pendingIndex].status = status;
@@ -993,17 +941,11 @@ export class LeavesService {
     return updatedLeaveRequest;
   }
 
-    
-    
-
-  
-  
-
   // Phase 2: REQ-022 - Manager reject leave request
   async rejectLeaveRequest(
     rejectLeaveRequestDto: RejectLeaveRequestDto,
     managerId: string,
-    leaveRequestId?: string,
+    leaveRequestId?: string
   ): Promise<LeaveRequestDocument> {
     const { status } = rejectLeaveRequestDto;
     // Use route parameter if provided, otherwise fall back to DTO
@@ -1011,22 +953,16 @@ export class LeavesService {
     const leaveRequestObjectId = new Types.ObjectId(requestId);
 
     // Step 1: Fetch the leave request by ID
-    const leaveRequest = await this.leaveRequestModel
-      .findById(leaveRequestObjectId)
-      .exec();
+    const leaveRequest = await this.leaveRequestModel.findById(leaveRequestObjectId).exec();
 
     // Step 2: If leave request doesn't exist, throw NotFoundException
     if (!leaveRequest) {
-      throw new NotFoundException(
-        `Leave request with ID ${leaveRequestObjectId} not found`,
-      );
+      throw new NotFoundException(`Leave request with ID ${leaveRequestObjectId} not found`);
     }
 
     // Step 3: Ensure the leave request is in PENDING status before rejection
     if (leaveRequest.status !== LeaveStatus.PENDING) {
-      throw new BadRequestException(
-        `Leave request has already been ${leaveRequest.status}`,
-      );
+      throw new BadRequestException(`Leave request has already been ${leaveRequest.status}`);
     }
 
     // Step 3.5: Prevent department head and HR Manager from rejecting their own leave requests
@@ -1038,24 +974,25 @@ export class LeavesService {
       const managerSystemRole = await this.systemRoleModel
         .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
         .exec();
-      const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+      const isDepartmentHead =
+        managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
       const isHRManager = managerSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
 
       if (isDepartmentHead) {
         throw new BadRequestException(
-          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.',
+          'Department heads cannot approve or reject their own leave requests. Your requests are handled by HR Manager.'
         );
       }
       if (isHRManager) {
         throw new BadRequestException(
-          'HR Managers cannot approve or reject their own leave requests. Your requests are handled by CEO.',
+          'HR Managers cannot approve or reject their own leave requests. Your requests are handled by CEO.'
         );
       }
     }
 
     // Step 4: Check the approval flow role to determine who should reject
     const pendingApproval = leaveRequest.approvalFlow.find(
-      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING,
+      (approval) => approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING
     );
     const approvalRole = pendingApproval?.role || 'Manager';
 
@@ -1069,30 +1006,31 @@ export class LeavesService {
 
       if (!isHRManager) {
         throw new BadRequestException(
-          'Only HR Managers can approve/reject department head and HR Admin leave requests.',
+          'Only HR Managers can approve/reject department head and HR Admin leave requests.'
         );
       }
     } else if (approvalRole === 'CEO') {
       // Verify approver is CEO (John Doe) - HR Admin can no longer approve
       const approver = await this.employeeProfileModel.findById(managerId).exec();
       const isCEO = approver && approver.firstName === 'John' && approver.lastName === 'Doe';
-      
+
       if (!isCEO) {
         throw new BadRequestException(
-          'Only CEO (John Doe) can approve/reject HR Manager leave requests.',
+          'Only CEO (John Doe) can approve/reject HR Manager leave requests.'
         );
       }
     }
-    
+
     // Prevent HR Admin from approving any requests (they can only view)
     const approverSystemRoleCheck = await this.systemRoleModel
       .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
       .exec();
-    const isApproverHRAdmin = approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
-    
+    const isApproverHRAdmin =
+      approverSystemRoleCheck?.roles?.includes(SystemRole.HR_ADMIN) || false;
+
     if (isApproverHRAdmin) {
       throw new BadRequestException(
-        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.',
+        'HR Admin cannot approve or reject leave requests. HR Admin can only view requests.'
       );
     }
 
@@ -1101,11 +1039,11 @@ export class LeavesService {
     if (pendingApproval) {
       // Find the index of the pending approval in the array by matching role and status
       const pendingIndex = leaveRequest.approvalFlow.findIndex(
-        (approval) => 
-          approval.role === approvalRole && 
+        (approval) =>
+          approval.role === approvalRole &&
           (approval.status === 'PENDING' || approval.status === LeaveStatus.PENDING)
       );
-      
+
       if (pendingIndex !== -1) {
         // Update the existing pending approval entry
         leaveRequest.approvalFlow[pendingIndex].status = LeaveStatus.REJECTED;
@@ -1138,12 +1076,9 @@ export class LeavesService {
     // Step 6: Release pending balance
     const entitlement = await this.getLeaveEntitlement(
       leaveRequest.employeeId.toString(),
-      leaveRequest.leaveTypeId.toString(),
+      leaveRequest.leaveTypeId.toString()
     );
-    entitlement.pending = Math.max(
-      0,
-      entitlement.pending - leaveRequest.durationDays,
-    );
+    entitlement.pending = Math.max(0, entitlement.pending - leaveRequest.durationDays);
     await this.updateLeaveEntitlement(entitlement._id.toString(), {
       pending: entitlement.pending,
     });
@@ -1159,40 +1094,41 @@ export class LeavesService {
 
   //LeaveAdjustment
 
-  async createLeaveAdjustment(
-    createLeaveAdjustmentDto: any,
-  ): Promise<LeaveAdjustmentDocument> {
+  async createLeaveAdjustment(createLeaveAdjustmentDto: any): Promise<LeaveAdjustmentDocument> {
     // Ensure employeeId (and any other id fields) are ObjectId before creation
     const doc: any = { ...createLeaveAdjustmentDto };
     if (doc.employeeId) doc.employeeId = this.toObjectId(doc.employeeId);
     if (doc.leaveTypeId) doc.leaveTypeId = this.toObjectId(doc.leaveTypeId);
-    
+
     // Get the entitlement to apply the adjustment
     const entitlement = await this.getLeaveEntitlement(
       createLeaveAdjustmentDto.employeeId,
-      createLeaveAdjustmentDto.leaveTypeId,
+      createLeaveAdjustmentDto.leaveTypeId
     );
-    
+
     // Apply the adjustment to the entitlement based on adjustment type
     const adjustmentAmount = createLeaveAdjustmentDto.amount;
     const adjustmentType = createLeaveAdjustmentDto.adjustmentType;
-    
+
     // Get policy for rounding rule (needed if we modify accruedActual)
     let leavePolicy = await this.leavePolicyModel
       .findOne({ leaveTypeId: new Types.ObjectId(createLeaveAdjustmentDto.leaveTypeId) })
       .exec();
-    
+
     // Try string comparison if ObjectId lookup fails
     if (!leavePolicy) {
       const allPolicies = await this.leavePolicyModel.find({}).exec();
-      leavePolicy = allPolicies.find(p => 
-        p.leaveTypeId?.toString() === createLeaveAdjustmentDto.leaveTypeId || 
-        p.leaveTypeId?.toString() === new Types.ObjectId(createLeaveAdjustmentDto.leaveTypeId).toString()
-      ) || null;
+      leavePolicy =
+        allPolicies.find(
+          (p) =>
+            p.leaveTypeId?.toString() === createLeaveAdjustmentDto.leaveTypeId ||
+            p.leaveTypeId?.toString() ===
+              new Types.ObjectId(createLeaveAdjustmentDto.leaveTypeId).toString()
+        ) || null;
     }
-    
+
     const roundingRule = leavePolicy?.roundingRule || RoundingRule.NONE;
-    
+
     switch (adjustmentType) {
       case 'add':
         // Add days: Increase accruedActual (which increases accruedRounded after rounding)
@@ -1200,7 +1136,7 @@ export class LeavesService {
         entitlement.accruedActual += adjustmentAmount;
         entitlement.accruedRounded = this.applyRoundingRule(
           entitlement.accruedActual,
-          roundingRule,
+          roundingRule
         );
         // Recalculate remaining (will increase because accruedRounded increased)
         entitlement.remaining = this.calculateRemaining(entitlement);
@@ -1212,7 +1148,7 @@ export class LeavesService {
         entitlement.accruedActual = Math.max(0, entitlement.accruedActual - adjustmentAmount);
         entitlement.accruedRounded = this.applyRoundingRule(
           entitlement.accruedActual,
-          roundingRule,
+          roundingRule
         );
         // Recalculate remaining (will decrease because accruedRounded decreased)
         entitlement.remaining = this.calculateRemaining(entitlement);
@@ -1227,20 +1163,18 @@ export class LeavesService {
       default:
         throw new Error(`Invalid adjustment type: ${adjustmentType}`);
     }
-    
+
     // Save the updated entitlement
     await entitlement.save();
-    
+
     // Create the adjustment record for audit trail
     const newLeaveAdjustment = new this.leaveAdjustmentModel(doc);
     return await newLeaveAdjustment.save();
   }
 
-  async getLeaveAdjustments(
-    employeeId: string,
-  ): Promise<LeaveAdjustmentDocument[]> {
+  async getLeaveAdjustments(employeeId: string): Promise<LeaveAdjustmentDocument[]> {
     // FIXED: Convert employeeId string to ObjectId for proper database query
-    const employeeObjectId = this.toObjectId(employeeId) as Types.ObjectId;
+    const employeeObjectId = this.toObjectId(employeeId);
     return await this.leaveAdjustmentModel
       .find({ employeeId: employeeObjectId })
       .populate('employeeId', 'employeeId firstName lastName')
@@ -1251,9 +1185,7 @@ export class LeavesService {
   }
 
   async deleteLeaveAdjustment(id: string): Promise<LeaveAdjustmentDocument> {
-    const leaveAdjustment = await this.leaveAdjustmentModel
-      .findByIdAndDelete(id)
-      .exec();
+    const leaveAdjustment = await this.leaveAdjustmentModel.findByIdAndDelete(id).exec();
     if (!leaveAdjustment) {
       throw new Error(`leaveAdjustment with ID ${id} not found`);
     }
@@ -1262,62 +1194,58 @@ export class LeavesService {
   //LeaveEntitlement
 
   async createLeaveEntitlement(
-    createLeaveEntitlementDto: CreateLeaveEntitlementDto,
+    createLeaveEntitlementDto: CreateLeaveEntitlementDto
   ): Promise<LeaveEntitlementDocument> {
     // Ensure ids are ObjectId when creating entitlement
     const doc: any = { ...createLeaveEntitlementDto };
-    doc.employeeId = this.toObjectId(
-      createLeaveEntitlementDto.employeeId,
-    ) as Types.ObjectId;
-    doc.leaveTypeId = this.toObjectId(
-      createLeaveEntitlementDto.leaveTypeId,
-    ) as Types.ObjectId;
-    
+    doc.employeeId = this.toObjectId(createLeaveEntitlementDto.employeeId);
+    doc.leaveTypeId = this.toObjectId(createLeaveEntitlementDto.leaveTypeId);
+
     // Get the leave policy to determine rounding rule
-    let leavePolicy = await this.leavePolicyModel
-      .findOne({ leaveTypeId: doc.leaveTypeId })
-      .exec();
-    
+    let leavePolicy = await this.leavePolicyModel.findOne({ leaveTypeId: doc.leaveTypeId }).exec();
+
     // If not found, try as string comparison
     if (!leavePolicy) {
       leavePolicy = await this.leavePolicyModel
         .findOne({ leaveTypeId: createLeaveEntitlementDto.leaveTypeId })
         .exec();
     }
-    
+
     // If still not found, try to find by string comparison as fallback
     if (!leavePolicy) {
       const allPolicies = await this.leavePolicyModel.find({}).exec();
-      const matchingPolicy = allPolicies.find(p => 
-        p.leaveTypeId?.toString() === doc.leaveTypeId?.toString() || 
-        p.leaveTypeId?.toString() === createLeaveEntitlementDto.leaveTypeId ||
-        (p.leaveTypeId instanceof Types.ObjectId && p.leaveTypeId.equals(doc.leaveTypeId))
+      const matchingPolicy = allPolicies.find(
+        (p) =>
+          p.leaveTypeId?.toString() === doc.leaveTypeId?.toString() ||
+          p.leaveTypeId?.toString() === createLeaveEntitlementDto.leaveTypeId ||
+          (p.leaveTypeId instanceof Types.ObjectId && p.leaveTypeId.equals(doc.leaveTypeId))
       );
       if (matchingPolicy) {
         leavePolicy = matchingPolicy;
       }
     }
-    
+
     const roundingRule = leavePolicy?.roundingRule || RoundingRule.NONE;
     console.log(`[createLeaveEntitlement] Policy lookup:`, {
       leaveTypeId: doc.leaveTypeId?.toString(),
       policyFound: !!leavePolicy,
       roundingRule: roundingRule,
-      accruedActual: doc.accruedActual
+      accruedActual: doc.accruedActual,
     });
-    
+
     // ALWAYS recalculate accruedRounded from accruedActual based on rounding rule
     // This ensures rounding is applied correctly when creating entitlements
     if (doc.accruedActual !== undefined && doc.accruedActual !== null && doc.accruedActual !== 0) {
       const originalAccruedRounded = doc.accruedRounded;
-      doc.accruedRounded = this.applyRoundingRule(
-        doc.accruedActual,
-        roundingRule,
+      doc.accruedRounded = this.applyRoundingRule(doc.accruedActual, roundingRule);
+      console.log(
+        `[createLeaveEntitlement] ✅ Applied rounding: ${doc.accruedActual} -> ${doc.accruedRounded} (rule: ${roundingRule}, employeeId: ${doc.employeeId?.toString()})`
       );
-      console.log(`[createLeaveEntitlement] ✅ Applied rounding: ${doc.accruedActual} -> ${doc.accruedRounded} (rule: ${roundingRule}, employeeId: ${doc.employeeId?.toString()})`);
-      
+
       if (originalAccruedRounded !== undefined && originalAccruedRounded !== doc.accruedRounded) {
-        console.log(`[createLeaveEntitlement] ⚠️ Overrode frontend accruedRounded value: ${originalAccruedRounded} -> ${doc.accruedRounded}`);
+        console.log(
+          `[createLeaveEntitlement] ⚠️ Overrode frontend accruedRounded value: ${originalAccruedRounded} -> ${doc.accruedRounded}`
+        );
       }
     } else {
       // If accruedActual is not provided or is 0, default to 0
@@ -1325,30 +1253,32 @@ export class LeavesService {
         doc.accruedActual = 0;
       }
       doc.accruedRounded = this.applyRoundingRule(doc.accruedActual, roundingRule);
-      console.log(`[createLeaveEntitlement] Set accruedActual: ${doc.accruedActual}, accruedRounded: ${doc.accruedRounded} (employeeId: ${doc.employeeId?.toString()})`);
+      console.log(
+        `[createLeaveEntitlement] Set accruedActual: ${doc.accruedActual}, accruedRounded: ${doc.accruedRounded} (employeeId: ${doc.employeeId?.toString()})`
+      );
     }
-    
+
     const newLeaveEntitlement = new this.leaveEntitlementModel(doc);
     const saved = await newLeaveEntitlement.save();
-    
+
     // Recalculate remaining to ensure it's correct
     saved.remaining = this.calculateRemaining(saved);
     await saved.save();
-    
+
     console.log(`[createLeaveEntitlement] ✅ Saved entitlement:`, {
       employeeId: saved.employeeId?.toString(),
       leaveTypeId: saved.leaveTypeId?.toString(),
       accruedActual: saved.accruedActual,
       accruedRounded: saved.accruedRounded,
-      remaining: saved.remaining
+      remaining: saved.remaining,
     });
-    
+
     return saved;
   }
 
   async getLeaveEntitlement(
     employeeId: string,
-    leaveTypeId: string,
+    leaveTypeId: string
   ): Promise<LeaveEntitlementDocument> {
     const leaveEntitlement = await this.leaveEntitlementModel
       .findOne({
@@ -1361,16 +1291,20 @@ export class LeavesService {
       // Fetch employee and leave type names for user-friendly error message
       let employeeName = 'the employee';
       let leaveTypeName = 'this leave type';
-      
+
       try {
         const employee = await this.employeeProfileModel.findById(employeeId).exec();
         if (employee) {
-          employeeName = employee.fullName || `${employee.firstName} ${employee.lastName}`.trim() || employee.employeeNumber || 'the employee';
+          employeeName =
+            employee.fullName ||
+            `${employee.firstName} ${employee.lastName}`.trim() ||
+            employee.employeeNumber ||
+            'the employee';
         }
       } catch (err) {
         // Ignore errors fetching employee name
       }
-      
+
       try {
         const leaveType = await this.leaveTypeModel.findById(leaveTypeId).exec();
         if (leaveType) {
@@ -1379,10 +1313,10 @@ export class LeavesService {
       } catch (err) {
         // Ignore errors fetching leave type name
       }
-      
+
       throw new NotFoundException(
         `Leave entitlement not found for ${employeeName} with leave type "${leaveTypeName}". ` +
-        `Please contact HR to create a leave entitlement before submitting leave requests.`
+          `Please contact HR to create a leave entitlement before submitting leave requests.`
       );
     }
 
@@ -1392,37 +1326,35 @@ export class LeavesService {
     let leavePolicy = await this.leavePolicyModel
       .findOne({ leaveTypeId: new Types.ObjectId(leaveTypeId) })
       .exec();
-    
+
     // If not found, try as string comparison
     if (!leavePolicy) {
-      leavePolicy = await this.leavePolicyModel
-        .findOne({ leaveTypeId: leaveTypeId })
-        .exec();
+      leavePolicy = await this.leavePolicyModel.findOne({ leaveTypeId: leaveTypeId }).exec();
     }
-    
+
     // If not found, try to find by string comparison as fallback
     if (!leavePolicy) {
       const allPolicies = await this.leavePolicyModel.find({}).exec();
-      const matchingPolicy = allPolicies.find(p => 
-        p.leaveTypeId?.toString() === leaveTypeId || 
-        p.leaveTypeId?.toString() === new Types.ObjectId(leaveTypeId).toString()
+      const matchingPolicy = allPolicies.find(
+        (p) =>
+          p.leaveTypeId?.toString() === leaveTypeId ||
+          p.leaveTypeId?.toString() === new Types.ObjectId(leaveTypeId).toString()
       );
       if (matchingPolicy) {
         leavePolicy = matchingPolicy;
       }
     }
-    
+
     const roundingRule = leavePolicy?.roundingRule || RoundingRule.NONE;
-    const expectedRounded = this.applyRoundingRule(
-      leaveEntitlement.accruedActual,
-      roundingRule,
-    );
+    const expectedRounded = this.applyRoundingRule(leaveEntitlement.accruedActual, roundingRule);
 
     // Always recalculate and save to ensure consistency
     // Use Math.abs to handle floating point precision issues
     const needsUpdate = Math.abs(leaveEntitlement.accruedRounded - expectedRounded) > 0.001;
     if (needsUpdate) {
-      console.log(`[getLeaveEntitlement] Recalculating rounding: ${leaveEntitlement.accruedRounded} -> ${expectedRounded} (accruedActual: ${leaveEntitlement.accruedActual}, rule: ${roundingRule})`);
+      console.log(
+        `[getLeaveEntitlement] Recalculating rounding: ${leaveEntitlement.accruedRounded} -> ${expectedRounded} (accruedActual: ${leaveEntitlement.accruedActual}, rule: ${roundingRule})`
+      );
       leaveEntitlement.accruedRounded = expectedRounded;
       leaveEntitlement.remaining = this.calculateRemaining(leaveEntitlement);
       await leaveEntitlement.save();
@@ -1433,7 +1365,7 @@ export class LeavesService {
 
   async updateLeaveEntitlement(
     id: string,
-    updateLeaveEntitlementDto: UpdateLeaveEntitlementDto,
+    updateLeaveEntitlementDto: UpdateLeaveEntitlementDto
   ): Promise<LeaveEntitlementDocument> {
     let leaveEntitlement = await this.leaveEntitlementModel.findById(id).exec();
 
@@ -1443,31 +1375,31 @@ export class LeavesService {
 
     // ALWAYS recalculate accruedRounded from accruedActual based on rounding rule
     // This ensures rounding is always correct, even if frontend sends wrong values
-    const accruedActualToUse = updateLeaveEntitlementDto.accruedActual !== undefined 
-      ? updateLeaveEntitlementDto.accruedActual 
-      : leaveEntitlement.accruedActual;
-    
+    const accruedActualToUse =
+      updateLeaveEntitlementDto.accruedActual !== undefined
+        ? updateLeaveEntitlementDto.accruedActual
+        : leaveEntitlement.accruedActual;
+
     // Get policy for rounding rule
     let leavePolicy = await this.leavePolicyModel
       .findOne({ leaveTypeId: leaveEntitlement.leaveTypeId })
       .exec();
-    
+
     // If not found, try as string comparison
     if (!leavePolicy) {
       leavePolicy = await this.leavePolicyModel
         .findOne({ leaveTypeId: leaveEntitlement.leaveTypeId.toString() })
         .exec();
     }
-    
+
     const roundingRule = leavePolicy?.roundingRule || RoundingRule.NONE;
-    
+
     // ALWAYS recalculate accruedRounded from accruedActual (override any frontend value)
-    const newAccruedRounded = this.applyRoundingRule(
-      accruedActualToUse,
-      roundingRule,
+    const newAccruedRounded = this.applyRoundingRule(accruedActualToUse, roundingRule);
+
+    console.log(
+      `[updateLeaveEntitlement] Applied rounding: ${accruedActualToUse} -> ${newAccruedRounded} (rule: ${roundingRule}, entitlementId: ${id})`
     );
-    
-    console.log(`[updateLeaveEntitlement] Applied rounding: ${accruedActualToUse} -> ${newAccruedRounded} (rule: ${roundingRule}, entitlementId: ${id})`);
     updateLeaveEntitlementDto.accruedRounded = newAccruedRounded;
 
     // Apply the update
@@ -1493,18 +1425,11 @@ export class LeavesService {
   private calculateMonthsWorked(hireDate: Date, currentDate: Date): number {
     const years = currentDate.getFullYear() - hireDate.getFullYear();
     const months = currentDate.getMonth() - hireDate.getMonth();
-    return (
-      years * 12 +
-      months +
-      (currentDate.getDate() >= hireDate.getDate() ? 0 : -1)
-    );
+    return years * 12 + months + (currentDate.getDate() >= hireDate.getDate() ? 0 : -1);
   }
 
   // Helper: Apply rounding rule
-  private applyRoundingRule(
-    amount: number,
-    roundingRule: RoundingRule,
-  ): number {
+  private applyRoundingRule(amount: number, roundingRule: RoundingRule): number {
     switch (roundingRule) {
       case RoundingRule.NONE:
         return amount;
@@ -1540,15 +1465,15 @@ export class LeavesService {
     if (!id) {
       return { objectId: null, string: null };
     }
-    
+
     if (id instanceof Types.ObjectId) {
       return { objectId: id, string: id.toString() };
     }
-    
+
     if (typeof id === 'string' && Types.ObjectId.isValid(id)) {
       return { objectId: new Types.ObjectId(id), string: id };
     }
-    
+
     // If it's a string but not a valid ObjectId, return as string
     return { objectId: null, string: String(id) };
   }
@@ -1556,11 +1481,11 @@ export class LeavesService {
   // Helper: Create query that handles both ObjectId and string formats for position/department IDs
   private createFlexibleIdQuery(fieldName: string, value: any): any {
     const normalized = this.normalizeId(value);
-    
+
     if (!normalized.objectId && !normalized.string) {
       return null; // Invalid value
     }
-    
+
     // Use $in to match both ObjectId and string formats
     const queryValues: any[] = [];
     if (normalized.objectId) {
@@ -1569,7 +1494,7 @@ export class LeavesService {
     if (normalized.string) {
       queryValues.push(normalized.string);
     }
-    
+
     return queryValues.length > 0 ? { [fieldName]: { $in: queryValues } } : null;
   }
 
@@ -1577,7 +1502,7 @@ export class LeavesService {
   async assignPersonalizedEntitlement(
     employeeId: string,
     leaveTypeId: string,
-    personalizedEntitlement: number,
+    personalizedEntitlement: number
   ): Promise<LeaveEntitlementDocument> {
     // getLeaveEntitlement will throw NotFoundException with user-friendly message if not found
     const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
@@ -1592,10 +1517,10 @@ export class LeavesService {
             accruedActual: personalizedEntitlement,
           },
         },
-        { new: true },
+        { new: true }
       )
       .exec();
-    
+
     if (!updated) {
       throw new Error(`Leave entitlement with ID ${entitlement._id} not found`);
     }
@@ -1604,27 +1529,22 @@ export class LeavesService {
     const leavePolicy = await this.leavePolicyModel
       .findOne({ leaveTypeId: new Types.ObjectId(leaveTypeId) })
       .exec();
-    
+
     // Try string comparison if ObjectId lookup fails
     if (!leavePolicy) {
       const allPolicies = await this.leavePolicyModel.find({}).exec();
-      const matchingPolicy = allPolicies.find(p => 
-        p.leaveTypeId?.toString() === leaveTypeId || 
-        p.leaveTypeId?.toString() === new Types.ObjectId(leaveTypeId).toString()
+      const matchingPolicy = allPolicies.find(
+        (p) =>
+          p.leaveTypeId?.toString() === leaveTypeId ||
+          p.leaveTypeId?.toString() === new Types.ObjectId(leaveTypeId).toString()
       );
       if (matchingPolicy) {
         const roundingRule = matchingPolicy.roundingRule || RoundingRule.NONE;
-        updated.accruedRounded = this.applyRoundingRule(
-          updated.accruedActual,
-          roundingRule,
-        );
+        updated.accruedRounded = this.applyRoundingRule(updated.accruedActual, roundingRule);
       }
     } else {
       const roundingRule = leavePolicy.roundingRule || RoundingRule.NONE;
-      updated.accruedRounded = this.applyRoundingRule(
-        updated.accruedActual,
-        roundingRule,
-      );
+      updated.accruedRounded = this.applyRoundingRule(updated.accruedActual, roundingRule);
     }
 
     // Recalculate remaining using the helper method (not direct increment)
@@ -1638,26 +1558,30 @@ export class LeavesService {
   async resetAllLeaveBalancesForTest(): Promise<any> {
     console.log('[resetAllLeaveBalancesForTest] Starting bulk reset...');
     const startTime = Date.now();
-    
+
     try {
       // Use bulk update for better performance
-      const result = await this.leaveEntitlementModel.updateMany(
-        {}, // Match all documents
-        {
-          $set: {
-            accruedActual: 0,
-            accruedRounded: 0,
-            carryForward: 0,
-            remaining: 0,
-            taken: 0,
-            pending: 0,
-            lastAccrualDate: new Date(),
-          },
-        }
-      ).exec();
+      const result = await this.leaveEntitlementModel
+        .updateMany(
+          {}, // Match all documents
+          {
+            $set: {
+              accruedActual: 0,
+              accruedRounded: 0,
+              carryForward: 0,
+              remaining: 0,
+              taken: 0,
+              pending: 0,
+              lastAccrualDate: new Date(),
+            },
+          }
+        )
+        .exec();
 
       const duration = Date.now() - startTime;
-      console.log(`[resetAllLeaveBalancesForTest] Completed in ${duration}ms. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`);
+      console.log(
+        `[resetAllLeaveBalancesForTest] Completed in ${duration}ms. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`
+      );
 
       return {
         total: result.matchedCount,
@@ -1678,10 +1602,11 @@ export class LeavesService {
       | 'FIRST_VACATION_DATE'
       | 'REVISED_HIRE_DATE'
       | 'WORK_RECEIVING_DATE' = 'HIRE_DATE',
-    force: boolean = false,
+    force: boolean = false
   ): Promise<void> {
-    const leaveEntitlements: LeaveEntitlementDocument[] =
-      await this.leaveEntitlementModel.find({}).exec();
+    const leaveEntitlements: LeaveEntitlementDocument[] = await this.leaveEntitlementModel
+      .find({})
+      .exec();
 
     for (const entitlement of leaveEntitlements) {
       try {
@@ -1689,7 +1614,7 @@ export class LeavesService {
         const resetDate = await this.calculateResetDate(
           entitlement.employeeId.toString(),
           criterion,
-          entitlement.leaveTypeId.toString(),
+          entitlement.leaveTypeId.toString()
         );
 
         const today = new Date();
@@ -1706,10 +1631,7 @@ export class LeavesService {
 
           // Calculate carry forward amount before resetting
           let carryForwardAmount = 0;
-          if (
-            leavePolicy?.carryForwardAllowed &&
-            entitlement.carryForward > 0
-          ) {
+          if (leavePolicy?.carryForwardAllowed && entitlement.carryForward > 0) {
             carryForwardAmount = entitlement.carryForward;
           }
 
@@ -1736,10 +1658,7 @@ export class LeavesService {
           });
         }
       } catch (error) {
-        console.error(
-          `Error resetting balance for entitlement ${entitlement._id}:`,
-          error,
-        );
+        console.error(`Error resetting balance for entitlement ${entitlement._id}:`, error);
         // Continue with next entitlement
       }
     }
@@ -1749,56 +1668,65 @@ export class LeavesService {
   async addAllEmployeesToLeaveEntitlements(): Promise<any> {
     console.log('[addAllEmployeesToLeaveEntitlements] Starting...');
     const startTime = Date.now();
-    
+
     try {
       // Get all employees (including inactive ones to ensure we process everyone)
       const employees = await this.employeeProfileModel.find({}).exec();
       console.log(`[addAllEmployeesToLeaveEntitlements] Found ${employees.length} employees`);
-      
+
       // Log contract type distribution
       const contractTypeCounts: Record<string, number> = {};
-      employees.forEach(emp => {
+      employees.forEach((emp) => {
         const ct = emp.contractType || 'NOT_SET';
         contractTypeCounts[ct] = (contractTypeCounts[ct] || 0) + 1;
       });
-      console.log(`[addAllEmployeesToLeaveEntitlements] Contract type distribution:`, contractTypeCounts);
-      
+      console.log(
+        `[addAllEmployeesToLeaveEntitlements] Contract type distribution:`,
+        contractTypeCounts
+      );
+
       // Get all leave types
       const leaveTypes = await this.leaveTypeModel.find({}).exec();
       console.log(`[addAllEmployeesToLeaveEntitlements] Found ${leaveTypes.length} leave types`);
-      
+
       if (leaveTypes.length === 0) {
         throw new Error('No leave types found. Please create leave types first.');
       }
-      
+
       let employeesUpdated = 0;
       let employeesProcessed = 0;
       let employeesFailed = 0;
       let entitlementsCreated = 0;
       let entitlementsSkipped = 0;
       const failedEmployees: Array<{ employeeId: string; error: string }> = [];
-      
+
       for (const employee of employees) {
         try {
           const employeeId = employee._id.toString();
-          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
-          
-          console.log(`[addAllEmployeesToLeaveEntitlements] Processing employee ${employeeName} (${employeeId})`);
-          
+          const employeeName =
+            `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
+
+          console.log(
+            `[addAllEmployeesToLeaveEntitlements] Processing employee ${employeeName} (${employeeId})`
+          );
+
           // Update contract type to FULL_TIME_CONTRACT if not set
           if (!employee.contractType || employee.contractType !== ContractType.FULL_TIME_CONTRACT) {
-            await this.employeeProfileModel.findByIdAndUpdate(
-              employee._id,
-              { $set: { contractType: ContractType.FULL_TIME_CONTRACT } }
-            ).exec();
+            await this.employeeProfileModel
+              .findByIdAndUpdate(employee._id, {
+                $set: { contractType: ContractType.FULL_TIME_CONTRACT },
+              })
+              .exec();
             employeesUpdated++;
-            console.log(`[addAllEmployeesToLeaveEntitlements] Updated contract type for ${employeeName}`);
+            console.log(
+              `[addAllEmployeesToLeaveEntitlements] Updated contract type for ${employeeName}`
+            );
           }
-          
+
           // Create entitlements for each leave type
           let employeeEntitlementsCreated = 0;
           let employeeEntitlementsSkipped = 0;
-          
+
           for (const leaveType of leaveTypes) {
             try {
               // Check if entitlement already exists
@@ -1808,13 +1736,13 @@ export class LeavesService {
                   leaveTypeId: leaveType._id,
                 })
                 .exec();
-              
+
               if (existingEntitlement) {
                 entitlementsSkipped++;
                 employeeEntitlementsSkipped++;
                 continue;
               }
-              
+
               // Create new entitlement with default values
               await this.createLeaveEntitlement({
                 employeeId: employeeId,
@@ -1827,33 +1755,44 @@ export class LeavesService {
                 pending: 0,
                 remaining: 0,
               });
-              
+
               entitlementsCreated++;
               employeeEntitlementsCreated++;
             } catch (leaveTypeError: any) {
-              console.error(`[addAllEmployeesToLeaveEntitlements] Error creating entitlement for ${employeeName} and leave type ${leaveType.name}:`, leaveTypeError.message);
+              console.error(
+                `[addAllEmployeesToLeaveEntitlements] Error creating entitlement for ${employeeName} and leave type ${leaveType.name}:`,
+                leaveTypeError.message
+              );
               // Continue with next leave type
             }
           }
-          
+
           employeesProcessed++;
-          console.log(`[addAllEmployeesToLeaveEntitlements] ✅ Completed ${employeeName}: Created ${employeeEntitlementsCreated} entitlements, skipped ${employeeEntitlementsSkipped}`);
+          console.log(
+            `[addAllEmployeesToLeaveEntitlements] ✅ Completed ${employeeName}: Created ${employeeEntitlementsCreated} entitlements, skipped ${employeeEntitlementsSkipped}`
+          );
         } catch (error: any) {
           employeesFailed++;
           const employeeId = employee._id?.toString() || 'unknown';
-          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
+          const employeeName =
+            `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employeeId;
           const errorMessage = error.message || String(error);
-          console.error(`[addAllEmployeesToLeaveEntitlements] ❌ Error processing employee ${employeeName} (${employeeId}):`, errorMessage);
+          console.error(
+            `[addAllEmployeesToLeaveEntitlements] ❌ Error processing employee ${employeeName} (${employeeId}):`,
+            errorMessage
+          );
           console.error(`[addAllEmployeesToLeaveEntitlements] Error stack:`, error.stack);
           failedEmployees.push({ employeeId, error: errorMessage });
           // Continue with next employee
         }
       }
-      
+
       const duration = Date.now() - startTime;
       console.log(`[addAllEmployeesToLeaveEntitlements] Completed in ${duration}ms`);
-      console.log(`[addAllEmployeesToLeaveEntitlements] Summary: ${employeesProcessed} processed, ${employeesFailed} failed, ${entitlementsCreated} entitlements created`);
-      
+      console.log(
+        `[addAllEmployeesToLeaveEntitlements] Summary: ${employeesProcessed} processed, ${employeesFailed} failed, ${entitlementsCreated} entitlements created`
+      );
+
       return {
         totalEmployees: employees.length,
         employeesProcessed,
@@ -1885,9 +1824,7 @@ export class LeavesService {
     return leaveType;
   }
 
-  async createLeaveType(
-    createLeaveTypeDto: CreateLeaveTypeDto,
-  ): Promise<LeaveTypeDocument> {
+  async createLeaveType(createLeaveTypeDto: CreateLeaveTypeDto): Promise<LeaveTypeDocument> {
     const { code, name } = createLeaveTypeDto;
     // Check if the leave type is a special leave type based on the `code` or `name`
     if (code === 'BEREAVEMENT_LEAVE' || code === 'JURY_DUTY') {
@@ -1900,7 +1837,7 @@ export class LeavesService {
 
   async updateLeaveType(
     id: string,
-    updateLeaveTypeDto: UpdateLeaveTypeDto,
+    updateLeaveTypeDto: UpdateLeaveTypeDto
   ): Promise<LeaveTypeDocument> {
     const updatedLeaveType = await this.leaveTypeModel
       .findByIdAndUpdate(id, updateLeaveTypeDto, { new: true })
@@ -1917,7 +1854,7 @@ export class LeavesService {
     if (!leaveType) {
       throw new NotFoundException(`LeaveType with ID ${id} not found`);
     }
-    return await this.leaveTypeModel.findByIdAndDelete(id).exec() as LeaveTypeDocument;
+    return (await this.leaveTypeModel.findByIdAndDelete(id).exec()) as LeaveTypeDocument;
   }
   // REQ-013: Get pending requests for manager review
   // async getPendingRequestsForManager(managerId: string): Promise<LeaveRequestDocument[]> {
@@ -1967,9 +1904,7 @@ export class LeavesService {
   // }
 
   // Phase 2: REQ-023 - Get delegated managers for a manager
-  private async getDelegatedManagers(
-    managerId: string,
-  ): Promise<Types.ObjectId[]> {
+  private async getDelegatedManagers(managerId: string): Promise<Types.ObjectId[]> {
     // This would typically query a delegation table
     // For now, return empty array - can be enhanced with actual delegation logic
     // Example: return await delegationModel.find({ delegatorId: managerId, isActive: true }).select('delegateId').exec();
@@ -1981,35 +1916,43 @@ export class LeavesService {
     managerId: string,
     delegateId: string,
     startDate: Date,
-    endDate: Date,
+    endDate: Date
   ): Promise<{ message: string; delegation: any }> {
     // Validate dates
     if (startDate >= endDate) {
-      throw new BadRequestException('End date must be after start date for delegation period. Please select a valid date range.');
+      throw new BadRequestException(
+        'End date must be after start date for delegation period. Please select a valid date range.'
+      );
     }
 
     const now = new Date();
     if (endDate < now) {
-      throw new BadRequestException('End date must be in the future. Please select a future date for the delegation period.');
+      throw new BadRequestException(
+        'End date must be in the future. Please select a future date for the delegation period.'
+      );
     }
 
     // Validate that delegateId is a valid employee
-    const delegate = await this.employeeProfileModel
-      .findById(delegateId)
-      .exec();
+    const delegate = await this.employeeProfileModel.findById(delegateId).exec();
     if (!delegate) {
-      throw new NotFoundException(`Employee with ID '${delegateId}' not found. Please verify the employee ID and try again.`);
+      throw new NotFoundException(
+        `Employee with ID '${delegateId}' not found. Please verify the employee ID and try again.`
+      );
     }
 
     // Validate that managerId is a valid employee
     const manager = await this.employeeProfileModel.findById(managerId).exec();
     if (!manager) {
-      throw new NotFoundException(`Manager with ID '${managerId}' not found. Please verify the manager ID and try again.`);
+      throw new NotFoundException(
+        `Manager with ID '${managerId}' not found. Please verify the manager ID and try again.`
+      );
     }
 
     // Check if delegate is the same as manager
     if (managerId === delegateId) {
-      throw new BadRequestException('You cannot delegate approval authority to yourself. Please select a different employee to delegate to.');
+      throw new BadRequestException(
+        'You cannot delegate approval authority to yourself. Please select a different employee to delegate to.'
+      );
     }
 
     // Check if manager is a department head and has their own pending leave requests
@@ -2017,7 +1960,8 @@ export class LeavesService {
     const managerSystemRole = await this.systemRoleModel
       .findOne({ employeeProfileId: new Types.ObjectId(managerId), isActive: true })
       .exec();
-    const isDepartmentHead = managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
+    const isDepartmentHead =
+      managerSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
 
     if (isDepartmentHead) {
       // Check if department head has any pending leave requests
@@ -2030,7 +1974,7 @@ export class LeavesService {
 
       if (pendingRequests.length > 0) {
         throw new BadRequestException(
-          'Department heads cannot delegate approval authority while they have pending leave requests. Please resolve your pending requests first or wait for them to be processed.',
+          'Department heads cannot delegate approval authority while they have pending leave requests. Please resolve your pending requests first or wait for them to be processed.'
         );
       }
     }
@@ -2041,7 +1985,7 @@ export class LeavesService {
       this.delegationMap.set(managerId, []);
     }
 
-    const delegations = this.delegationMap.get(managerId)!;
+    const delegations = this.delegationMap.get(managerId);
 
     // Check for overlapping delegations to the same delegate
     const hasOverlap = delegations.some(
@@ -2050,12 +1994,12 @@ export class LeavesService {
         del.isActive &&
         ((startDate >= del.startDate && startDate <= del.endDate) ||
           (endDate >= del.startDate && endDate <= del.endDate) ||
-          (startDate <= del.startDate && endDate >= del.endDate)),
+          (startDate <= del.startDate && endDate >= del.endDate))
     );
 
     if (hasOverlap) {
       throw new BadRequestException(
-        'An active delegation already exists for this delegate in the specified date range.',
+        'An active delegation already exists for this delegate in the specified date range.'
       );
     }
 
@@ -2085,10 +2029,7 @@ export class LeavesService {
     const now = new Date();
     return delegations.some(
       (del) =>
-        del.delegateId === employeeId &&
-        del.isActive &&
-        now >= del.startDate &&
-        now <= del.endDate,
+        del.delegateId === employeeId && del.isActive && now >= del.startDate && now <= del.endDate
     );
   }
 
@@ -2101,7 +2042,7 @@ export class LeavesService {
           del.delegateId === employeeId &&
           del.isActive &&
           now >= del.startDate &&
-          now <= del.endDate,
+          now <= del.endDate
       );
       if (isActiveDelegate) {
         return managerId;
@@ -2113,20 +2054,16 @@ export class LeavesService {
   // Phase 2: REQ-025, REQ-029 - HR Manager finalize approved leave request
   async finalizeLeaveRequest(
     leaveRequestId: string,
-    hrUserId: string,
+    hrUserId: string
   ): Promise<LeaveRequestDocument> {
     const leaveRequestObjectId = new Types.ObjectId(leaveRequestId);
 
     // Step 1: Fetch the leave request by ID
-    const leaveRequest = await this.leaveRequestModel
-      .findById(leaveRequestObjectId)
-      .exec();
+    const leaveRequest = await this.leaveRequestModel.findById(leaveRequestObjectId).exec();
 
     // Step 2: If leave request doesn't exist, throw NotFoundException
     if (!leaveRequest) {
-      throw new NotFoundException(
-        `Leave request with ID ${leaveRequestObjectId} not found`,
-      );
+      throw new NotFoundException(`Leave request with ID ${leaveRequestObjectId} not found`);
     }
 
     // Step 3: Check if leave request is approved and ready for finalization
@@ -2137,7 +2074,7 @@ export class LeavesService {
       const initialApproval = leaveRequest.approvalFlow[0];
       const isHRManagerRequest = initialApproval?.role === 'CEO';
       const isDepartmentHeadRequest = initialApproval?.role === 'HR Manager';
-      
+
       let errorMessage = `Leave request must be APPROVED before finalization. Current status: ${leaveRequest.status}`;
       if (isHRManagerRequest) {
         errorMessage = `Leave request must be APPROVED by CEO before finalization. Current status: ${leaveRequest.status}`;
@@ -2146,21 +2083,17 @@ export class LeavesService {
       } else {
         errorMessage = `Leave request must be APPROVED by Department Head before HR finalization. Current status: ${leaveRequest.status}`;
       }
-      
+
       throw new BadRequestException(errorMessage);
     }
 
     // Check if already finalized by HR Manager
     const alreadyFinalized = leaveRequest.approvalFlow.some(
-      (approval) =>
-        approval.role === 'HR Manager' &&
-        approval.status === LeaveStatus.APPROVED,
+      (approval) => approval.role === 'HR Manager' && approval.status === LeaveStatus.APPROVED
     );
 
     if (alreadyFinalized) {
-      throw new BadRequestException(
-        'Leave request has already been finalized by HR Manager.',
-      );
+      throw new BadRequestException('Leave request has already been finalized by HR Manager.');
     }
 
     // Check if this is a department head request (approval flow starts with HR Manager)
@@ -2175,38 +2108,33 @@ export class LeavesService {
       const hasDepartmentHeadApproval = leaveRequest.approvalFlow.some(
         (approval) =>
           (approval.role === 'Departement_Head' ||
-           approval.role === 'Department Head' ||
-           approval.role?.toLowerCase().includes('department')) &&
-          approval.status === LeaveStatus.APPROVED,
+            approval.role === 'Department Head' ||
+            approval.role?.toLowerCase().includes('department')) &&
+          approval.status === LeaveStatus.APPROVED
       );
 
       if (!hasDepartmentHeadApproval) {
         throw new BadRequestException(
-          'Leave request must be approved by Department Head before HR finalization.',
+          'Leave request must be approved by Department Head before HR finalization.'
         );
       }
     }
 
     // Step 4: REQ-028 - Verify medical documents if required
     if (leaveRequest.attachmentId) {
-      const attachment = await this.attachmentModel
-        .findById(leaveRequest.attachmentId)
-        .exec();
+      const attachment = await this.attachmentModel.findById(leaveRequest.attachmentId).exec();
       if (!attachment) {
         throw new NotFoundException('Referenced attachment not found.');
       }
       // BR 54: Additional document validation (file type, size, etc.)
-      await this.validateDocument(
-        leaveRequest.leaveTypeId.toString(),
-        attachment,
-      );
+      await this.validateDocument(leaveRequest.leaveTypeId.toString(), attachment);
     }
 
     // Step 5: BR 41 - Check cumulative limits (e.g., max sick leave per year)
     await this.checkCumulativeLimits(
       leaveRequest.employeeId.toString(),
       leaveRequest.leaveTypeId.toString(),
-      leaveRequest.durationDays,
+      leaveRequest.durationDays
     );
 
     // Step 6: Add HR Manager's finalization to the approval flow
@@ -2237,7 +2165,7 @@ export class LeavesService {
   // Phase 2: BR 54 - Validate document (file type, size, format)
   private async validateDocument(
     leaveTypeId: string,
-    attachment: AttachmentDocument,
+    attachment: AttachmentDocument
   ): Promise<void> {
     const leaveType = await this.leaveTypeModel.findById(leaveTypeId).exec();
     if (!leaveType) {
@@ -2253,9 +2181,7 @@ export class LeavesService {
     // Validate file size (e.g., max 10MB)
     const maxFileSize = 10 * 1024 * 1024; // 10MB
     if (attachment.size && attachment.size > maxFileSize) {
-      throw new Error(
-        'Attachment file size exceeds maximum allowed size (10MB).',
-      );
+      throw new Error('Attachment file size exceeds maximum allowed size (10MB).');
     }
   }
 
@@ -2263,7 +2189,7 @@ export class LeavesService {
   private async checkCumulativeLimits(
     employeeId: string,
     leaveTypeId: string,
-    requestedDays: number,
+    requestedDays: number
   ): Promise<void> {
     const leaveType = await this.leaveTypeModel.findById(leaveTypeId).exec();
     if (!leaveType) {
@@ -2286,15 +2212,12 @@ export class LeavesService {
         })
         .exec();
 
-      const totalSickLeaveDays = approvedSickLeaves.reduce(
-        (sum, req) => sum + req.durationDays,
-        0,
-      );
+      const totalSickLeaveDays = approvedSickLeaves.reduce((sum, req) => sum + req.durationDays, 0);
       const maxSickLeaveThreeYears = 360; // Business rule: max 360 days over 3-year cycle
 
       if (totalSickLeaveDays + requestedDays > maxSickLeaveThreeYears) {
         throw new Error(
-          `Cumulative sick leave limit exceeded. Maximum ${maxSickLeaveThreeYears} days allowed over a 3-year cycle.`,
+          `Cumulative sick leave limit exceeded. Maximum ${maxSickLeaveThreeYears} days allowed over a 3-year cycle.`
         );
       }
 
@@ -2308,33 +2231,26 @@ export class LeavesService {
         return reqDate >= yearStart && reqDate <= yearEnd;
       });
 
-      const yearSickLeaveDays = yearSickLeaves.reduce(
-        (sum, req) => sum + req.durationDays,
-        0,
-      );
+      const yearSickLeaveDays = yearSickLeaves.reduce((sum, req) => sum + req.durationDays, 0);
       const maxSickLeavePerYear = 30;
 
       if (yearSickLeaveDays + requestedDays > maxSickLeavePerYear) {
         throw new Error(
-          `Annual sick leave limit exceeded. Maximum ${maxSickLeavePerYear} days per year allowed.`,
+          `Annual sick leave limit exceeded. Maximum ${maxSickLeavePerYear} days per year allowed.`
         );
       }
     }
   }
 
   // Phase 2: REQ-029, BR 32 - Finalize approved leave request (update balances with proper calculation)
-  private async finalizeApprovedLeaveRequest(
-    leaveRequest: LeaveRequestDocument,
-  ): Promise<void> {
+  private async finalizeApprovedLeaveRequest(leaveRequest: LeaveRequestDocument): Promise<void> {
     const entitlement = await this.getLeaveEntitlement(
       leaveRequest.employeeId.toString(),
-      leaveRequest.leaveTypeId.toString(),
+      leaveRequest.leaveTypeId.toString()
     );
 
     // Get leave type to check if it's deductible
-    const leaveType = await this.leaveTypeModel
-      .findById(leaveRequest.leaveTypeId)
-      .exec();
+    const leaveType = await this.leaveTypeModel.findById(leaveRequest.leaveTypeId).exec();
 
     if (!leaveType) {
       throw new Error(`Leave type with ID ${leaveRequest.leaveTypeId} not found`);
@@ -2343,9 +2259,9 @@ export class LeavesService {
     // BR 32: Proper balance calculation - move from pending to taken atomically
     // Only deduct from balance if the leave type is deductible
     // Non-deductible leaves (e.g., unpaid leave, special leave) don't count against balance
-    
+
     let updated;
-    if (leaveType.deductible !== false) {
+    if (leaveType.deductible) {
       // For deductible leaves: decrement pending and increment taken
       updated = await this.leaveEntitlementModel
         .findByIdAndUpdate(
@@ -2356,7 +2272,7 @@ export class LeavesService {
               taken: leaveRequest.durationDays,
             },
           },
-          { new: true },
+          { new: true }
         )
         .exec();
 
@@ -2366,10 +2282,8 @@ export class LeavesService {
     } else {
       // For non-deductible leaves: do nothing (they were never added to pending, so nothing to remove)
       // Just recalculate remaining in case other deductible leaves affected it
-      updated = await this.leaveEntitlementModel
-        .findById(entitlement._id)
-        .exec();
-      
+      updated = await this.leaveEntitlementModel.findById(entitlement._id).exec();
+
       if (!updated) {
         throw new Error('Failed to find entitlement');
       }
@@ -2392,7 +2306,7 @@ export class LeavesService {
   // Notify relevant parties when leave request status changes
   private async notifyStakeholders(
     leaveRequest: LeaveRequestDocument,
-    event: string,
+    event: string
   ): Promise<void> {
     try {
       // Populate employee and leave type to get necessary details
@@ -2410,15 +2324,16 @@ export class LeavesService {
       const employee = populatedRequest.employeeId as any;
       const leaveType = populatedRequest.leaveTypeId as any;
       const employeeId = employee._id?.toString() || employee.toString();
-      const employeeName = employee.firstName && employee.lastName 
-        ? `${employee.firstName} ${employee.lastName}`
-        : 'Employee';
-      
+      const employeeName =
+        employee.firstName && employee.lastName
+          ? `${employee.firstName} ${employee.lastName}`
+          : 'Employee';
+
       // Get manager ID (Department Head) - use the same logic as getTeamMembers but in reverse
       // Method 1: Try directManagerId first (if set)
       // Method 2: Use supervisorPositionId to find manager (reverse of getTeamMembers logic)
       let managerId: string | null = null;
-      
+
       if (employee.directManagerId) {
         managerId = employee.directManagerId.toString();
         console.log(`[NOTIFICATION] Found managerId from populated directManagerId: ${managerId}`);
@@ -2429,7 +2344,7 @@ export class LeavesService {
           .select('directManagerId supervisorPositionId employeeNumber')
           .lean()
           .exec();
-        
+
         console.log(`[NOTIFICATION] Employee profile fetched:`, {
           employeeId,
           employeeNumber: (employeeProfile as any)?.employeeNumber,
@@ -2437,32 +2352,44 @@ export class LeavesService {
           directManagerId: (employeeProfile as any)?.directManagerId,
           supervisorPositionId: (employeeProfile as any)?.supervisorPositionId,
         });
-        
+
         // Method 1: Check directManagerId from profile
         if (employeeProfile && (employeeProfile as any).directManagerId) {
           managerId = (employeeProfile as any).directManagerId.toString();
-          console.log(`[NOTIFICATION] Found managerId from employee profile directManagerId: ${managerId}`);
-        } 
+          console.log(
+            `[NOTIFICATION] Found managerId from employee profile directManagerId: ${managerId}`
+          );
+        }
         // Method 2: Use supervisorPositionId to find the manager (reverse of getTeamMembers)
         // If employee has supervisorPositionId, find the employee who has that position as primaryPositionId
         else if (employeeProfile && (employeeProfile as any).supervisorPositionId) {
           const supervisorPositionId = (employeeProfile as any).supervisorPositionId;
-          console.log(`[NOTIFICATION] Employee has supervisorPositionId: ${supervisorPositionId}, finding manager...`);
-          
+          console.log(
+            `[NOTIFICATION] Employee has supervisorPositionId: ${supervisorPositionId}, finding manager...`
+          );
+
           // Find the employee who has this position as their primaryPositionId (this is the manager/department head)
           // This is the reverse of: find employees where supervisorPositionId matches manager's primaryPositionId
           // IMPORTANT: primaryPositionId is stored as STRING in MongoDB, not ObjectId
           // Convert supervisorPositionId to string for comparison
-          const supervisorPosIdString = supervisorPositionId instanceof Types.ObjectId 
-            ? supervisorPositionId.toString() 
-            : String(supervisorPositionId);
-          
-          console.log(`[NOTIFICATION] Searching for manager with primaryPositionId (as string): ${supervisorPosIdString}`);
-          console.log(`[NOTIFICATION] supervisorPositionId type: ${typeof supervisorPositionId}, value: ${supervisorPositionId}`);
-          
+          const supervisorPosIdString =
+            supervisorPositionId instanceof Types.ObjectId
+              ? supervisorPositionId.toString()
+              : String(supervisorPositionId);
+
+          console.log(
+            `[NOTIFICATION] Searching for manager with primaryPositionId (as string): ${supervisorPosIdString}`
+          );
+          console.log(
+            `[NOTIFICATION] supervisorPositionId type: ${typeof supervisorPositionId}, value: ${supervisorPositionId}`
+          );
+
           // Use flexible query to handle both ObjectId and string formats
-          const primaryPositionQuery = this.createFlexibleIdQuery('primaryPositionId', supervisorPositionId);
-          
+          const primaryPositionQuery = this.createFlexibleIdQuery(
+            'primaryPositionId',
+            supervisorPositionId
+          );
+
           if (primaryPositionQuery) {
             // Try with status filter first
             let managerProfile = await this.employeeProfileModel
@@ -2473,131 +2400,176 @@ export class LeavesService {
               .select('_id employeeNumber firstName lastName primaryPositionId')
               .lean()
               .exec();
-            
+
             // If not found, try without status filter (in case status is the issue)
             if (!managerProfile) {
-              console.log(`[NOTIFICATION] Not found with status filter, trying without status filter...`);
+              console.log(
+                `[NOTIFICATION] Not found with status filter, trying without status filter...`
+              );
               managerProfile = await this.employeeProfileModel
                 .findOne(primaryPositionQuery)
                 .select('_id employeeNumber firstName lastName primaryPositionId status')
                 .lean()
                 .exec();
             }
-            
+
             if (managerProfile) {
               managerId = managerProfile._id.toString();
-              console.log(`[NOTIFICATION] ✅ Found Department Head via primaryPositionId: ${managerId} (${(managerProfile as any).employeeNumber || 'N/A'} - ${(managerProfile as any).firstName || ''} ${(managerProfile as any).lastName || ''})`);
-              console.log(`[NOTIFICATION] Manager's primaryPositionId: ${(managerProfile as any).primaryPositionId?.toString() || 'N/A'}`);
+              console.log(
+                `[NOTIFICATION] ✅ Found Department Head via primaryPositionId: ${managerId} (${(managerProfile as any).employeeNumber || 'N/A'} - ${(managerProfile as any).firstName || ''} ${(managerProfile as any).lastName || ''})`
+              );
+              console.log(
+                `[NOTIFICATION] Manager's primaryPositionId: ${(managerProfile as any).primaryPositionId?.toString() || 'N/A'}`
+              );
             } else {
               // Alternative approach: Since getTeamMembers works, let's reverse it
               // Find all employees and check which one has this employee in their team
               // This works even if the manager's primaryPositionId is not set correctly in the UI
-              const supervisorPosIdString = supervisorPositionId instanceof Types.ObjectId 
-                ? supervisorPositionId.toString() 
-                : String(supervisorPositionId);
-              console.warn(`[NOTIFICATION] ❌ No employee found with primaryPositionId matching supervisorPositionId ${supervisorPosIdString}`);
-            console.warn(`[NOTIFICATION] Trying alternative: Finding manager by checking who has this employee in their team...`);
-            
-            // Get all active employees who might be managers (have DEPARTMENT_HEAD role or have a primaryPositionId)
-            // We'll check each one to see if this employee is in their team
-            const potentialManagers = await this.employeeProfileModel
-              .find({
-                status: { $in: [EmployeeStatus.ACTIVE, EmployeeStatus.PROBATION] },
-                $or: [
-                  { primaryPositionId: { $exists: true, $ne: null } },
-                ],
-              })
-              .select('_id employeeNumber firstName lastName primaryPositionId')
-              .lean()
-              .exec();
-            
-            console.log(`[NOTIFICATION] Checking ${potentialManagers.length} potential managers...`);
-            
-            // For each potential manager, check if this employee is in their team
-            // (i.e., check if employee's supervisorPositionId matches manager's primaryPositionId)
-            for (const potentialManager of potentialManagers) {
-              if ((potentialManager as any).primaryPositionId) {
-                const managerPrimaryPosId = String((potentialManager as any).primaryPositionId);
-                if (managerPrimaryPosId === supervisorPosIdString) {
-                  managerProfile = potentialManager;
-                  managerId = potentialManager._id.toString();
-                  console.log(`[NOTIFICATION] ✅ Found Department Head via reverse team lookup: ${managerId} (${(potentialManager as any).employeeNumber || 'N/A'} - ${(potentialManager as any).firstName || ''} ${(potentialManager as any).lastName || ''})`);
-                  console.log(`[NOTIFICATION] Manager's primaryPositionId: ${managerPrimaryPosId}`);
-                  break;
+              const supervisorPosIdString =
+                supervisorPositionId instanceof Types.ObjectId
+                  ? supervisorPositionId.toString()
+                  : String(supervisorPositionId);
+              console.warn(
+                `[NOTIFICATION] ❌ No employee found with primaryPositionId matching supervisorPositionId ${supervisorPosIdString}`
+              );
+              console.warn(
+                `[NOTIFICATION] Trying alternative: Finding manager by checking who has this employee in their team...`
+              );
+
+              // Get all active employees who might be managers (have DEPARTMENT_HEAD role or have a primaryPositionId)
+              // We'll check each one to see if this employee is in their team
+              const potentialManagers = await this.employeeProfileModel
+                .find({
+                  status: { $in: [EmployeeStatus.ACTIVE, EmployeeStatus.PROBATION] },
+                  $or: [{ primaryPositionId: { $exists: true, $ne: null } }],
+                })
+                .select('_id employeeNumber firstName lastName primaryPositionId')
+                .lean()
+                .exec();
+
+              console.log(
+                `[NOTIFICATION] Checking ${potentialManagers.length} potential managers...`
+              );
+
+              // For each potential manager, check if this employee is in their team
+              // (i.e., check if employee's supervisorPositionId matches manager's primaryPositionId)
+              for (const potentialManager of potentialManagers) {
+                if ((potentialManager as any).primaryPositionId) {
+                  const managerPrimaryPosId = String((potentialManager as any).primaryPositionId);
+                  if (managerPrimaryPosId === supervisorPosIdString) {
+                    managerProfile = potentialManager;
+                    managerId = potentialManager._id.toString();
+                    console.log(
+                      `[NOTIFICATION] ✅ Found Department Head via reverse team lookup: ${managerId} (${(potentialManager as any).employeeNumber || 'N/A'} - ${(potentialManager as any).firstName || ''} ${(potentialManager as any).lastName || ''})`
+                    );
+                    console.log(
+                      `[NOTIFICATION] Manager's primaryPositionId: ${managerPrimaryPosId}`
+                    );
+                    break;
+                  }
                 }
               }
-            }
-            
-            // If still not found, check all employees (including inactive)
-            if (!managerProfile) {
-              console.warn(`[NOTIFICATION] Not found in active employees, checking all employees (including inactive)...`);
-              const allEmployeesQuery = this.createFlexibleIdQuery('primaryPositionId', supervisorPositionId);
-              const allEmployees = allEmployeesQuery 
-                ? await this.employeeProfileModel
-                    .find(allEmployeesQuery)
-                    .select('_id employeeNumber firstName lastName status primaryPositionId')
+
+              // If still not found, check all employees (including inactive)
+              if (!managerProfile) {
+                console.warn(
+                  `[NOTIFICATION] Not found in active employees, checking all employees (including inactive)...`
+                );
+                const allEmployeesQuery = this.createFlexibleIdQuery(
+                  'primaryPositionId',
+                  supervisorPositionId
+                );
+                const allEmployees = allEmployeesQuery
+                  ? await this.employeeProfileModel
+                      .find(allEmployeesQuery)
+                      .select('_id employeeNumber firstName lastName status primaryPositionId')
+                      .lean()
+                      .exec()
+                  : [];
+
+                console.warn(
+                  `[NOTIFICATION] Found ${allEmployees.length} employees (any status) with primaryPositionId ${supervisorPosIdString}:`,
+                  allEmployees.map((e: any) => ({
+                    id: e._id.toString(),
+                    employeeNumber: e.employeeNumber,
+                    name: `${e.firstName || ''} ${e.lastName || ''}`,
+                    status: e.status,
+                    primaryPositionId: String(e.primaryPositionId || 'null'),
+                  }))
+                );
+
+                if (allEmployees.length > 0) {
+                  const foundEmployee = allEmployees[0];
+                  managerProfile = foundEmployee;
+                  managerId = foundEmployee._id.toString();
+                  console.warn(
+                    `[NOTIFICATION] ⚠️ Using employee with matching position (status: ${foundEmployee.status}): ${managerId} (${foundEmployee.employeeNumber || 'N/A'})`
+                  );
+                } else {
+                  // Final debug: Check what Karim's actual primaryPositionId is
+                  // Karim's employee ID from the image: 692d95ebf2f917c28a7da59e
+                  console.error(
+                    `[NOTIFICATION] ❌ CRITICAL: No employee found with primaryPositionId ${supervisorPosIdString}`
+                  );
+                  console.error(
+                    `[NOTIFICATION] Employee's supervisorPositionId: ${supervisorPosIdString}`
+                  );
+
+                  // Debug: Check Karim's actual profile
+                  const karimProfile = await this.employeeProfileModel
+                    .findById('692d95ebf2f917c28a7da59e')
+                    .select(
+                      '_id employeeNumber firstName lastName primaryPositionId supervisorPositionId'
+                    )
                     .lean()
-                    .exec()
-                : [];
-              
-              console.warn(`[NOTIFICATION] Found ${allEmployees.length} employees (any status) with primaryPositionId ${supervisorPosIdString}:`, 
-                allEmployees.map((e: any) => ({
-                  id: e._id.toString(),
-                  employeeNumber: e.employeeNumber,
-                  name: `${e.firstName || ''} ${e.lastName || ''}`,
-                  status: e.status,
-                  primaryPositionId: String(e.primaryPositionId || 'null'),
-                }))
-              );
-              
-              if (allEmployees.length > 0) {
-                const foundEmployee = allEmployees[0];
-                managerProfile = foundEmployee;
-                managerId = foundEmployee._id.toString();
-                console.warn(`[NOTIFICATION] ⚠️ Using employee with matching position (status: ${foundEmployee.status}): ${managerId} (${foundEmployee.employeeNumber || 'N/A'})`);
-              } else {
-                // Final debug: Check what Karim's actual primaryPositionId is
-                // Karim's employee ID from the image: 692d95ebf2f917c28a7da59e
-                console.error(`[NOTIFICATION] ❌ CRITICAL: No employee found with primaryPositionId ${supervisorPosIdString}`);
-                console.error(`[NOTIFICATION] Employee's supervisorPositionId: ${supervisorPosIdString}`);
-                
-                // Debug: Check Karim's actual profile
-                const karimProfile = await this.employeeProfileModel
-                  .findById('692d95ebf2f917c28a7da59e')
-                  .select('_id employeeNumber firstName lastName primaryPositionId supervisorPositionId')
-                  .lean()
-                  .exec();
-                
-                if (karimProfile) {
-                  const karimPrimaryPosId = String((karimProfile as any).primaryPositionId || 'null');
-                  console.error(`[NOTIFICATION] DEBUG - Karim's profile:`, {
-                    id: karimProfile._id.toString(),
-                    employeeNumber: (karimProfile as any).employeeNumber,
-                    name: `${(karimProfile as any).firstName || ''} ${(karimProfile as any).lastName || ''}`,
-                    primaryPositionId: karimPrimaryPosId,
-                    supervisorPositionId: String((karimProfile as any).supervisorPositionId || 'null'),
-                  });
-                  console.error(`[NOTIFICATION] Expected primaryPositionId: ${supervisorPosIdString}`);
-                  console.error(`[NOTIFICATION] Karim's actual primaryPositionId: ${karimPrimaryPosId}`);
-                  
-                  // If Karim's primaryPositionId doesn't match, but we know the team view works,
-                  // maybe we should just use Karim directly if he's the only department head
-                  if (karimPrimaryPosId !== supervisorPosIdString) {
-                    console.error(`[NOTIFICATION] ⚠️ MISMATCH: Karim's primaryPositionId doesn't match employee's supervisorPositionId!`);
-                    console.error(`[NOTIFICATION] This explains why notifications aren't working. Karim needs to have primaryPositionId set to ${supervisorPosIdString}`);
+                    .exec();
+
+                  if (karimProfile) {
+                    const karimPrimaryPosId = String(
+                      (karimProfile as any).primaryPositionId || 'null'
+                    );
+                    console.error(`[NOTIFICATION] DEBUG - Karim's profile:`, {
+                      id: karimProfile._id.toString(),
+                      employeeNumber: (karimProfile as any).employeeNumber,
+                      name: `${(karimProfile as any).firstName || ''} ${(karimProfile as any).lastName || ''}`,
+                      primaryPositionId: karimPrimaryPosId,
+                      supervisorPositionId: String(
+                        (karimProfile as any).supervisorPositionId || 'null'
+                      ),
+                    });
+                    console.error(
+                      `[NOTIFICATION] Expected primaryPositionId: ${supervisorPosIdString}`
+                    );
+                    console.error(
+                      `[NOTIFICATION] Karim's actual primaryPositionId: ${karimPrimaryPosId}`
+                    );
+
+                    // If Karim's primaryPositionId doesn't match, but we know the team view works,
+                    // maybe we should just use Karim directly if he's the only department head
+                    if (karimPrimaryPosId !== supervisorPosIdString) {
+                      console.error(
+                        `[NOTIFICATION] ⚠️ MISMATCH: Karim's primaryPositionId doesn't match employee's supervisorPositionId!`
+                      );
+                      console.error(
+                        `[NOTIFICATION] This explains why notifications aren't working. Karim needs to have primaryPositionId set to ${supervisorPosIdString}`
+                      );
+                    }
                   }
                 }
               }
             }
-            }
           } else {
-            console.warn(`[NOTIFICATION] Invalid supervisorPositionId format: ${supervisorPositionId}`);
+            console.warn(
+              `[NOTIFICATION] Invalid supervisorPositionId format: ${supervisorPositionId}`
+            );
           }
         } else {
-          console.warn(`[NOTIFICATION] Employee ${employeeId} does not have directManagerId or supervisorPositionId set!`);
+          console.warn(
+            `[NOTIFICATION] Employee ${employeeId} does not have directManagerId or supervisorPositionId set!`
+          );
         }
       }
-      
+
       // Verify managerId exists and is valid
       if (managerId) {
         const managerProfile = await this.employeeProfileModel
@@ -2611,7 +2583,9 @@ export class LeavesService {
         } else {
           // Ensure we use the exact _id format (as string) - this matches userId in JWT
           managerId = managerProfile._id.toString();
-          console.log(`[NOTIFICATION] Verified Department Head: ${managerId} (${(managerProfile as any).employeeNumber || 'N/A'} - ${(managerProfile as any).firstName || ''} ${(managerProfile as any).lastName || ''})`);
+          console.log(
+            `[NOTIFICATION] Verified Department Head: ${managerId} (${(managerProfile as any).employeeNumber || 'N/A'} - ${(managerProfile as any).firstName || ''} ${(managerProfile as any).lastName || ''})`
+          );
         }
       }
 
@@ -2634,28 +2608,27 @@ export class LeavesService {
               leaveRequest._id.toString(),
               employeeId,
               managerId,
-              leaveDetails,
+              leaveDetails
             );
-            
+
             // Check if manager has an active delegate
             const delegations = this.delegationMap.get(managerId);
             if (delegations && delegations.length > 0) {
               const now = new Date();
               const activeDelegations = delegations.filter(
-                (del) =>
-                  del.isActive &&
-                  now >= del.startDate &&
-                  now <= del.endDate,
+                (del) => del.isActive && now >= del.startDate && now <= del.endDate
               );
-              
+
               // Notify all active delegates
               for (const delegation of activeDelegations) {
-                console.log(`[NOTIFICATION] Manager ${managerId} has active delegate ${delegation.delegateId}, sending notification...`);
+                console.log(
+                  `[NOTIFICATION] Manager ${managerId} has active delegate ${delegation.delegateId}, sending notification...`
+                );
                 await this.notificationsService.notifyLeaveRequestCreated(
                   leaveRequest._id.toString(),
                   employeeId,
                   delegation.delegateId, // Notify the delegate
-                  leaveDetails,
+                  leaveDetails
                 );
               }
             }
@@ -2667,7 +2640,7 @@ export class LeavesService {
           await this.notificationsService.notifyLeaveRequestStatusChanged(
             leaveRequest._id.toString(),
             employeeId,
-            'APPROVED',
+            'APPROVED'
           );
           break;
 
@@ -2676,7 +2649,7 @@ export class LeavesService {
           await this.notificationsService.notifyLeaveRequestStatusChanged(
             leaveRequest._id.toString(),
             employeeId,
-            'REJECTED',
+            'REJECTED'
           );
           break;
 
@@ -2685,7 +2658,7 @@ export class LeavesService {
           await this.notificationsService.notifyLeaveRequestStatusChanged(
             leaveRequest._id.toString(),
             employeeId,
-            'MODIFIED',
+            'MODIFIED'
           );
           break;
 
@@ -2694,7 +2667,7 @@ export class LeavesService {
           await this.notificationsService.notifyLeaveRequestStatusChanged(
             leaveRequest._id.toString(),
             employeeId,
-            'RETURNED_FOR_CORRECTION',
+            'RETURNED_FOR_CORRECTION'
           );
           break;
 
@@ -2702,28 +2675,32 @@ export class LeavesService {
         case 'overridden_approved':
         case 'overridden_rejected':
           // Notify employee and manager (department head) when leave request is finalized by HR Manager
-          // Requirement: As an HR manager, I want the system to notify the employee, 
+          // Requirement: As an HR manager, I want the system to notify the employee,
           // the employee's manager, when a leave request is finalized so that everyone is informed.
           if (managerId) {
             console.log(`[NOTIFICATION] Finalizing leave request - notifying employee and manager`);
             console.log(`[NOTIFICATION] Employee ID: ${employeeId}, Manager ID: ${managerId}`);
-            
+
             await this.notificationsService.notifyLeaveRequestFinalized(
               leaveRequest._id.toString(),
               employeeId,
               managerId,
               managerId, // Use managerId as coordinatorId (for backward compatibility with the method signature)
-              leaveDetails,
+              leaveDetails
             );
-            
-            console.log(`[NOTIFICATION] ✅ Notifications sent to employee and manager for finalized leave request`);
+
+            console.log(
+              `[NOTIFICATION] ✅ Notifications sent to employee and manager for finalized leave request`
+            );
           } else {
             // If no manager found, still notify the employee
-            console.warn(`[NOTIFICATION] No manager found, only notifying employee for finalized leave request`);
+            console.warn(
+              `[NOTIFICATION] No manager found, only notifying employee for finalized leave request`
+            );
             await this.notificationsService.notifyLeaveRequestStatusChanged(
               leaveRequest._id.toString(),
               employeeId,
-              'APPROVED', // Finalized means approved
+              'APPROVED' // Finalized means approved
             );
           }
           break;
@@ -2745,19 +2722,23 @@ export class LeavesService {
     leaveRequestId: string,
     hrUserId: string,
     overrideToApproved: boolean,
-    overrideReason: string,
+    overrideReason: string
   ): Promise<LeaveRequestDocument> {
     const leaveRequest = await this.leaveRequestModel
       .findById(leaveRequestId)
       .populate('leaveTypeId', 'name code')
       .exec();
     if (!leaveRequest) {
-      throw new NotFoundException(`Leave request with ID ${leaveRequestId} not found. Please verify the request ID and try again.`);
+      throw new NotFoundException(
+        `Leave request with ID ${leaveRequestId} not found. Please verify the request ID and try again.`
+      );
     }
 
     // Validate override reason is provided (required but no character limit)
     if (!overrideReason || typeof overrideReason !== 'string') {
-      throw new BadRequestException('Override justification is required. Please provide a reason for this override decision.');
+      throw new BadRequestException(
+        'Override justification is required. Please provide a reason for this override decision.'
+      );
     }
 
     // Store override reason in approval flow for audit purposes
@@ -2769,13 +2750,13 @@ export class LeavesService {
       // Store the override reason in the approval flow (if the schema supports it)
       // Note: If the schema doesn't have a reason field, we can add it to justification or create a separate field
     });
-    
+
     // Also store override reason in the request's justification field if it exists, or append it
     if (overrideReason.trim()) {
       const existingJustification = leaveRequest.justification || '';
       const overrideNote = `[HR Override: ${overrideReason.trim()}]`;
-      leaveRequest.justification = existingJustification 
-        ? `${existingJustification}\n${overrideNote}` 
+      leaveRequest.justification = existingJustification
+        ? `${existingJustification}\n${overrideNote}`
         : overrideNote;
     }
 
@@ -2786,13 +2767,17 @@ export class LeavesService {
         let leaveTypeIdForFinalize: string;
         if (leaveRequest.leaveTypeId instanceof Types.ObjectId) {
           leaveTypeIdForFinalize = leaveRequest.leaveTypeId.toString();
-        } else if (typeof leaveRequest.leaveTypeId === 'object' && leaveRequest.leaveTypeId !== null) {
+        } else if (
+          typeof leaveRequest.leaveTypeId === 'object' &&
+          leaveRequest.leaveTypeId !== null
+        ) {
           // Populated object - extract the _id
           const populatedLeaveType = leaveRequest.leaveTypeId as any;
           if (populatedLeaveType._id) {
-            leaveTypeIdForFinalize = populatedLeaveType._id instanceof Types.ObjectId 
-              ? populatedLeaveType._id.toString() 
-              : String(populatedLeaveType._id);
+            leaveTypeIdForFinalize =
+              populatedLeaveType._id instanceof Types.ObjectId
+                ? populatedLeaveType._id.toString()
+                : String(populatedLeaveType._id);
           } else {
             // Fallback: get original unpopulated document
             const originalRequest = await this.leaveRequestModel
@@ -2801,9 +2786,10 @@ export class LeavesService {
               .lean()
               .exec();
             if (originalRequest && originalRequest.leaveTypeId) {
-              leaveTypeIdForFinalize = originalRequest.leaveTypeId instanceof Types.ObjectId 
-                ? originalRequest.leaveTypeId.toString() 
-                : String(originalRequest.leaveTypeId);
+              leaveTypeIdForFinalize =
+                originalRequest.leaveTypeId instanceof Types.ObjectId
+                  ? originalRequest.leaveTypeId.toString()
+                  : String(originalRequest.leaveTypeId);
             } else {
               throw new BadRequestException(
                 'Unable to process leave request: Leave type information is missing. Please contact system administrator.'
@@ -2813,11 +2799,11 @@ export class LeavesService {
         } else {
           leaveTypeIdForFinalize = String(leaveRequest.leaveTypeId);
         }
-        
+
         // Temporarily set leaveTypeId to ObjectId for finalizeApprovedLeaveRequest
         const originalLeaveTypeId = leaveRequest.leaveTypeId;
         leaveRequest.leaveTypeId = new Types.ObjectId(leaveTypeIdForFinalize) as any;
-        
+
         try {
           await this.finalizeApprovedLeaveRequest(leaveRequest);
         } finally {
@@ -2842,7 +2828,7 @@ export class LeavesService {
       }
     } else {
       leaveRequest.status = LeaveStatus.REJECTED;
-      
+
       // Extract leaveTypeId correctly - handle both populated object and ObjectId cases
       let leaveTypeIdValue: string;
       try {
@@ -2852,13 +2838,13 @@ export class LeavesService {
           .select('leaveTypeId')
           .lean()
           .exec();
-        
+
         if (!originalRequest || !originalRequest.leaveTypeId) {
           throw new BadRequestException(
             'Unable to process leave request: Leave type information is missing. Please contact system administrator.'
           );
         }
-        
+
         // Extract the ObjectId value
         if (originalRequest.leaveTypeId instanceof Types.ObjectId) {
           leaveTypeIdValue = originalRequest.leaveTypeId.toString();
@@ -2866,9 +2852,11 @@ export class LeavesService {
           leaveTypeIdValue = originalRequest.leaveTypeId;
         } else {
           // Handle case where it might be an object with _id
-          leaveTypeIdValue = (originalRequest.leaveTypeId as any)?._id?.toString() || String(originalRequest.leaveTypeId);
+          leaveTypeIdValue =
+            (originalRequest.leaveTypeId as any)?._id?.toString() ||
+            String(originalRequest.leaveTypeId);
         }
-        
+
         // Validate leaveTypeId is a valid ObjectId string
         if (!Types.ObjectId.isValid(leaveTypeIdValue)) {
           throw new BadRequestException(
@@ -2883,17 +2871,17 @@ export class LeavesService {
           'Unable to process leave request: Error reading leave type information. Please contact system administrator.'
         );
       }
-      
+
       try {
         const entitlement = await this.getLeaveEntitlement(
           leaveRequest.employeeId.toString(),
-          leaveTypeIdValue,
+          leaveTypeIdValue
         );
         const updated = await this.leaveEntitlementModel
           .findByIdAndUpdate(
             entitlement._id,
             { $inc: { pending: -leaveRequest.durationDays } },
-            { new: true },
+            { new: true }
           )
           .exec();
         if (updated && updated.pending < 0) {
@@ -2927,7 +2915,9 @@ export class LeavesService {
         .populate('leaveTypeId', 'name code')
         .exec();
       if (!populatedRequest) {
-        throw new NotFoundException(`Failed to retrieve updated leave request with ID ${leaveRequestId}. Please try again.`);
+        throw new NotFoundException(
+          `Failed to retrieve updated leave request with ID ${leaveRequestId}. Please try again.`
+        );
       }
       return populatedRequest;
     } catch (error) {
@@ -2945,7 +2935,7 @@ export class LeavesService {
   async processMultipleLeaveRequests(
     leaveRequestIds: string[],
     hrUserId: string,
-    approved: boolean,
+    approved: boolean
   ): Promise<LeaveRequestDocument[]> {
     const results: LeaveRequestDocument[] = [];
     const errors: Array<{ requestId: string; error: string }> = [];
@@ -2953,9 +2943,7 @@ export class LeavesService {
     for (const leaveRequestId of leaveRequestIds) {
       try {
         // ENHANCED: Fetch request to check its current status
-        const leaveRequest = await this.leaveRequestModel
-          .findById(leaveRequestId)
-          .exec();
+        const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
 
         if (!leaveRequest) {
           errors.push({
@@ -2976,16 +2964,13 @@ export class LeavesService {
             const approvedRequest = await this.approveLeaveRequest(
               approveDto,
               hrUserId,
-              leaveRequestId,
+              leaveRequestId
             );
             results.push(approvedRequest);
           }
           // If request is APPROVED -> finalize it
           else if (leaveRequest.status === LeaveStatus.APPROVED) {
-            const finalized = await this.finalizeLeaveRequest(
-              leaveRequestId,
-              hrUserId,
-            );
+            const finalized = await this.finalizeLeaveRequest(leaveRequestId, hrUserId);
             results.push(finalized);
           } else {
             errors.push({
@@ -3000,11 +2985,7 @@ export class LeavesService {
               leaveRequestId,
               status: LeaveStatus.REJECTED,
             };
-            const rejected = await this.rejectLeaveRequest(
-              rejectDto,
-              hrUserId,
-              leaveRequestId,
-            );
+            const rejected = await this.rejectLeaveRequest(rejectDto, hrUserId, leaveRequestId);
             results.push(rejected);
           } else {
             errors.push({
@@ -3015,35 +2996,27 @@ export class LeavesService {
         }
       } catch (error: any) {
         // ENHANCED: Collect errors instead of silently continuing
-        const errorMessage =
-          error?.message ||
-          error?.response?.message ||
-          'Unknown error occurred';
+        const errorMessage = error?.message || error?.response?.message || 'Unknown error occurred';
         errors.push({
           requestId: leaveRequestId,
           error: errorMessage,
         });
-        console.error(
-          `Error processing leave request ${leaveRequestId}:`,
-          error,
-        );
+        console.error(`Error processing leave request ${leaveRequestId}:`, error);
       }
     }
 
     // ENHANCED: If all requests failed, throw error. Otherwise return results (partial success is acceptable)
     if (errors.length > 0 && results.length === 0) {
-      const errorSummary = errors
-        .map((e) => `${e.requestId}: ${e.error}`)
-        .join('; ');
+      const errorSummary = errors.map((e) => `${e.requestId}: ${e.error}`).join('; ');
       throw new BadRequestException(
-        `All ${errors.length} request(s) failed to process. Errors: ${errorSummary}`,
+        `All ${errors.length} request(s) failed to process. Errors: ${errorSummary}`
       );
     }
 
     // ENHANCED: Log warnings for partial failures but still return successful results
     if (errors.length > 0) {
       console.warn(
-        `Bulk processing: ${results.length} succeeded, ${errors.length} failed. Failed IDs: ${errors.map((e) => e.requestId).join(', ')}`,
+        `Bulk processing: ${results.length} succeeded, ${errors.length} failed. Failed IDs: ${errors.map((e) => e.requestId).join(', ')}`
       );
     }
 
@@ -3054,10 +3027,7 @@ export class LeavesService {
   // Consolidated: returns detailed entitlement info. If `leaveTypeId` is provided,
   // returns a single object; otherwise returns an array of entitlements.
   //REQ-031:view current leave balance
-  async getEmployeeLeaveBalance(
-    employeeId: string,
-    leaveTypeId?: string,
-  ): Promise<any> {
+  async getEmployeeLeaveBalance(employeeId: string, leaveTypeId?: string): Promise<any> {
     try {
       const query: any = { employeeId: new Types.ObjectId(employeeId) };
       if (leaveTypeId) {
@@ -3070,51 +3040,54 @@ export class LeavesService {
         .exec();
 
       // Map entitlements and handle null populate results - only include valid leave types
-      const mapped = (await Promise.all(
-        entitlements.map(async (ent) => {
-          let leaveTypeName = (ent.leaveTypeId as any)?.name;
-          let leaveTypeIdValue = ent.leaveTypeId?._id || ent.leaveTypeId;
+      const mapped = (
+        await Promise.all(
+          entitlements.map(async (ent) => {
+            let leaveTypeName = (ent.leaveTypeId as any)?.name;
+            let leaveTypeIdValue = ent.leaveTypeId?._id || ent.leaveTypeId;
 
-          // If populate failed (leaveTypeId is null or doesn't have name), fetch it separately
-          if (!leaveTypeName && ent.leaveTypeId) {
-            const storedLeaveTypeId = ent.leaveTypeId instanceof Types.ObjectId 
-              ? ent.leaveTypeId 
-              : (typeof ent.leaveTypeId === 'string' 
-                  ? new Types.ObjectId(ent.leaveTypeId) 
-                  : (ent.leaveTypeId as any)?._id || ent.leaveTypeId);
-            
-            if (storedLeaveTypeId) {
-              try {
-                const leaveType = await this.leaveTypeModel.findById(storedLeaveTypeId).exec();
-                if (leaveType) {
-                  leaveTypeName = leaveType.name;
-                  leaveTypeIdValue = leaveType._id;
-                } else {
-                  return null; // Filter out deleted leave types
+            // If populate failed (leaveTypeId is null or doesn't have name), fetch it separately
+            if (!leaveTypeName && ent.leaveTypeId) {
+              const storedLeaveTypeId =
+                ent.leaveTypeId instanceof Types.ObjectId
+                  ? ent.leaveTypeId
+                  : typeof ent.leaveTypeId === 'string'
+                    ? new Types.ObjectId(ent.leaveTypeId)
+                    : (ent.leaveTypeId as any)?._id || ent.leaveTypeId;
+
+              if (storedLeaveTypeId) {
+                try {
+                  const leaveType = await this.leaveTypeModel.findById(storedLeaveTypeId).exec();
+                  if (leaveType) {
+                    leaveTypeName = leaveType.name;
+                    leaveTypeIdValue = leaveType._id;
+                  } else {
+                    return null; // Filter out deleted leave types
+                  }
+                } catch (err) {
+                  return null; // Filter out invalid leave types
                 }
-              } catch (err) {
+              } else {
                 return null; // Filter out invalid leave types
               }
-            } else {
+            } else if (!leaveTypeName) {
               return null; // Filter out invalid leave types
             }
-          } else if (!leaveTypeName) {
-            return null; // Filter out invalid leave types
-          }
 
-          return {
-            leaveTypeId: leaveTypeIdValue,
-            leaveTypeName: leaveTypeName,
-            yearlyEntitlement: ent.yearlyEntitlement,
-            accruedActual: ent.accruedActual,
-            carryForward: ent.carryForward,
-            taken: ent.taken,
-            pending: ent.pending,
-            remaining: ent.remaining,
-            lastAccrualDate: ent.lastAccrualDate,
-          };
-        })
-      )).filter(balance => balance !== null);
+            return {
+              leaveTypeId: leaveTypeIdValue,
+              leaveTypeName: leaveTypeName,
+              yearlyEntitlement: ent.yearlyEntitlement,
+              accruedActual: ent.accruedActual,
+              carryForward: ent.carryForward,
+              taken: ent.taken,
+              pending: ent.pending,
+              remaining: ent.remaining,
+              lastAccrualDate: ent.lastAccrualDate,
+            };
+          })
+        )
+      ).filter((balance) => balance !== null);
 
       if (leaveTypeId) {
         return mapped.length ? mapped[0] : null;
@@ -3122,9 +3095,7 @@ export class LeavesService {
 
       return mapped;
     } catch (error) {
-      throw new Error(
-        `Failed to fetch leave balance: ${(error as any).message}`,
-      );
+      throw new Error(`Failed to fetch leave balance: ${(error as any).message}`);
     }
   }
 
@@ -3133,13 +3104,13 @@ export class LeavesService {
   async getPastLeaveRequests(
     employeeId: string,
     filters?: any,
-    userId?: string, // Optional: the actual user making the request (could be a delegate)
+    userId?: string // Optional: the actual user making the request (could be a delegate)
   ): Promise<any[]> {
     try {
       // Check if userId is a delegate
       let actualManagerId: string | null = null;
       let isDelegate = false;
-      
+
       if (userId) {
         const delegatedManagerId = this.getDelegatedManagerId(userId);
         if (delegatedManagerId) {
@@ -3148,7 +3119,7 @@ export class LeavesService {
           console.log(`[DELEGATE] User ${userId} is a delegate for manager ${actualManagerId}`);
         }
       }
-      
+
       // Check if userId is a department head or HR Manager viewing their own requests
       // Only show team requests (excluding own) if:
       // 1. userId === employeeId (viewing own ID)
@@ -3163,40 +3134,48 @@ export class LeavesService {
           .exec();
         const isDeptHead = userSystemRole?.roles?.includes(SystemRole.DEPARTMENT_HEAD) || false;
         const isHRManager = userSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
-        
+
         // Only apply team requests logic for delegated pending requests view
         // Check if it's specifically a pending-only query (no other filters)
         const isPendingOnlyQuery = filters?.status === 'pending' || filters?.status === 'PENDING';
         const hasOtherFilters = !!(filters?.fromDate || filters?.toDate || filters?.leaveTypeId);
-        
+
         if (isDeptHead && isPendingOnlyQuery && !hasOtherFilters) {
           isDepartmentHeadViewingOwn = true;
-          console.log(`[DEPARTMENT_HEAD] Department head ${userId} viewing delegated pending requests - showing team requests (excluding own)`);
+          console.log(
+            `[DEPARTMENT_HEAD] Department head ${userId} viewing delegated pending requests - showing team requests (excluding own)`
+          );
         } else if (isDeptHead) {
-          console.log(`[DEPARTMENT_HEAD] Department head ${userId} viewing personal requests - showing own requests`);
+          console.log(
+            `[DEPARTMENT_HEAD] Department head ${userId} viewing personal requests - showing own requests`
+          );
         }
-        
+
         // HR Manager viewing own ID with pending status = show requests that need HR Manager approval
         if (isHRManager && isPendingOnlyQuery && !hasOtherFilters) {
           isHRManagerViewingOwn = true;
-          console.log(`[HR_MANAGER] HR Manager ${userId} viewing delegated pending requests - showing department head requests`);
+          console.log(
+            `[HR_MANAGER] HR Manager ${userId} viewing delegated pending requests - showing department head requests`
+          );
         } else if (isHRManager) {
-          console.log(`[HR_MANAGER] HR Manager ${userId} viewing personal requests - showing own requests`);
+          console.log(
+            `[HR_MANAGER] HR Manager ${userId} viewing personal requests - showing own requests`
+          );
         }
       }
-      
+
       // If user is a delegate, get requests for the manager's team members
       // If department head is viewing their own ID, get team requests (excluding their own)
       // Otherwise, get requests for the specified employeeId
       let query: any;
-      
+
       if (isDelegate && actualManagerId) {
         // Delegate: Get all pending requests for the manager's team
         const manager = await this.employeeProfileModel.findById(actualManagerId).exec();
         if (!manager || !manager.primaryPositionId) {
           return []; // Manager not found or has no position
         }
-        
+
         // Find all team members (employees with supervisorPositionId matching manager's primaryPositionId)
         const teamMembers = await this.employeeProfileModel
           .find({
@@ -3206,41 +3185,47 @@ export class LeavesService {
           .select('_id')
           .lean()
           .exec();
-        
+
         const teamMemberIds = teamMembers.map((m: any) => m._id);
-        
+
         // Exclude the manager's own requests from delegate view
         // Also exclude the delegate's own requests if the delegate is an HR Manager
         const managerObjectId = new Types.ObjectId(actualManagerId);
         const delegateObjectId = userId ? new Types.ObjectId(userId) : null;
-        
+
         // Check if delegate is an HR Manager or HR Admin
         let excludeDelegateOwn = false;
         if (delegateObjectId) {
           const delegateSystemRole = await this.systemRoleModel
             .findOne({ employeeProfileId: delegateObjectId, isActive: true })
             .exec();
-          const isHRManagerDelegate = delegateSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
-          const isHRAdminDelegate = delegateSystemRole?.roles?.includes(SystemRole.HR_ADMIN) || false;
+          const isHRManagerDelegate =
+            delegateSystemRole?.roles?.includes(SystemRole.HR_MANAGER) || false;
+          const isHRAdminDelegate =
+            delegateSystemRole?.roles?.includes(SystemRole.HR_ADMIN) || false;
           excludeDelegateOwn = isHRManagerDelegate || isHRAdminDelegate;
         }
-        
+
         // Build query to exclude manager's own requests
         // If delegate is HR Manager, also exclude delegate's own requests
         const excludedIds = [managerObjectId];
         if (excludeDelegateOwn && delegateObjectId) {
           excludedIds.push(delegateObjectId);
-          console.log(`[DELEGATE] HR Manager delegate ${userId} - excluding both manager's and delegate's own requests`);
+          console.log(
+            `[DELEGATE] HR Manager delegate ${userId} - excluding both manager's and delegate's own requests`
+          );
         }
-        
+
         query = {
           employeeId: {
             $in: teamMemberIds,
             $nin: excludedIds, // Exclude manager's and delegate's own requests
           },
         };
-        
-        console.log(`[DELEGATE] Found ${teamMemberIds.length} team members for delegate to review (excluding ${excludedIds.length} excluded employee(s))`);
+
+        console.log(
+          `[DELEGATE] Found ${teamMemberIds.length} team members for delegate to review (excluding ${excludedIds.length} excluded employee(s))`
+        );
       } else if (isDepartmentHeadViewingOwn) {
         // Department head viewing their own ID: show team requests (excluding their own)
         const manager = await this.employeeProfileModel.findById(userId).exec();
@@ -3248,7 +3233,7 @@ export class LeavesService {
           // If no position, return empty (can't determine team)
           return [];
         }
-        
+
         // Find all team members (employees with supervisorPositionId matching manager's primaryPositionId)
         const teamMembers = await this.employeeProfileModel
           .find({
@@ -3258,19 +3243,21 @@ export class LeavesService {
           .select('_id')
           .lean()
           .exec();
-        
+
         const teamMemberIds = teamMembers.map((m: any) => m._id);
-        
+
         // Exclude the department head's own requests
         const managerObjectId = new Types.ObjectId(userId);
-        query = { 
-          employeeId: { 
+        query = {
+          employeeId: {
             $in: teamMemberIds,
             $ne: managerObjectId, // Exclude department head's own requests
           },
         };
-        
-        console.log(`[DEPARTMENT_HEAD] Found ${teamMemberIds.length} team members (excluding own requests)`);
+
+        console.log(
+          `[DEPARTMENT_HEAD] Found ${teamMemberIds.length} team members (excluding own requests)`
+        );
       } else if (isHRManagerViewingOwn) {
         // HR Manager viewing their own ID: show requests that need HR Manager approval
         // These are department head requests (approvalFlow[0].role === "HR Manager")
@@ -3282,7 +3269,9 @@ export class LeavesService {
           // Exclude HR Manager's own requests (they go to CEO)
           employeeId: { $ne: new Types.ObjectId(userId) },
         };
-        console.log(`[HR_MANAGER] Querying for department head requests needing HR Manager approval (excluding own)`);
+        console.log(
+          `[HR_MANAGER] Querying for department head requests needing HR Manager approval (excluding own)`
+        );
       } else {
         // Regular query: get requests for specific employee
         query = { employeeId: new Types.ObjectId(employeeId) };
@@ -3291,8 +3280,7 @@ export class LeavesService {
       // Apply date filters
       if (filters?.fromDate || filters?.toDate) {
         query['dates.from'] = {};
-        if (filters?.fromDate)
-          query['dates.from'].$gte = new Date(filters.fromDate);
+        if (filters?.fromDate) query['dates.from'].$gte = new Date(filters.fromDate);
         if (filters?.toDate) {
           query['dates.to'] = query['dates.to'] || {};
           query['dates.to'].$lte = new Date(filters.toDate);
@@ -3310,15 +3298,22 @@ export class LeavesService {
           query.status = normalizedStatus;
           console.log(`[getPastLeaveRequests] Filtering by status: ${normalizedStatus}`);
         } else {
-          console.warn(`[getPastLeaveRequests] Invalid status value: "${filters.status}" (normalized: "${normalizedStatus}"). Valid values are: ${validStatuses.join(', ')}`);
+          console.warn(
+            `[getPastLeaveRequests] Invalid status value: "${filters.status}" (normalized: "${normalizedStatus}"). Valid values are: ${validStatuses.join(', ')}`
+          );
         }
-      } else if ((isDelegate || isDepartmentHeadViewingOwn || isHRManagerViewingOwn) && (!filters?.status || (typeof filters.status === 'string' && filters.status.trim() === ''))) {
+      } else if (
+        (isDelegate || isDepartmentHeadViewingOwn || isHRManagerViewingOwn) &&
+        (!filters?.status || (typeof filters.status === 'string' && filters.status.trim() === ''))
+      ) {
         // For delegates, department heads, and HR managers viewing team requests, default to pending if no status filter is provided
         if (!isHRManagerViewingOwn) {
           // Only set status if not already set by HR Manager query logic above
           query.status = LeaveStatus.PENDING;
         }
-        console.log(`[getPastLeaveRequests] ${isDelegate ? 'Delegate' : isHRManagerViewingOwn ? 'HR Manager' : 'Department Head'} query - defaulting to PENDING status`);
+        console.log(
+          `[getPastLeaveRequests] ${isDelegate ? 'Delegate' : isHRManagerViewingOwn ? 'HR Manager' : 'Department Head'} query - defaulting to PENDING status`
+        );
       }
 
       if (filters?.leaveTypeId) {
@@ -3336,9 +3331,13 @@ export class LeavesService {
         requests.map(async (req) => {
           let leaveTypeName: string | null = null;
           let leaveTypeIdValue = req.leaveTypeId;
-          
+
           try {
-            if (req.leaveTypeId && typeof req.leaveTypeId === 'object' && req.leaveTypeId !== null) {
+            if (
+              req.leaveTypeId &&
+              typeof req.leaveTypeId === 'object' &&
+              req.leaveTypeId !== null
+            ) {
               // Safely access name property - check if it exists first
               const populatedLeaveType = req.leaveTypeId as any;
               if (populatedLeaveType && populatedLeaveType.name) {
@@ -3351,18 +3350,22 @@ export class LeavesService {
               }
             }
           } catch (typeError) {
-            console.warn(`[getPastLeaveRequests] Error accessing leaveTypeId for request ${req._id}:`, typeError);
+            console.warn(
+              `[getPastLeaveRequests] Error accessing leaveTypeId for request ${req._id}:`,
+              typeError
+            );
             leaveTypeName = null;
           }
 
           // If populate failed (leaveTypeId is null or doesn't have name), fetch it separately
           if (!leaveTypeName && req.leaveTypeId) {
-            const storedLeaveTypeId = req.leaveTypeId instanceof Types.ObjectId 
-              ? req.leaveTypeId 
-              : (typeof req.leaveTypeId === 'string' 
-                  ? new Types.ObjectId(req.leaveTypeId) 
-                  : (req.leaveTypeId as any)?._id || req.leaveTypeId);
-            
+            const storedLeaveTypeId =
+              req.leaveTypeId instanceof Types.ObjectId
+                ? req.leaveTypeId
+                : typeof req.leaveTypeId === 'string'
+                  ? new Types.ObjectId(req.leaveTypeId)
+                  : (req.leaveTypeId as any)?._id || req.leaveTypeId;
+
             if (storedLeaveTypeId) {
               try {
                 const leaveType = await this.leaveTypeModel.findById(storedLeaveTypeId).exec();
@@ -3403,7 +3406,7 @@ export class LeavesService {
       console.error(`[getPastLeaveRequests] Error:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new BadRequestException(
-        `Unable to retrieve leave requests. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please try again or contact support if the problem continues.'}`,
+        `Unable to retrieve leave requests. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please try again or contact support if the problem continues.'}`
       );
     }
   }
@@ -3419,8 +3422,7 @@ export class LeavesService {
 
       if (filters.fromDate || filters.toDate) {
         query['dates.from'] = {};
-        if (filters.fromDate)
-          query['dates.from'].$gte = new Date(filters.fromDate);
+        if (filters.fromDate) query['dates.from'].$gte = new Date(filters.fromDate);
         if (filters.toDate) {
           query['dates.to'] = query['dates.to'] || {};
           query['dates.to'].$lte = new Date(filters.toDate);
@@ -3433,7 +3435,7 @@ export class LeavesService {
         console.log(`[filterLeaveHistory] Filtering by status: ${query.status}`);
       }
 
-      let sortObj: any = {};
+      const sortObj: any = {};
       if (filters.sortByDate) {
         sortObj['dates.from'] = filters.sortByDate === 'asc' ? 1 : -1;
       }
@@ -3455,61 +3457,66 @@ export class LeavesService {
 
       return {
         total,
-        items: await Promise.all(items.map(async (req) => {
-          // Safely get leave type name, handling null populate and deleted leave types
-          let leaveTypeName = 'Unknown Leave Type';
-          let leaveTypeIdValue = req.leaveTypeId;
-          
-          try {
-            if (req.leaveTypeId) {
-              if (typeof req.leaveTypeId === 'object' && req.leaveTypeId !== null) {
-                // Check if populated object has name property
-                const populatedLeaveType = req.leaveTypeId as any;
-                if (populatedLeaveType.name) {
-                  leaveTypeName = populatedLeaveType.name;
-                  leaveTypeIdValue = populatedLeaveType._id || populatedLeaveType;
-                } else {
-                  // Populated but name is missing (might be deleted)
-                  leaveTypeName = 'Deleted Leave Type';
-                  leaveTypeIdValue = populatedLeaveType._id || populatedLeaveType;
-                }
-              } else if (typeof req.leaveTypeId === 'string') {
-                // If it's a string ID, try to fetch the leave type
-                try {
-                  const leaveType = await this.leaveTypeModel.findById(req.leaveTypeId).exec();
-                  if (leaveType) {
-                    leaveTypeName = leaveType.name;
-                    leaveTypeIdValue = leaveType._id;
+        items: await Promise.all(
+          items.map(async (req) => {
+            // Safely get leave type name, handling null populate and deleted leave types
+            let leaveTypeName = 'Unknown Leave Type';
+            let leaveTypeIdValue = req.leaveTypeId;
+
+            try {
+              if (req.leaveTypeId) {
+                if (typeof req.leaveTypeId === 'object' && req.leaveTypeId !== null) {
+                  // Check if populated object has name property
+                  const populatedLeaveType = req.leaveTypeId as any;
+                  if (populatedLeaveType.name) {
+                    leaveTypeName = populatedLeaveType.name;
+                    leaveTypeIdValue = populatedLeaveType._id || populatedLeaveType;
                   } else {
+                    // Populated but name is missing (might be deleted)
                     leaveTypeName = 'Deleted Leave Type';
+                    leaveTypeIdValue = populatedLeaveType._id || populatedLeaveType;
                   }
-                } catch (fetchError) {
-                  leaveTypeName = 'Unknown Leave Type';
+                } else if (typeof req.leaveTypeId === 'string') {
+                  // If it's a string ID, try to fetch the leave type
+                  try {
+                    const leaveType = await this.leaveTypeModel.findById(req.leaveTypeId).exec();
+                    if (leaveType) {
+                      leaveTypeName = leaveType.name;
+                      leaveTypeIdValue = leaveType._id;
+                    } else {
+                      leaveTypeName = 'Deleted Leave Type';
+                    }
+                  } catch (fetchError) {
+                    leaveTypeName = 'Unknown Leave Type';
+                  }
                 }
               }
+            } catch (typeError) {
+              console.warn(
+                `[filterLeaveHistory] Error processing leave type for request ${req._id}:`,
+                typeError
+              );
+              leaveTypeName = 'Unknown Leave Type';
             }
-          } catch (typeError) {
-            console.warn(`[filterLeaveHistory] Error processing leave type for request ${req._id}:`, typeError);
-            leaveTypeName = 'Unknown Leave Type';
-          }
-          
-          return {
-            _id: req._id,
-            employeeId: req.employeeId,
-            leaveTypeId: leaveTypeIdValue,
-            leaveTypeName,
-            dates: req.dates,
-            durationDays: req.durationDays,
-            status: req.status,
-            createdAt: (req as any).createdAt,
-          };
-        })),
+
+            return {
+              _id: req._id,
+              employeeId: req.employeeId,
+              leaveTypeId: leaveTypeIdValue,
+              leaveTypeName,
+              dates: req.dates,
+              durationDays: req.durationDays,
+              status: req.status,
+              createdAt: (req as any).createdAt,
+            };
+          })
+        ),
       };
     } catch (error) {
       console.error(`[filterLeaveHistory] Error:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new BadRequestException(
-        `Unable to filter leave history. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please check your filter criteria and try again.'}`,
+        `Unable to filter leave history. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please check your filter criteria and try again.'}`
       );
     }
   }
@@ -3519,7 +3526,7 @@ export class LeavesService {
     managerId: string,
     upcomingFromDate?: Date,
     upcomingToDate?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<any> {
     try {
       // Get manager's position
@@ -3533,9 +3540,14 @@ export class LeavesService {
       }
 
       // Normalize manager's primaryPositionId to handle both ObjectId and string formats
-      const managerPositionQuery = this.createFlexibleIdQuery('supervisorPositionId', manager.primaryPositionId);
+      const managerPositionQuery = this.createFlexibleIdQuery(
+        'supervisorPositionId',
+        manager.primaryPositionId
+      );
       if (!managerPositionQuery) {
-        console.warn(`[getTeamLeaveBalances] Invalid manager primaryPositionId: ${manager.primaryPositionId}`);
+        console.warn(
+          `[getTeamLeaveBalances] Invalid manager primaryPositionId: ${manager.primaryPositionId}`
+        );
         return {
           managerId,
           teamMembers: [],
@@ -3555,22 +3567,26 @@ export class LeavesService {
       if (departmentId && departmentId.trim()) {
         const trimmedDeptId = departmentId.trim();
         const departmentQuery = this.createFlexibleIdQuery('primaryDepartmentId', trimmedDeptId);
-        
+
         if (departmentQuery) {
           console.log(`[getTeamLeaveBalances] Filtering by department: ${trimmedDeptId}`);
           const finalQuery = {
             ...baseQuery,
             ...departmentQuery,
           };
-          
+
           teamMembers = await this.employeeProfileModel
             .find(finalQuery)
             .populate('primaryDepartmentId', 'name code')
             .populate('primaryPositionId', 'title code')
-            .select('_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId')
+            .select(
+              '_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId'
+            )
             .exec();
-          
-          console.log(`[getTeamLeaveBalances] Found ${teamMembers.length} team members with flexible department query`);
+
+          console.log(
+            `[getTeamLeaveBalances] Found ${teamMembers.length} team members with flexible department query`
+          );
         } else {
           console.warn(`[getTeamLeaveBalances] Invalid departmentId format: ${trimmedDeptId}`);
           // Fallback to base query without department filter
@@ -3578,7 +3594,9 @@ export class LeavesService {
             .find(baseQuery)
             .populate('primaryDepartmentId', 'name code')
             .populate('primaryPositionId', 'title code')
-            .select('_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId')
+            .select(
+              '_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId'
+            )
             .exec();
         }
       } else {
@@ -3587,21 +3605,34 @@ export class LeavesService {
           .find(baseQuery)
           .populate('primaryDepartmentId', 'name code')
           .populate('primaryPositionId', 'title code')
-          .select('_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId')
+          .select(
+            '_id firstName lastName middleName fullName primaryDepartmentId primaryPositionId'
+          )
           .exec();
       }
 
       console.log(`[getTeamLeaveBalances] Total found: ${teamMembers.length} team members`);
       if (teamMembers.length > 0) {
         teamMembers.forEach((member, idx) => {
-          const deptId = (member as any).primaryDepartmentId?._id || (member as any).primaryDepartmentId;
-          const deptIdStr = deptId?.toString ? deptId.toString() : (deptId || 'N/A');
-          const deptIdType = deptId instanceof Types.ObjectId ? 'ObjectId' : (deptId ? typeof deptId : 'null/undefined');
-          console.log(`[getTeamLeaveBalances] Member ${idx + 1}: ${(member as any).firstName} ${(member as any).lastName}, Department ID: ${deptIdStr}, Type: ${deptIdType}`);
+          const deptId = member.primaryDepartmentId?._id || member.primaryDepartmentId;
+          const deptIdStr = deptId?.toString ? deptId.toString() : deptId || 'N/A';
+          const deptIdType =
+            deptId instanceof Types.ObjectId
+              ? 'ObjectId'
+              : deptId
+                ? typeof deptId
+                : 'null/undefined';
+          console.log(
+            `[getTeamLeaveBalances] Member ${idx + 1}: ${member.firstName} ${member.lastName}, Department ID: ${deptIdStr}, Type: ${deptIdType}`
+          );
           if (departmentId && departmentId.trim()) {
-            const matches = deptIdStr === departmentId.trim() || 
-                           (deptId instanceof Types.ObjectId && deptId.equals(new Types.ObjectId(departmentId.trim())));
-            console.log(`[getTeamLeaveBalances]   - Matches filter (${departmentId.trim()}): ${matches}`);
+            const matches =
+              deptIdStr === departmentId.trim() ||
+              (deptId instanceof Types.ObjectId &&
+                deptId.equals(new Types.ObjectId(departmentId.trim())));
+            console.log(
+              `[getTeamLeaveBalances]   - Matches filter (${departmentId.trim()}): ${matches}`
+            );
           }
         });
       }
@@ -3613,14 +3644,13 @@ export class LeavesService {
             .populate('leaveTypeId')
             .exec();
 
-          let upcomingQuery: any = {
+          const upcomingQuery: any = {
             employeeId: new Types.ObjectId(member._id),
             status: { $in: [LeaveStatus.APPROVED, LeaveStatus.PENDING, LeaveStatus.REJECTED] },
           };
           if (upcomingFromDate || upcomingToDate) {
             upcomingQuery['dates.from'] = {};
-            if (upcomingFromDate)
-              upcomingQuery['dates.from'].$gte = upcomingFromDate;
+            if (upcomingFromDate) upcomingQuery['dates.from'].$gte = upcomingFromDate;
             if (upcomingToDate) {
               upcomingQuery['dates.to'] = upcomingQuery['dates.to'] || {};
               upcomingQuery['dates.to'].$lte = upcomingToDate;
@@ -3633,72 +3663,81 @@ export class LeavesService {
             .exec();
 
           // Construct employee name from firstName, lastName, or use fullName if available
-          const memberData = member as any;
-          const employeeName = memberData.fullName || 
-            (memberData.firstName && memberData.lastName 
+          const memberData = member;
+          const employeeName =
+            memberData.fullName ||
+            (memberData.firstName && memberData.lastName
               ? `${memberData.firstName}${memberData.middleName ? ' ' + memberData.middleName : ''} ${memberData.lastName}`.trim()
               : 'N/A');
 
           // Handle entitlements with fallback for null populate - only include valid leave types
-          const processedEntitlements = (await Promise.all(
-            entitlements.map(async (ent) => {
-              let leaveTypeName = (ent.leaveTypeId as any)?.name;
-              let leaveTypeIdValue = (ent.leaveTypeId as any)?._id;
+          const processedEntitlements = (
+            await Promise.all(
+              entitlements.map(async (ent) => {
+                let leaveTypeName = (ent.leaveTypeId as any)?.name;
+                let leaveTypeIdValue = (ent.leaveTypeId as any)?._id;
 
-              // If populate failed, fetch leave type separately
-              if (!leaveTypeName && ent.leaveTypeId) {
-                const storedLeaveTypeId = ent.leaveTypeId instanceof Types.ObjectId 
-                  ? ent.leaveTypeId 
-                  : (typeof ent.leaveTypeId === 'string' 
-                      ? new Types.ObjectId(ent.leaveTypeId) 
-                      : (ent.leaveTypeId as any)?._id || ent.leaveTypeId);
-                
-                if (storedLeaveTypeId) {
-                  try {
-                    const leaveType = await this.leaveTypeModel.findById(storedLeaveTypeId).exec();
-                    if (leaveType) {
-                      leaveTypeName = leaveType.name;
-                      leaveTypeIdValue = leaveType._id;
-                    } else {
-                      return null; // Filter out deleted leave types
+                // If populate failed, fetch leave type separately
+                if (!leaveTypeName && ent.leaveTypeId) {
+                  const storedLeaveTypeId =
+                    ent.leaveTypeId instanceof Types.ObjectId
+                      ? ent.leaveTypeId
+                      : typeof ent.leaveTypeId === 'string'
+                        ? new Types.ObjectId(ent.leaveTypeId)
+                        : (ent.leaveTypeId as any)?._id || ent.leaveTypeId;
+
+                  if (storedLeaveTypeId) {
+                    try {
+                      const leaveType = await this.leaveTypeModel
+                        .findById(storedLeaveTypeId)
+                        .exec();
+                      if (leaveType) {
+                        leaveTypeName = leaveType.name;
+                        leaveTypeIdValue = leaveType._id;
+                      } else {
+                        return null; // Filter out deleted leave types
+                      }
+                    } catch (err) {
+                      return null; // Filter out invalid leave types
                     }
-                  } catch (err) {
+                  } else {
                     return null; // Filter out invalid leave types
                   }
-                } else {
+                } else if (!leaveTypeName) {
                   return null; // Filter out invalid leave types
                 }
-              } else if (!leaveTypeName) {
-                return null; // Filter out invalid leave types
-              }
 
-              return {
-                leaveTypeId: leaveTypeIdValue,
-                leaveTypeName: leaveTypeName,
-                remaining: ent.remaining,
-                pending: ent.pending,
-                taken: ent.taken,
-              };
-            })
-          )).filter(balance => balance !== null);
+                return {
+                  leaveTypeId: leaveTypeIdValue,
+                  leaveTypeName: leaveTypeName,
+                  remaining: ent.remaining,
+                  pending: ent.pending,
+                  taken: ent.taken,
+                };
+              })
+            )
+          ).filter((balance) => balance !== null);
 
           // Group entitlements by leaveTypeId and aggregate values
-          const leaveBalancesMap = new Map<string, {
-            leaveTypeId: any;
-            leaveTypeName: string;
-            remaining: number;
-            pending: number;
-            taken: number;
-          }>();
+          const leaveBalancesMap = new Map<
+            string,
+            {
+              leaveTypeId: any;
+              leaveTypeName: string;
+              remaining: number;
+              pending: number;
+              taken: number;
+            }
+          >();
 
           processedEntitlements.forEach((balance) => {
             if (!balance) return;
-            
+
             const leaveTypeIdKey = balance.leaveTypeId?.toString() || balance.leaveTypeId;
-            
+
             if (leaveBalancesMap.has(leaveTypeIdKey)) {
               // Aggregate values for duplicate leave types
-              const existing = leaveBalancesMap.get(leaveTypeIdKey)!;
+              const existing = leaveBalancesMap.get(leaveTypeIdKey);
               existing.remaining += balance.remaining || 0;
               existing.pending += balance.pending || 0;
               existing.taken += balance.taken || 0;
@@ -3718,59 +3757,64 @@ export class LeavesService {
           const leaveBalances = Array.from(leaveBalancesMap.values());
 
           // Handle upcomingLeaves with fallback for null populate - only include valid leave types
-          const upcomingLeavesMapped = (await Promise.all(
-            upcomingLeaves.map(async (leave) => {
-              let leaveTypeName = (leave.leaveTypeId as any)?.name;
-              let leaveTypeIdValue = (leave.leaveTypeId as any)?._id || leave.leaveTypeId;
+          const upcomingLeavesMapped = (
+            await Promise.all(
+              upcomingLeaves.map(async (leave) => {
+                let leaveTypeName = (leave.leaveTypeId as any)?.name;
+                let leaveTypeIdValue = (leave.leaveTypeId as any)?._id || leave.leaveTypeId;
 
-              // If populate failed, fetch leave type separately
-              if (!leaveTypeName && leave.leaveTypeId) {
-                const storedLeaveTypeId = leave.leaveTypeId instanceof Types.ObjectId 
-                  ? leave.leaveTypeId 
-                  : (typeof leave.leaveTypeId === 'string' 
-                      ? new Types.ObjectId(leave.leaveTypeId) 
-                      : (leave.leaveTypeId as any)?._id || leave.leaveTypeId);
-                
-                if (storedLeaveTypeId) {
-                  try {
-                    const leaveType = await this.leaveTypeModel.findById(storedLeaveTypeId).exec();
-                    if (leaveType) {
-                      leaveTypeName = leaveType.name;
-                      leaveTypeIdValue = leaveType._id;
-                    } else {
-                      return null; // Filter out deleted leave types
+                // If populate failed, fetch leave type separately
+                if (!leaveTypeName && leave.leaveTypeId) {
+                  const storedLeaveTypeId =
+                    leave.leaveTypeId instanceof Types.ObjectId
+                      ? leave.leaveTypeId
+                      : typeof leave.leaveTypeId === 'string'
+                        ? new Types.ObjectId(leave.leaveTypeId)
+                        : (leave.leaveTypeId as any)?._id || leave.leaveTypeId;
+
+                  if (storedLeaveTypeId) {
+                    try {
+                      const leaveType = await this.leaveTypeModel
+                        .findById(storedLeaveTypeId)
+                        .exec();
+                      if (leaveType) {
+                        leaveTypeName = leaveType.name;
+                        leaveTypeIdValue = leaveType._id;
+                      } else {
+                        return null; // Filter out deleted leave types
+                      }
+                    } catch (err) {
+                      return null; // Filter out invalid leave types
                     }
-                  } catch (err) {
+                  } else {
                     return null; // Filter out invalid leave types
                   }
-                } else {
+                } else if (!leaveTypeName) {
                   return null; // Filter out invalid leave types
                 }
-              } else if (!leaveTypeName) {
-                return null; // Filter out invalid leave types
-              }
 
-              return {
-                _id: leave._id,
-                leaveTypeId: leaveTypeIdValue,
-                leaveTypeName: leaveTypeName,
-                dates: leave.dates,
-                durationDays: leave.durationDays,
-                status: leave.status,
-                isFlagged: (leave as any).irregularPatternFlag || false,
-              };
-            })
-          )).filter(leave => leave !== null);
+                return {
+                  _id: leave._id,
+                  leaveTypeId: leaveTypeIdValue,
+                  leaveTypeName: leaveTypeName,
+                  dates: leave.dates,
+                  durationDays: leave.durationDays,
+                  status: leave.status,
+                  isFlagged: (leave as any).irregularPatternFlag || false,
+                };
+              })
+            )
+          ).filter((leave) => leave !== null);
 
           return {
             employeeId: member._id,
             employeeName: employeeName,
-            position: (member.primaryPositionId && (member.primaryPositionId as any).title) || 'N/A',
-            department: (member.primaryDepartmentId && (member.primaryDepartmentId as any).name) || 'N/A',
+            position: (member.primaryPositionId && member.primaryPositionId.title) || 'N/A',
+            department: (member.primaryDepartmentId && member.primaryDepartmentId.name) || 'N/A',
             leaveBalances: leaveBalances,
             upcomingLeaves: upcomingLeavesMapped,
           };
-        }),
+        })
       );
 
       return {
@@ -3779,9 +3823,7 @@ export class LeavesService {
         totalTeamMembers: balances.length,
       };
     } catch (error) {
-      throw new Error(
-        `Failed to get team leave balances: ${(error as any).message}`,
-      );
+      throw new Error(`Failed to get team leave balances: ${(error as any).message}`);
     }
   }
 
@@ -3808,9 +3850,14 @@ export class LeavesService {
       }
 
       // Normalize manager's primaryPositionId to handle both ObjectId and string formats
-      const managerPositionQuery = this.createFlexibleIdQuery('supervisorPositionId', manager.primaryPositionId);
+      const managerPositionQuery = this.createFlexibleIdQuery(
+        'supervisorPositionId',
+        manager.primaryPositionId
+      );
       if (!managerPositionQuery) {
-        console.warn(`[filterTeamLeaveData] Invalid manager primaryPositionId: ${manager.primaryPositionId}`);
+        console.warn(
+          `[filterTeamLeaveData] Invalid manager primaryPositionId: ${manager.primaryPositionId}`
+        );
         return {
           total: 0,
           filters: {
@@ -3839,20 +3886,22 @@ export class LeavesService {
       if (filters.departmentId && filters.departmentId.trim()) {
         const trimmedDeptId = filters.departmentId.trim();
         const departmentQuery = this.createFlexibleIdQuery('primaryDepartmentId', trimmedDeptId);
-        
+
         if (departmentQuery) {
           console.log(`[filterTeamLeaveData] Filtering by department: ${trimmedDeptId}`);
           const finalQuery = {
             ...baseQuery,
             ...departmentQuery,
           };
-          
+
           teamMembers = await this.employeeProfileModel
             .find(finalQuery)
             .select('_id primaryDepartmentId')
             .exec();
-          
-          console.log(`[filterTeamLeaveData] Found ${teamMembers.length} team members with flexible department query`);
+
+          console.log(
+            `[filterTeamLeaveData] Found ${teamMembers.length} team members with flexible department query`
+          );
         } else {
           console.warn(`[filterTeamLeaveData] Invalid departmentId format: ${trimmedDeptId}`);
           // Fallback to base query without department filter
@@ -3868,43 +3917,70 @@ export class LeavesService {
           .select('_id primaryDepartmentId')
           .exec();
       }
-      
+
       console.log(`[filterTeamLeaveData] Total found: ${teamMembers.length} team members`);
       if (teamMembers.length > 0 && filters.departmentId) {
         teamMembers.forEach((member, idx) => {
-          const deptId = (member as any).primaryDepartmentId;
-          const deptIdStr = deptId?.toString ? deptId.toString() : (deptId || 'N/A');
-          const deptIdType = deptId instanceof Types.ObjectId ? 'ObjectId' : (deptId ? typeof deptId : 'null/undefined');
-          console.log(`[filterTeamLeaveData] Member ${idx + 1}: Department ID: ${deptIdStr}, Type: ${deptIdType}`);
+          const deptId = member.primaryDepartmentId;
+          const deptIdStr = deptId?.toString ? deptId.toString() : deptId || 'N/A';
+          const deptIdType =
+            deptId instanceof Types.ObjectId
+              ? 'ObjectId'
+              : deptId
+                ? typeof deptId
+                : 'null/undefined';
+          console.log(
+            `[filterTeamLeaveData] Member ${idx + 1}: Department ID: ${deptIdStr}, Type: ${deptIdType}`
+          );
           if (filters.departmentId && filters.departmentId.trim()) {
-            const matches = deptIdStr === filters.departmentId.trim() || 
-                           (deptId instanceof Types.ObjectId && deptId.equals(new Types.ObjectId(filters.departmentId.trim())));
-            console.log(`[filterTeamLeaveData]   - Matches filter (${filters.departmentId.trim()}): ${matches}`);
+            const matches =
+              deptIdStr === filters.departmentId.trim() ||
+              (deptId instanceof Types.ObjectId &&
+                deptId.equals(new Types.ObjectId(filters.departmentId.trim())));
+            console.log(
+              `[filterTeamLeaveData]   - Matches filter (${filters.departmentId.trim()}): ${matches}`
+            );
           }
         });
       }
-      
+
       if (teamMembers.length > 0 && filters.departmentId) {
         const trimmedDeptId = filters.departmentId.trim();
-        console.log(`[filterTeamLeaveData] Sample team members:`, teamMembers.slice(0, 3).map(m => {
-          const deptId = (m as any).primaryDepartmentId;
-          const deptIdStr = deptId?.toString ? deptId.toString() : (deptId || 'N/A');
-          return {
-            employeeId: m._id.toString(),
-            departmentId: deptIdStr,
-            departmentIdType: deptId instanceof Types.ObjectId ? 'ObjectId' : (deptId ? typeof deptId : 'null/undefined'),
-            matchesFilter: deptIdStr === trimmedDeptId || 
-              (deptId instanceof Types.ObjectId && deptId.equals(new Types.ObjectId(trimmedDeptId)))
-          };
-        }));
+        console.log(
+          `[filterTeamLeaveData] Sample team members:`,
+          teamMembers.slice(0, 3).map((m) => {
+            const deptId = m.primaryDepartmentId;
+            const deptIdStr = deptId?.toString ? deptId.toString() : deptId || 'N/A';
+            return {
+              employeeId: m._id.toString(),
+              departmentId: deptIdStr,
+              departmentIdType:
+                deptId instanceof Types.ObjectId
+                  ? 'ObjectId'
+                  : deptId
+                    ? typeof deptId
+                    : 'null/undefined',
+              matchesFilter:
+                deptIdStr === trimmedDeptId ||
+                (deptId instanceof Types.ObjectId &&
+                  deptId.equals(new Types.ObjectId(trimmedDeptId))),
+            };
+          })
+        );
       } else if (filters.departmentId && filters.departmentId.trim()) {
         const trimmedDeptId = filters.departmentId.trim();
-        console.warn(`[filterTeamLeaveData] ⚠️ No team members found for department ${trimmedDeptId}`);
+        console.warn(
+          `[filterTeamLeaveData] ⚠️ No team members found for department ${trimmedDeptId}`
+        );
         console.warn(`[filterTeamLeaveData] Possible reasons:`);
-        console.warn(`  1. No employees in this department have supervisorPositionId matching manager's position`);
-        console.warn(`  2. Employees don't have a department assigned (primaryDepartmentId is null/undefined)`);
+        console.warn(
+          `  1. No employees in this department have supervisorPositionId matching manager's position`
+        );
+        console.warn(
+          `  2. Employees don't have a department assigned (primaryDepartmentId is null/undefined)`
+        );
         console.warn(`  3. The department ID format doesn't match (expected ObjectId)`);
-        
+
         // Diagnostic: Check if any employees exist in this department at all
         const diagnosticQuery: any = {
           primaryDepartmentId: Types.ObjectId.isValid(trimmedDeptId)
@@ -3916,8 +3992,10 @@ export class LeavesService {
           .select('_id firstName lastName primaryDepartmentId supervisorPositionId')
           .limit(5)
           .exec();
-        console.log(`[filterTeamLeaveData] Diagnostic: Found ${allEmployeesInDept.length} total employees in this department`);
-        
+        console.log(
+          `[filterTeamLeaveData] Diagnostic: Found ${allEmployeesInDept.length} total employees in this department`
+        );
+
         // Also check team members without department filter to see if they have departments assigned
         const teamMembersWithoutDeptFilter = await this.employeeProfileModel
           .find({
@@ -3927,40 +4005,50 @@ export class LeavesService {
           .select('_id firstName lastName primaryDepartmentId')
           .limit(5)
           .exec();
-        console.log(`[filterTeamLeaveData] Diagnostic: Found ${teamMembersWithoutDeptFilter.length} team members (without dept filter)`);
-        const withoutDept = teamMembersWithoutDeptFilter.filter(m => !(m as any).primaryDepartmentId);
+        console.log(
+          `[filterTeamLeaveData] Diagnostic: Found ${teamMembersWithoutDeptFilter.length} team members (without dept filter)`
+        );
+        const withoutDept = teamMembersWithoutDeptFilter.filter(
+          (m) => !(m as any).primaryDepartmentId
+        );
         if (withoutDept.length > 0) {
-          console.warn(`[filterTeamLeaveData] ⚠️ Found ${withoutDept.length} team members WITHOUT department assigned:`, 
-            withoutDept.map(m => ({
+          console.warn(
+            `[filterTeamLeaveData] ⚠️ Found ${withoutDept.length} team members WITHOUT department assigned:`,
+            withoutDept.map((m) => ({
               id: m._id.toString(),
-              name: `${(m as any).firstName || ''} ${(m as any).lastName || ''}`.trim()
+              name: `${(m as any).firstName || ''} ${(m as any).lastName || ''}`.trim(),
             }))
           );
         }
-        
+
         if (allEmployeesInDept.length > 0) {
-          console.log(`[filterTeamLeaveData] Sample employees in department:`, allEmployeesInDept.map(e => ({
-            id: e._id.toString(),
-            name: `${(e as any).firstName || ''} ${(e as any).lastName || ''}`.trim(),
-            deptId: (e as any).primaryDepartmentId?.toString() || (e as any).primaryDepartmentId,
-            supervisorPosId: (e as any).supervisorPositionId?.toString() || (e as any).supervisorPositionId,
-            managerPosId: manager.primaryPositionId?.toString()
-          })));
+          console.log(
+            `[filterTeamLeaveData] Sample employees in department:`,
+            allEmployeesInDept.map((e) => ({
+              id: e._id.toString(),
+              name: `${(e as any).firstName || ''} ${(e as any).lastName || ''}`.trim(),
+              deptId: (e as any).primaryDepartmentId?.toString() || (e as any).primaryDepartmentId,
+              supervisorPosId:
+                (e as any).supervisorPositionId?.toString() || (e as any).supervisorPositionId,
+              managerPosId: manager.primaryPositionId?.toString(),
+            }))
+          );
         }
       }
-      
+
       const memberIds = teamMembers.map((m) => m._id);
-      
+
       // Exclude department head's own requests from the list
       // Department heads should not see their own leave requests in the pending requests bar
       const managerObjectId = new Types.ObjectId(managerId);
-      const filteredMemberIds = memberIds.filter(
-        (id) => !id.equals(managerObjectId)
-      );
+      const filteredMemberIds = memberIds.filter((id) => !id.equals(managerObjectId));
 
       // If no team members found (excluding manager), return empty results
       if (filteredMemberIds.length === 0) {
-        console.warn('[filterTeamLeaveData] No team members found (excluding manager). Base query:', JSON.stringify(baseQuery));
+        console.warn(
+          '[filterTeamLeaveData] No team members found (excluding manager). Base query:',
+          JSON.stringify(baseQuery)
+        );
         return {
           total: 0,
           filters: {
@@ -3985,8 +4073,7 @@ export class LeavesService {
 
       if (filters.fromDate || filters.toDate) {
         query['dates.from'] = {};
-        if (filters.fromDate)
-          query['dates.from'].$gte = new Date(filters.fromDate);
+        if (filters.fromDate) query['dates.from'].$gte = new Date(filters.fromDate);
         if (filters.toDate) {
           query['dates.to'] = query['dates.to'] || {};
           query['dates.to'].$lte = new Date(filters.toDate);
@@ -3999,7 +4086,7 @@ export class LeavesService {
         console.log(`[filterTeamLeaveData] Filtering by status: ${query.status}`);
       }
 
-      let sortObj: any = {};
+      const sortObj: any = {};
       if (filters.sortByDate) {
         sortObj['dates.from'] = filters.sortByDate === 'asc' ? 1 : -1;
       }
@@ -4032,54 +4119,63 @@ export class LeavesService {
               : undefined,
           status: filters.status,
         },
-        items: await Promise.all(items.map(async (req) => {
-          const employee = req.employeeId as any;
-          const employeeName = employee && typeof employee === 'object'
-            ? `${employee.firstName || ''} ${employee.middleName || ''} ${employee.lastName || ''}`.trim()
-            : undefined;
-          
-          // Safely get leave type name
-          let leaveTypeName = 'Unknown Leave Type';
-          try {
-            if (req.leaveTypeId) {
-              if (typeof req.leaveTypeId === 'object' && req.leaveTypeId !== null) {
-                const populatedLeaveType = req.leaveTypeId as any;
-                if (populatedLeaveType && populatedLeaveType.name) {
-                  leaveTypeName = populatedLeaveType.name;
-                } else {
-                  leaveTypeName = 'Deleted Leave Type';
-                }
-              } else if (typeof req.leaveTypeId === 'string') {
-                try {
-                  const leaveType = await this.leaveTypeModel.findById(req.leaveTypeId).exec();
-                  leaveTypeName = leaveType ? leaveType.name : 'Deleted Leave Type';
-                } catch {
-                  leaveTypeName = 'Unknown Leave Type';
+        items: await Promise.all(
+          items.map(async (req) => {
+            const employee = req.employeeId as any;
+            const employeeName =
+              employee && typeof employee === 'object'
+                ? `${employee.firstName || ''} ${employee.middleName || ''} ${employee.lastName || ''}`.trim()
+                : undefined;
+
+            // Safely get leave type name
+            let leaveTypeName = 'Unknown Leave Type';
+            try {
+              if (req.leaveTypeId) {
+                if (typeof req.leaveTypeId === 'object' && req.leaveTypeId !== null) {
+                  const populatedLeaveType = req.leaveTypeId as any;
+                  if (populatedLeaveType && populatedLeaveType.name) {
+                    leaveTypeName = populatedLeaveType.name;
+                  } else {
+                    leaveTypeName = 'Deleted Leave Type';
+                  }
+                } else if (typeof req.leaveTypeId === 'string') {
+                  try {
+                    const leaveType = await this.leaveTypeModel.findById(req.leaveTypeId).exec();
+                    leaveTypeName = leaveType ? leaveType.name : 'Deleted Leave Type';
+                  } catch {
+                    leaveTypeName = 'Unknown Leave Type';
+                  }
                 }
               }
+            } catch (typeError) {
+              console.warn(
+                `[filterTeamLeaveData] Error processing leave type for request ${req._id}:`,
+                typeError
+              );
+              leaveTypeName = 'Unknown Leave Type';
             }
-          } catch (typeError) {
-            console.warn(`[filterTeamLeaveData] Error processing leave type for request ${req._id}:`, typeError);
-            leaveTypeName = 'Unknown Leave Type';
-          }
-          
-          return {
-            _id: req._id.toString(),
-            employeeId: (req.employeeId as any)?._id?.toString() || req.employeeId?.toString() || req.employeeId,
-            employeeName,
-            leaveTypeName,
-            dates: req.dates,
-            durationDays: req.durationDays,
-            status: req.status,
-            createdAt: (req as any).createdAt,
-          };
-        })),
+
+            return {
+              _id: req._id.toString(),
+              employeeId:
+                (req.employeeId as any)?._id?.toString() ||
+                req.employeeId?.toString() ||
+                req.employeeId,
+              employeeName,
+              leaveTypeName,
+              dates: req.dates,
+              durationDays: req.durationDays,
+              status: req.status,
+              createdAt: (req as any).createdAt,
+            };
+          })
+        ),
       };
     } catch (error) {
       console.error(`[filterTeamLeaveData] Error:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new BadRequestException(
-        `Unable to filter team leave data. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please check your filter criteria and try again.'}`,
+        `Unable to filter team leave data. ${errorMessage.includes('name') ? 'Some leave types may have been deleted. Please contact support if this issue persists.' : 'Please check your filter criteria and try again.'}`
       );
     }
   }
@@ -4089,12 +4185,10 @@ export class LeavesService {
     leaveRequestId: string,
     managerId: string,
     flagReason: string,
-    notes?: string,
+    notes?: string
   ): Promise<any> {
     try {
-      const leaveRequest = await this.leaveRequestModel
-        .findById(leaveRequestId)
-        .exec();
+      const leaveRequest = await this.leaveRequestModel.findById(leaveRequestId).exec();
       if (!leaveRequest) {
         throw new Error(`LeaveRequest with ID ${leaveRequestId} not found`);
       }
@@ -4112,9 +4206,7 @@ export class LeavesService {
         status: 'flagged',
       };
     } catch (error) {
-      throw new Error(
-        `Failed to flag irregular pattern: ${(error as any).message}`,
-      );
+      throw new Error(`Failed to flag irregular pattern: ${(error as any).message}`);
     }
   }
 
@@ -4125,14 +4217,12 @@ export class LeavesService {
     accrualAmount: number,
     accrualType: string,
     policyId?: string,
-    notes?: string,
+    notes?: string
   ): Promise<any> {
     try {
       // BR 11: Check if employee is on unpaid leave or suspended
-      const employee = await this.employeeProfileModel
-        .findById(employeeId)
-        .exec();
-      
+      const employee = await this.employeeProfileModel.findById(employeeId).exec();
+
       if (!employee) {
         throw new Error(`Employee ${employeeId} not found`);
       }
@@ -4184,10 +4274,7 @@ export class LeavesService {
         };
       }
 
-      const entitlement = await this.getLeaveEntitlement(
-        employeeId,
-        leaveTypeId,
-      );
+      const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
       const previousBalance = entitlement.remaining;
 
       // Get policy for rounding rule
@@ -4207,7 +4294,7 @@ export class LeavesService {
             },
             $set: { lastAccrualDate: new Date() },
           },
-          { new: true },
+          { new: true }
         )
         .exec();
 
@@ -4217,10 +4304,7 @@ export class LeavesService {
 
       // Step 2: Round the TOTAL accruedActual (not just the increment)
       // This ensures accruedRounded = rounded(total accruedActual)
-      updated.accruedRounded = this.applyRoundingRule(
-        updated.accruedActual,
-        roundingRule,
-      );
+      updated.accruedRounded = this.applyRoundingRule(updated.accruedActual, roundingRule);
 
       // Step 3: Recalculate remaining using helper method
       updated.remaining = this.calculateRemaining(updated);
@@ -4247,7 +4331,7 @@ export class LeavesService {
     leaveTypeId: string,
     accrualAmount: number,
     accrualType: string,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<any> {
     try {
       const query: any = { leaveTypeId: new Types.ObjectId(leaveTypeId) };
@@ -4265,9 +4349,7 @@ export class LeavesService {
       for (const entitlement of entitlements) {
         try {
           // BR 11: Check if employee is on unpaid leave or suspended
-          const employee = await this.employeeProfileModel
-            .findById(entitlement.employeeId)
-            .exec();
+          const employee = await this.employeeProfileModel.findById(entitlement.employeeId).exec();
 
           if (!employee) {
             failed++;
@@ -4336,7 +4418,7 @@ export class LeavesService {
                   lastAccrualDate: new Date(),
                 },
               },
-              { new: true },
+              { new: true }
             )
             .exec();
 
@@ -4345,10 +4427,7 @@ export class LeavesService {
           }
 
           // Step 2: Round the TOTAL accruedActual (not just the increment)
-          updated.accruedRounded = this.applyRoundingRule(
-            updated.accruedActual,
-            roundingRule,
-          );
+          updated.accruedRounded = this.applyRoundingRule(updated.accruedActual, roundingRule);
           await updated.save();
 
           // Recalculate remaining using helper method
@@ -4382,9 +4461,7 @@ export class LeavesService {
         details: results,
       };
     } catch (error) {
-      throw new Error(
-        `Failed to accrue leave for all employees: ${(error as any).message}`,
-      );
+      throw new Error(`Failed to accrue leave for all employees: ${(error as any).message}`);
     }
   }
 
@@ -4393,7 +4470,7 @@ export class LeavesService {
     leaveTypeId: string,
     employeeId?: string,
     asOfDate?: Date,
-    departmentId?: string,
+    departmentId?: string
   ): Promise<any> {
     console.log(`[runCarryForward] ════════════════════════════════════════`);
     console.log(`[runCarryForward] START - Called with:`, {
@@ -4402,7 +4479,7 @@ export class LeavesService {
       asOfDate,
       departmentId,
     });
-    
+
     try {
       const processDate = asOfDate || new Date();
       console.log(`[runCarryForward] Process date: ${processDate}`);
@@ -4414,29 +4491,31 @@ export class LeavesService {
       }
       // departmentId is currently not used in filtering; you can add it later if needed
 
-      const entitlements = await this.leaveEntitlementModel
-        .find(query)
-        .exec();
-      
+      const entitlements = await this.leaveEntitlementModel.find(query).exec();
+
       // Check for duplicate entitlements (same employee + leave type)
       const employeeLeaveTypeMap = new Map<string, any[]>();
-      entitlements.forEach(ent => {
+      entitlements.forEach((ent) => {
         const key = `${ent.employeeId?.toString()}_${ent.leaveTypeId?.toString()}`;
         if (!employeeLeaveTypeMap.has(key)) {
           employeeLeaveTypeMap.set(key, []);
         }
-        employeeLeaveTypeMap.get(key)!.push(ent);
+        employeeLeaveTypeMap.get(key).push(ent);
       });
-      
+
       // Log duplicates if found
       employeeLeaveTypeMap.forEach((ents, key) => {
         if (ents.length > 1) {
-          console.warn(`[runCarryForward] ⚠️ Found ${ents.length} duplicate entitlements for ${key}`);
+          console.warn(
+            `[runCarryForward] ⚠️ Found ${ents.length} duplicate entitlements for ${key}`
+          );
         }
       });
-      
-      console.log(`[runCarryForward] Found ${entitlements.length} entitlements to process for leaveTypeId: ${leaveTypeId}`);
-      
+
+      console.log(
+        `[runCarryForward] Found ${entitlements.length} entitlements to process for leaveTypeId: ${leaveTypeId}`
+      );
+
       const results: any[] = [];
       let successful = 0;
       let failed = 0;
@@ -4446,12 +4525,10 @@ export class LeavesService {
       let leavePolicy = await this.leavePolicyModel
         .findOne({ leaveTypeId: new Types.ObjectId(leaveTypeId) })
         .exec();
-      
+
       // If not found, try as string
       if (!leavePolicy) {
-        leavePolicy = await this.leavePolicyModel
-          .findOne({ leaveTypeId: leaveTypeId })
-          .exec();
+        leavePolicy = await this.leavePolicyModel.findOne({ leaveTypeId: leaveTypeId }).exec();
       }
 
       const maxCarryForward = leavePolicy?.maxCarryForward || 0;
@@ -4471,17 +4548,20 @@ export class LeavesService {
       const canCarryForward = carryForwardAllowed || maxCarryForward > 0;
 
       if (!canCarryForward) {
-        console.warn(`[runCarryForward] Carry forward not allowed: carryForwardAllowed=${carryForwardAllowed}, maxCarryForward=${maxCarryForward}`);
+        console.warn(
+          `[runCarryForward] Carry forward not allowed: carryForwardAllowed=${carryForwardAllowed}, maxCarryForward=${maxCarryForward}`
+        );
         return {
           processedDate: processDate,
           leaveTypeId,
           successful: 0,
           failed: 0,
           total: entitlements.length,
-          details: entitlements.map(ent => ({
+          details: entitlements.map((ent) => ({
             employeeId: ent.employeeId,
             status: 'skipped',
-            reason: 'Carry forward not allowed by policy. Please enable "Carry Forward Allowed" or set "Max Carry Forward" to a positive value.',
+            reason:
+              'Carry forward not allowed by policy. Please enable "Carry Forward Allowed" or set "Max Carry Forward" to a positive value.',
             carryForwardAmount: 0,
             newBalance: ent.remaining,
           })),
@@ -4489,10 +4569,13 @@ export class LeavesService {
       }
 
       // If maxCarryForward is 0 but carryForwardAllowed is true, use a default
-      const effectiveMaxCarryForward = maxCarryForward > 0 ? maxCarryForward : (carryForwardAllowed ? 999 : 0);
-      
+      const effectiveMaxCarryForward =
+        maxCarryForward > 0 ? maxCarryForward : carryForwardAllowed ? 999 : 0;
+
       if (maxCarryForward === 0 && carryForwardAllowed) {
-        console.warn(`[runCarryForward] maxCarryForward is 0 but carryForwardAllowed is true. Using unlimited carry forward.`);
+        console.warn(
+          `[runCarryForward] maxCarryForward is 0 but carryForwardAllowed is true. Using unlimited carry forward.`
+        );
       }
 
       for (const entitlement of entitlements) {
@@ -4500,20 +4583,20 @@ export class LeavesService {
           // IMPORTANT: Recalculate remaining balance before calculating carry forward
           // This ensures we're using the correct current balance
           const currentRemaining = this.calculateRemaining(entitlement);
-          
+
           // For carry forward, we need to consider what CAN be carried forward
           // This is typically the remaining balance, but if remaining is 0 and there's
           // accrued that hasn't been accounted for, we should check yearlyEntitlement - taken
           // However, the standard approach is: carry forward = remaining balance (up to max)
-          
+
           // Calculate potential carry forward from remaining balance
-          let potentialCarryForward = currentRemaining;
-          
+          const potentialCarryForward = currentRemaining;
+
           // If remaining is 0 or very small, but there's yearly entitlement and taken is less than entitlement,
           // this might indicate we're at year-end and should carry forward unused entitlement
           // However, this should typically be handled by the reset process, not carry forward
           // For now, we'll stick with remaining balance as the source
-          
+
           console.log(`[runCarryForward] Processing entitlement:`, {
             employeeId: entitlement.employeeId?.toString(),
             yearlyEntitlement: entitlement.yearlyEntitlement,
@@ -4530,10 +4613,7 @@ export class LeavesService {
 
           // Use effectiveMaxCarryForward (handles case where maxCarryForward is 0 but carryForwardAllowed is true)
           // Use the RECALCULATED remaining balance, not the stored one
-          const carryForwardAmount = Math.min(
-            potentialCarryForward,
-            effectiveMaxCarryForward,
-          );
+          const carryForwardAmount = Math.min(potentialCarryForward, effectiveMaxCarryForward);
 
           console.log(`[runCarryForward] Calculated carryForwardAmount: ${carryForwardAmount}`);
 
@@ -4548,16 +4628,18 @@ export class LeavesService {
               pending: entitlement.pending,
               currentCarryForward: entitlement.carryForward || 0,
               calculatedRemaining: currentRemaining,
-              suggestion: currentRemaining === 0 && entitlement.yearlyEntitlement > 0 
-                ? 'Consider running accruals first, or this may be expected if all leave was used/reset'
-                : 'This is expected if remaining balance is 0'
+              suggestion:
+                currentRemaining === 0 && entitlement.yearlyEntitlement > 0
+                  ? 'Consider running accruals first, or this may be expected if all leave was used/reset'
+                  : 'This is expected if remaining balance is 0',
             });
             results.push({
               employeeId: entitlement.employeeId,
               status: 'skipped',
-              reason: effectiveMaxCarryForward === 0 
-                ? 'Max carry forward is 0 in policy' 
-                : `No remaining balance to carry forward (current remaining: ${currentRemaining.toFixed(2)} days). Accrued: ${entitlement.accruedRounded}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending}`,
+              reason:
+                effectiveMaxCarryForward === 0
+                  ? 'Max carry forward is 0 in policy'
+                  : `No remaining balance to carry forward (current remaining: ${currentRemaining.toFixed(2)} days). Accrued: ${entitlement.accruedRounded}, Taken: ${entitlement.taken}, Pending: ${entitlement.pending}`,
               carryForwardAmount: 0,
               newBalance: currentRemaining,
               details: {
@@ -4568,7 +4650,7 @@ export class LeavesService {
                 pending: entitlement.pending,
                 currentCarryForward: entitlement.carryForward || 0,
                 calculatedRemaining: currentRemaining,
-              }
+              },
             });
             continue;
           }
@@ -4576,13 +4658,13 @@ export class LeavesService {
           // Record the previous remaining balance and carryForward for reference
           const previousRemaining = currentRemaining; // Use recalculated remaining
           const previousCarryForward = entitlement.carryForward || 0;
-          
+
           // Calculate new remaining: subtract the carry forward amount from current remaining
           // The carryForward field will be set to the amount being carried forward
           // When carry forward happens, we're moving days FROM remaining TO carryForward
           // So remaining should decrease by the carry forward amount
           const newRemaining = previousRemaining - carryForwardAmount;
-          
+
           // Ensure remaining doesn't go negative (shouldn't happen if carryForwardAmount <= remaining)
           if (newRemaining < 0) {
             console.error(`[runCarryForward] ❌ Carry forward amount exceeds remaining:`, {
@@ -4594,9 +4676,11 @@ export class LeavesService {
               taken: entitlement.taken,
               pending: entitlement.pending,
             });
-            throw new Error(`Carry forward amount (${carryForwardAmount}) exceeds remaining balance (${previousRemaining}). This should not happen - carryForwardAmount should be min(remaining, maxCarryForward)`);
+            throw new Error(
+              `Carry forward amount (${carryForwardAmount}) exceeds remaining balance (${previousRemaining}). This should not happen - carryForwardAmount should be min(remaining, maxCarryForward)`
+            );
           }
-          
+
           // Round to 2 decimal places to avoid floating point precision issues
           const roundedRemaining = Math.round(newRemaining * 100) / 100;
           const roundedCarryForward = Math.round(carryForwardAmount * 100) / 100;
@@ -4618,13 +4702,15 @@ export class LeavesService {
             .exec();
 
           if (!freshEntitlement) {
-            throw new Error(`Entitlement not found: ${entitlement._id} for employee ${entitlement.employeeId?.toString()}`);
+            throw new Error(
+              `Entitlement not found: ${entitlement._id} for employee ${entitlement.employeeId?.toString()}`
+            );
           }
 
           // Update the fields
           freshEntitlement.carryForward = roundedCarryForward;
           freshEntitlement.remaining = roundedRemaining;
-          
+
           // Save the document with error handling
           let updated;
           try {
@@ -4635,17 +4721,19 @@ export class LeavesService {
               error: saveError.message,
               validationErrors: saveError.errors,
             });
-            throw new Error(`Failed to save entitlement: ${saveError.message || 'Unknown save error'}`);
+            throw new Error(
+              `Failed to save entitlement: ${saveError.message || 'Unknown save error'}`
+            );
           }
-          
+
           if (!updated) {
             throw new Error(`Save returned null for entitlement ${entitlement._id}`);
           }
-          
+
           // Verify the calculation is correct after save
           // After updating carryForward and remaining, recalculate to ensure consistency
           const verifyRemaining = this.calculateRemaining(updated);
-          
+
           console.log(`[runCarryForward] Verification after save:`, {
             employeeId: entitlement.employeeId?.toString(),
             accruedRounded: updated.accruedRounded,
@@ -4656,19 +4744,24 @@ export class LeavesService {
             calculatedRemaining: verifyRemaining,
             difference: Math.abs(verifyRemaining - updated.remaining),
           });
-          
+
           // If there's a mismatch, update remaining to match the calculation
           // This ensures remaining = accruedRounded + carryForward - taken - pending
           let finalRemaining = updated.remaining;
           if (Math.abs(verifyRemaining - updated.remaining) > 0.01) {
-            console.warn(`[runCarryForward] ⚠️ Remaining mismatch after save. Saved: ${updated.remaining}, Calculated: ${verifyRemaining}. Updating...`);
+            console.warn(
+              `[runCarryForward] ⚠️ Remaining mismatch after save. Saved: ${updated.remaining}, Calculated: ${verifyRemaining}. Updating...`
+            );
             updated.remaining = verifyRemaining;
             finalRemaining = verifyRemaining;
             try {
               await updated.save();
               console.log(`[runCarryForward] ✅ Corrected remaining to ${verifyRemaining}`);
             } catch (recalcError: any) {
-              console.error(`[runCarryForward] ❌ Error saving recalculated remaining:`, recalcError.message);
+              console.error(
+                `[runCarryForward] ❌ Error saving recalculated remaining:`,
+                recalcError.message
+              );
               // Don't throw - the main update succeeded, this is just a correction
             }
           }
@@ -4695,40 +4788,52 @@ export class LeavesService {
           // Double-check the values were saved correctly
           // Use finalRemaining (which may have been corrected) for comparison
           if (verification) {
-            const carryForwardDiff = Math.abs((verification.carryForward || 0) - roundedCarryForward);
+            const carryForwardDiff = Math.abs(
+              (verification.carryForward || 0) - roundedCarryForward
+            );
             const remainingDiff = Math.abs((verification.remaining || 0) - finalRemaining);
-            
+
             // Also verify the calculation matches
-            const verificationCalculatedRemaining = (verification.accruedRounded || 0) + 
-              (verification.carryForward || 0) - 
-              (verification.taken || 0) - 
+            const verificationCalculatedRemaining =
+              (verification.accruedRounded || 0) +
+              (verification.carryForward || 0) -
+              (verification.taken || 0) -
               (verification.pending || 0);
-            const calculationDiff = Math.abs(verification.remaining - verificationCalculatedRemaining);
-            
+            const calculationDiff = Math.abs(
+              verification.remaining - verificationCalculatedRemaining
+            );
+
             if (carryForwardDiff > 0.01 || remainingDiff > 0.01) {
-              console.error(`[runCarryForward] ⚠️ WARNING: Values may not have persisted correctly!`, {
-                expectedCarryForward: roundedCarryForward,
-                actualCarryForward: verification.carryForward,
-                carryForwardDiff: carryForwardDiff,
-                expectedRemaining: finalRemaining,
-                actualRemaining: verification.remaining,
-                remainingDiff: remainingDiff,
-                verificationCalculatedRemaining,
-                calculationDiff,
-              });
-              
+              console.error(
+                `[runCarryForward] ⚠️ WARNING: Values may not have persisted correctly!`,
+                {
+                  expectedCarryForward: roundedCarryForward,
+                  actualCarryForward: verification.carryForward,
+                  carryForwardDiff: carryForwardDiff,
+                  expectedRemaining: finalRemaining,
+                  actualRemaining: verification.remaining,
+                  remainingDiff: remainingDiff,
+                  verificationCalculatedRemaining,
+                  calculationDiff,
+                }
+              );
+
               // Create detailed error message showing which value(s) failed
               const errors: string[] = [];
               if (carryForwardDiff > 0.01) {
-                errors.push(`carryForward: expected ${roundedCarryForward}, got ${verification.carryForward}`);
+                errors.push(
+                  `carryForward: expected ${roundedCarryForward}, got ${verification.carryForward}`
+                );
               }
               if (remainingDiff > 0.01) {
                 errors.push(`remaining: expected ${finalRemaining}, got ${verification.remaining}`);
               }
               if (calculationDiff > 0.01) {
-                errors.push(`remaining calculation mismatch: saved ${verification.remaining}, but calculated ${verificationCalculatedRemaining} from (accruedRounded: ${verification.accruedRounded} + carryForward: ${verification.carryForward} - taken: ${verification.taken} - pending: ${verification.pending})`);
+                errors.push(
+                  `remaining calculation mismatch: saved ${verification.remaining}, but calculated ${verificationCalculatedRemaining} from (accruedRounded: ${verification.accruedRounded} + carryForward: ${verification.carryForward} - taken: ${verification.taken} - pending: ${verification.pending})`
+                );
               }
-              
+
               throw new Error(`Update verification failed. ${errors.join('; ')}`);
             }
           }
@@ -4757,7 +4862,7 @@ export class LeavesService {
               pending: entitlement.pending,
               carryForward: entitlement.carryForward,
               remaining: entitlement.remaining,
-            }
+            },
           });
           results.push({
             employeeId: entitlement.employeeId,
@@ -4771,7 +4876,7 @@ export class LeavesService {
               pending: entitlement.pending,
               carryForward: entitlement.carryForward || 0,
               remaining: entitlement.remaining,
-            }
+            },
           });
         }
       }
@@ -4804,13 +4909,10 @@ export class LeavesService {
     fromDate: Date,
     toDate?: Date,
     reason?: string,
-    notes?: string,
+    notes?: string
   ): Promise<any> {
     try {
-      const entitlement = await this.getLeaveEntitlement(
-        employeeId,
-        leaveTypeId,
-      );
+      const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
       // Normalize the starting remaining value to avoid floating point precision issues
       const previousBalance = Math.round(entitlement.remaining * 100) / 100;
       entitlement.remaining = previousBalance;
@@ -4820,34 +4922,33 @@ export class LeavesService {
       let leavePolicy = await this.leavePolicyModel
         .findOne({ leaveTypeId: new Types.ObjectId(leaveTypeId) })
         .exec();
-      
+
       // If not found, try as string
       if (!leavePolicy) {
-        leavePolicy = await this.leavePolicyModel
-          .findOne({ leaveTypeId: leaveTypeId })
-          .exec();
+        leavePolicy = await this.leavePolicyModel.findOne({ leaveTypeId: leaveTypeId }).exec();
       }
-      
+
       // If still not found, try using the entitlement's leaveTypeId
       if (!leavePolicy && entitlement.leaveTypeId) {
         const entLeaveTypeId = entitlement.leaveTypeId as any;
-        const entitlementLeaveTypeId = entLeaveTypeId instanceof Types.ObjectId 
-          ? entLeaveTypeId 
-          : new Types.ObjectId(String(entLeaveTypeId));
+        const entitlementLeaveTypeId =
+          entLeaveTypeId instanceof Types.ObjectId
+            ? entLeaveTypeId
+            : new Types.ObjectId(String(entLeaveTypeId));
         leavePolicy = await this.leavePolicyModel
           .findOne({ leaveTypeId: entitlementLeaveTypeId })
           .exec();
       }
-      
+
       const roundingRule = leavePolicy?.roundingRule || RoundingRule.NONE;
-      
+
       console.log(`[adjustAccrual] Policy lookup:`, {
         leaveTypeId,
         entitlementLeaveTypeId: entitlement.leaveTypeId ? String(entitlement.leaveTypeId) : 'N/A',
         policyFound: !!leavePolicy,
         roundingRule: roundingRule,
         policyRoundingRule: leavePolicy?.roundingRule,
-        adjustmentType: adjustmentType
+        adjustmentType: adjustmentType,
       });
 
       switch (adjustmentType) {
@@ -4860,22 +4961,22 @@ export class LeavesService {
           entitlement.remaining -= adjustmentAmount;
           console.log(`[adjustAccrual] Reduction - Before rounding: ${entitlement.remaining}`);
           // Apply policy rounding rule to remaining
-          entitlement.remaining = this.applyRoundingRule(
-            entitlement.remaining,
-            roundingRule,
+          entitlement.remaining = this.applyRoundingRule(entitlement.remaining, roundingRule);
+          console.log(
+            `[adjustAccrual] Reduction - After rounding (${roundingRule}): ${entitlement.remaining}`
           );
-          console.log(`[adjustAccrual] Reduction - After rounding (${roundingRule}): ${entitlement.remaining}`);
           break;
         case 'adjustment':
           entitlement.remaining += adjustmentAmount;
-          console.log(`[adjustAccrual] Adjustment - Before rounding: ${entitlement.remaining}, Adjustment amount: ${adjustmentAmount}`);
+          console.log(
+            `[adjustAccrual] Adjustment - Before rounding: ${entitlement.remaining}, Adjustment amount: ${adjustmentAmount}`
+          );
           // Apply policy rounding rule to remaining
           const beforeRounding = entitlement.remaining;
-          entitlement.remaining = this.applyRoundingRule(
-            entitlement.remaining,
-            roundingRule,
+          entitlement.remaining = this.applyRoundingRule(entitlement.remaining, roundingRule);
+          console.log(
+            `[adjustAccrual] Adjustment - After rounding (${roundingRule}): ${beforeRounding} -> ${entitlement.remaining}`
           );
-          console.log(`[adjustAccrual] Adjustment - After rounding (${roundingRule}): ${beforeRounding} -> ${entitlement.remaining}`);
           break;
         case 'restoration':
           entitlement.accruedActual += adjustmentAmount;
@@ -4890,7 +4991,7 @@ export class LeavesService {
       if (adjustmentType === 'suspension' || adjustmentType === 'restoration') {
         entitlement.accruedRounded = this.applyRoundingRule(
           entitlement.accruedActual,
-          roundingRule,
+          roundingRule
         );
       }
 
@@ -4898,14 +4999,16 @@ export class LeavesService {
       // For reduction/adjustment: directly update remaining without touching accrued fields
       // For suspension/restoration: update accrued and let remaining be recalculated
       let updated: LeaveEntitlementDocument;
-      
+
       if (adjustmentType === 'reduction' || adjustmentType === 'adjustment') {
         // Direct remaining change - update directly without going through updateLeaveEntitlement
         // to avoid any recalculation logic that might interfere
         // Ensure the rounded value is what we save
         const roundedRemaining = entitlement.remaining;
-        console.log(`[adjustAccrual] Saving remaining value: ${roundedRemaining} (rounded with rule: ${roundingRule})`);
-        
+        console.log(
+          `[adjustAccrual] Saving remaining value: ${roundedRemaining} (rounded with rule: ${roundingRule})`
+        );
+
         updated = await this.leaveEntitlementModel
           .findByIdAndUpdate(
             entitlement._id.toString(),
@@ -4913,14 +5016,16 @@ export class LeavesService {
             { new: true }
           )
           .exec();
-        
+
         if (!updated) {
           throw new Error('Failed to update entitlement');
         }
-        
+
         // Verify the value was saved correctly
-        console.log(`[adjustAccrual] Saved remaining value: ${updated.remaining}, Expected: ${roundedRemaining}`);
-        
+        console.log(
+          `[adjustAccrual] Saved remaining value: ${updated.remaining}, Expected: ${roundedRemaining}`
+        );
+
         // Ensure the returned document has the correct rounded value
         updated.remaining = roundedRemaining;
       } else {
@@ -4929,11 +5034,8 @@ export class LeavesService {
           accruedActual: entitlement.accruedActual,
           accruedRounded: entitlement.accruedRounded,
         };
-        
-        updated = await this.updateLeaveEntitlement(
-          entitlement._id.toString(),
-          updateData,
-        );
+
+        updated = await this.updateLeaveEntitlement(entitlement._id.toString(), updateData);
 
         if (!updated) {
           throw new Error('Failed to update entitlement');
@@ -4945,7 +5047,7 @@ export class LeavesService {
         updated.remaining = Math.round(updated.remaining * 100) / 100;
         await updated.save();
       }
-      
+
       // Clamp to avoid negative remaining (optional - depends on business rules)
       // updated.remaining = Math.max(0, updated.remaining);
 
@@ -4970,7 +5072,7 @@ export class LeavesService {
   private async calculateWorkingDays(
     startDate: Date,
     endDate: Date,
-    employeeId: string,
+    employeeId: string
   ): Promise<number> {
     let workingDays = 0;
     const currentDate = new Date(startDate);
@@ -4980,10 +5082,7 @@ export class LeavesService {
 
     // Get calendar for the year
     const year = currentDate.getFullYear();
-    const calendar = await this.calendarModel
-      .findOne({ year })
-      .populate('holidays')
-      .exec();
+    const calendar = await this.calendarModel.findOne({ year }).populate('holidays').exec();
 
     // Get holidays as date strings for quick lookup
     const holidayDates = new Set<string>();
@@ -5038,7 +5137,7 @@ export class LeavesService {
   async checkEligibility(
     employeeId: string,
     leaveTypeId: string,
-    employeeProfile?: EmployeeProfileDocument,
+    employeeProfile?: EmployeeProfileDocument
   ): Promise<void> {
     // Fetch employee profile if not provided
     let employee: EmployeeProfileDocument;
@@ -5071,24 +5170,24 @@ export class LeavesService {
     if (eligibility.minTenureMonths !== undefined && eligibility.minTenureMonths !== null) {
       const hireDate = new Date(employee.dateOfHire);
       const today = new Date();
-      
+
       // Calculate months of service
       const yearsDiff = today.getFullYear() - hireDate.getFullYear();
       const monthsDiff = today.getMonth() - hireDate.getMonth();
       const totalMonths = yearsDiff * 12 + monthsDiff;
-      
+
       // Adjust for days (if today's day is less than hire day, subtract a month)
       if (today.getDate() < hireDate.getDate()) {
         const adjustedMonths = totalMonths - 1;
         if (adjustedMonths < eligibility.minTenureMonths) {
           errors.push(
-            `Minimum tenure requirement not met. Required: ${eligibility.minTenureMonths} months, Current: ${adjustedMonths} months`,
+            `Minimum tenure requirement not met. Required: ${eligibility.minTenureMonths} months, Current: ${adjustedMonths} months`
           );
         }
       } else {
         if (totalMonths < eligibility.minTenureMonths) {
           errors.push(
-            `Minimum tenure requirement not met. Required: ${eligibility.minTenureMonths} months, Current: ${totalMonths} months`,
+            `Minimum tenure requirement not met. Required: ${eligibility.minTenureMonths} months, Current: ${totalMonths} months`
           );
         }
       }
@@ -5115,7 +5214,7 @@ export class LeavesService {
           const PositionModel = this.employeeProfileModel.db.model('Position');
           const position = await PositionModel.findById(employee.primaryPositionId).exec();
           if (position) {
-            positionCode = (position as any).code;
+            positionCode = position.code;
           }
         }
 
@@ -5125,7 +5224,7 @@ export class LeavesService {
           const isPositionAllowed = eligibility.positionsAllowed.includes(positionCode);
           if (!isPositionAllowed) {
             errors.push(
-              `Position '${positionCode}' is not eligible for this leave type. Allowed positions: ${eligibility.positionsAllowed.join(', ')}`,
+              `Position '${positionCode}' is not eligible for this leave type. Allowed positions: ${eligibility.positionsAllowed.join(', ')}`
             );
           }
         }
@@ -5142,12 +5241,11 @@ export class LeavesService {
       if (!employeeContractType) {
         errors.push('Employee does not have a contract type assigned');
       } else {
-        const isContractTypeAllowed = eligibility.contractTypesAllowed.includes(
-          employeeContractType,
-        );
+        const isContractTypeAllowed =
+          eligibility.contractTypesAllowed.includes(employeeContractType);
         if (!isContractTypeAllowed) {
           errors.push(
-            `Contract type '${employeeContractType}' is not eligible for this leave type. Allowed contract types: ${eligibility.contractTypesAllowed.join(', ')}`,
+            `Contract type '${employeeContractType}' is not eligible for this leave type. Allowed contract types: ${eligibility.contractTypesAllowed.join(', ')}`
           );
         }
       }
@@ -5155,9 +5253,7 @@ export class LeavesService {
 
     // Throw error if any eligibility checks failed
     if (errors.length > 0) {
-      throw new BadRequestException(
-        `Eligibility check failed:\n${errors.join('\n')}`,
-      );
+      throw new BadRequestException(`Eligibility check failed:\n${errors.join('\n')}`);
     }
   }
 
@@ -5184,16 +5280,10 @@ export class LeavesService {
   // Business Rule: Calculate reset date based on criterion (Hire date, First Vacation Date, Revised Hire Date, Work Receiving Date)
   async calculateResetDate(
     employeeId: string,
-    criterion:
-      | 'HIRE_DATE'
-      | 'FIRST_VACATION_DATE'
-      | 'REVISED_HIRE_DATE'
-      | 'WORK_RECEIVING_DATE',
-    leaveTypeId: string,
+    criterion: 'HIRE_DATE' | 'FIRST_VACATION_DATE' | 'REVISED_HIRE_DATE' | 'WORK_RECEIVING_DATE',
+    leaveTypeId: string
   ): Promise<Date> {
-    const employeeProfile = await this.employeeProfileModel
-      .findById(employeeId)
-      .exec();
+    const employeeProfile = await this.employeeProfileModel.findById(employeeId).exec();
     if (!employeeProfile) {
       throw new Error(`Employee ${employeeId} not found`);
     }
@@ -5251,17 +5341,9 @@ export class LeavesService {
   async updateResetDateForEmployee(
     employeeId: string,
     leaveTypeId: string,
-    criterion:
-      | 'HIRE_DATE'
-      | 'FIRST_VACATION_DATE'
-      | 'REVISED_HIRE_DATE'
-      | 'WORK_RECEIVING_DATE',
+    criterion: 'HIRE_DATE' | 'FIRST_VACATION_DATE' | 'REVISED_HIRE_DATE' | 'WORK_RECEIVING_DATE'
   ): Promise<void> {
-    const resetDate = await this.calculateResetDate(
-      employeeId,
-      criterion,
-      leaveTypeId,
-    );
+    const resetDate = await this.calculateResetDate(employeeId, criterion, leaveTypeId);
     const entitlement = await this.getLeaveEntitlement(employeeId, leaveTypeId);
 
     await this.updateLeaveEntitlement(entitlement._id.toString(), {
@@ -5287,7 +5369,7 @@ export class LeavesService {
     if (!filePath && file.filename) {
       filePath = path.join(uploadsDir, file.filename);
     }
-    
+
     if (!filePath) {
       throw new BadRequestException('File path is missing. File upload failed.');
     }
@@ -5316,10 +5398,10 @@ export class LeavesService {
   async verifyDocument(
     leaveRequestId: string,
     hrUserId: string,
-    verificationNotes?: string,
+    verificationNotes?: string
   ): Promise<LeaveRequestDocument> {
-    const requestId = this.toObjectId(leaveRequestId) as Types.ObjectId;
-    const hrUserObjectId = this.toObjectId(hrUserId) as Types.ObjectId;
+    const requestId = this.toObjectId(leaveRequestId);
+    const hrUserObjectId = this.toObjectId(hrUserId);
 
     const leaveRequest = await this.leaveRequestModel.findById(requestId).exec();
     if (!leaveRequest) {
@@ -5354,10 +5436,10 @@ export class LeavesService {
   async rejectDocument(
     leaveRequestId: string,
     hrUserId: string,
-    rejectionReason: string,
+    rejectionReason: string
   ): Promise<LeaveRequestDocument> {
-    const requestId = this.toObjectId(leaveRequestId) as Types.ObjectId;
-    const hrUserObjectId = this.toObjectId(hrUserId) as Types.ObjectId;
+    const requestId = this.toObjectId(leaveRequestId);
+    const hrUserObjectId = this.toObjectId(hrUserId);
 
     const leaveRequest = await this.leaveRequestModel.findById(requestId).exec();
     if (!leaveRequest) {
@@ -5442,7 +5524,7 @@ export class LeavesService {
               shouldAccrue = true;
               // For per-term, use yearlyRate as the accrual amount
               accrualAmount = policy.yearlyRate || 0;
-              
+
               // Process per-term accrual for these entitlements
               for (const entitlement of entitlementsDue) {
                 try {
@@ -5452,14 +5534,14 @@ export class LeavesService {
                     accrualAmount,
                     accrualMethod,
                     undefined,
-                    'Automated per-term accrual from scheduled job',
+                    'Automated per-term accrual from scheduled job'
                   );
                   totalSuccessful++;
                   totalProcessed++;
                 } catch (err) {
                   console.error(
                     `[Automated Accrual] Failed for employee ${entitlement.employeeId}:`,
-                    (err as any).message,
+                    (err as any).message
                   );
                   totalFailed++;
                   totalProcessed++;
@@ -5471,7 +5553,7 @@ export class LeavesService {
 
           if (shouldAccrue && accrualAmount > 0) {
             console.log(
-              `[Automated Accrual] Processing ${accrualMethod} accrual for leave type ${leaveTypeId}, amount: ${accrualAmount}`,
+              `[Automated Accrual] Processing ${accrualMethod} accrual for leave type ${leaveTypeId}, amount: ${accrualAmount}`
             );
 
             // Get all entitlements for this leave type
@@ -5496,8 +5578,7 @@ export class LeavesService {
                       lastAccrualDate.getFullYear() < today.getFullYear();
                   } else if (accrualMethod === AccrualMethod.YEARLY) {
                     // For yearly, check if last accrual was in a previous year
-                    needsAccrual =
-                      lastAccrualDate.getFullYear() < today.getFullYear();
+                    needsAccrual = lastAccrualDate.getFullYear() < today.getFullYear();
                   }
                 }
 
@@ -5508,7 +5589,7 @@ export class LeavesService {
                     accrualAmount,
                     accrualMethod,
                     undefined,
-                    'Automated accrual from scheduled job',
+                    'Automated accrual from scheduled job'
                   );
                   totalSuccessful++;
                 }
@@ -5516,7 +5597,7 @@ export class LeavesService {
               } catch (err) {
                 console.error(
                   `[Automated Accrual] Failed for employee ${entitlement.employeeId}:`,
-                  (err as any).message,
+                  (err as any).message
                 );
                 totalFailed++;
               }
@@ -5525,19 +5606,16 @@ export class LeavesService {
         } catch (err) {
           console.error(
             `[Automated Accrual] Error processing policy ${policy._id}:`,
-            (err as any).message,
+            (err as any).message
           );
         }
       }
 
       console.log(
-        `[Automated Accrual] Completed. Processed: ${totalProcessed}, Successful: ${totalSuccessful}, Failed: ${totalFailed}`,
+        `[Automated Accrual] Completed. Processed: ${totalProcessed}, Successful: ${totalSuccessful}, Failed: ${totalFailed}`
       );
     } catch (error) {
-      console.error(
-        '[Automated Accrual] Fatal error in scheduled job:',
-        (error as any).message,
-      );
+      console.error('[Automated Accrual] Fatal error in scheduled job:', (error as any).message);
     }
   }
 
@@ -5546,16 +5624,16 @@ export class LeavesService {
    * Runs daily at 3 AM to check for due carry-forwards
    */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
-  
+
   // REQ-023, BR 28: Auto-escalate leave requests pending for > 48 hours
   @Cron(CronExpression.EVERY_HOUR) // Check every hour for requests pending > 48 hours
   async autoEscalatePendingRequests() {
     try {
       console.log('[AUTO-ESCALATION] Checking for leave requests pending > 48 hours...');
-      
+
       const now = new Date();
       const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-      
+
       // Find all pending requests created more than 48 hours ago
       const pendingRequests = await this.leaveRequestModel
         .find({
@@ -5564,24 +5642,31 @@ export class LeavesService {
         })
         .populate('employeeId', 'firstName lastName supervisorPositionId')
         .exec();
-      
+
       console.log(`[AUTO-ESCALATION] Found ${pendingRequests.length} requests pending > 48 hours`);
-      
+
       for (const request of pendingRequests) {
         try {
           const employee = request.employeeId as any;
           if (!employee || !employee.supervisorPositionId) {
-            console.warn(`[AUTO-ESCALATION] Request ${request._id} has no employee or supervisorPositionId, skipping`);
+            console.warn(
+              `[AUTO-ESCALATION] Request ${request._id} has no employee or supervisorPositionId, skipping`
+            );
             continue;
           }
-          
+
           // Get the manager (department head) - use flexible query to handle both ObjectId and string
-          const primaryPositionQuery = this.createFlexibleIdQuery('primaryPositionId', employee.supervisorPositionId);
+          const primaryPositionQuery = this.createFlexibleIdQuery(
+            'primaryPositionId',
+            employee.supervisorPositionId
+          );
           if (!primaryPositionQuery) {
-            console.warn(`[AUTO-ESCALATION] Invalid supervisorPositionId format: ${employee.supervisorPositionId}`);
+            console.warn(
+              `[AUTO-ESCALATION] Invalid supervisorPositionId format: ${employee.supervisorPositionId}`
+            );
             continue;
           }
-          
+
           const manager = await this.employeeProfileModel
             .findOne({
               ...primaryPositionQuery,
@@ -5590,38 +5675,37 @@ export class LeavesService {
             .select('_id employeeNumber firstName lastName')
             .lean()
             .exec();
-          
+
           if (!manager) {
             console.warn(`[AUTO-ESCALATION] No manager found for request ${request._id}, skipping`);
             continue;
           }
-          
+
           const managerId = manager._id.toString();
-          
+
           // Check if manager has an active delegate
           const delegations = this.delegationMap.get(managerId);
           let hasActiveDelegate = false;
           let activeDelegateId: string | null = null;
-          
+
           if (delegations && delegations.length > 0) {
             const activeDelegations = delegations.filter(
-              (del) =>
-                del.isActive &&
-                now >= del.startDate &&
-                now <= del.endDate,
+              (del) => del.isActive && now >= del.startDate && now <= del.endDate
             );
-            
+
             if (activeDelegations.length > 0) {
               hasActiveDelegate = true;
               activeDelegateId = activeDelegations[0].delegateId;
             }
           }
-          
+
           // If there's an active delegate, escalate to HR Manager
           // Otherwise, just log (the request is already with the manager)
           if (hasActiveDelegate && activeDelegateId) {
-            console.log(`[AUTO-ESCALATION] Request ${request._id} has been pending > 48 hours with active delegate ${activeDelegateId}, escalating to HR Manager`);
-            
+            console.log(
+              `[AUTO-ESCALATION] Request ${request._id} has been pending > 48 hours with active delegate ${activeDelegateId}, escalating to HR Manager`
+            );
+
             // Find HR Managers
             const hrManagerRoles = await this.systemRoleModel
               .find({
@@ -5630,11 +5714,11 @@ export class LeavesService {
               })
               .select('employeeProfileId')
               .exec();
-            
+
             const hrManagerIds = hrManagerRoles
-              .map(role => role.employeeProfileId?.toString())
+              .map((role) => role.employeeProfileId?.toString())
               .filter((id): id is string => !!id);
-            
+
             // Notify HR Managers about the escalation
             for (const hrManagerId of hrManagerIds) {
               await this.notificationLogModel.create({
@@ -5643,7 +5727,7 @@ export class LeavesService {
                 message: `⚠️ ESCALATION: Leave request from ${employee.firstName || ''} ${employee.lastName || ''} has been pending for more than 48 hours and requires attention.`,
               });
             }
-            
+
             // Also notify the delegate
             await this.notificationLogModel.create({
               to: new Types.ObjectId(activeDelegateId),
@@ -5651,19 +5735,21 @@ export class LeavesService {
               message: `⚠️ URGENT: Leave request from ${employee.firstName || ''} ${employee.lastName || ''} has been pending for more than 48 hours. Please review immediately.`,
             });
           } else {
-            console.log(`[AUTO-ESCALATION] Request ${request._id} has been pending > 48 hours (no active delegate), manager should handle`);
+            console.log(
+              `[AUTO-ESCALATION] Request ${request._id} has been pending > 48 hours (no active delegate), manager should handle`
+            );
           }
         } catch (error) {
           console.error(`[AUTO-ESCALATION] Error processing request ${request._id}:`, error);
         }
       }
-      
+
       console.log('[AUTO-ESCALATION] Auto-escalation check completed');
     } catch (error) {
       console.error('[AUTO-ESCALATION] Error in auto-escalation job:', error);
     }
   }
-  
+
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async automatedCarryForwardJob() {
     console.log('[Automated Carry-Forward] Starting scheduled carry-forward job...');
@@ -5702,15 +5788,13 @@ export class LeavesService {
       for (const [leaveTypeId, entitlementIds] of byLeaveType.entries()) {
         try {
           console.log(
-            `[Automated Carry-Forward] Processing leave type ${leaveTypeId} for ${entitlementIds.length} employees`,
+            `[Automated Carry-Forward] Processing leave type ${leaveTypeId} for ${entitlementIds.length} employees`
           );
 
           // Process each entitlement individually to ensure we only process those due for reset
           for (const entitlementId of entitlementIds) {
             try {
-              const entitlement = await this.leaveEntitlementModel
-                .findById(entitlementId)
-                .exec();
+              const entitlement = await this.leaveEntitlementModel.findById(entitlementId).exec();
 
               if (!entitlement) {
                 totalFailed++;
@@ -5743,10 +5827,7 @@ export class LeavesService {
 
               // Calculate carry-forward amount
               const maxCarryForward = leavePolicy.maxCarryForward || 0;
-              const carryForwardAmount = Math.min(
-                entitlement.remaining,
-                maxCarryForward,
-              );
+              const carryForwardAmount = Math.min(entitlement.remaining, maxCarryForward);
 
               if (carryForwardAmount > 0) {
                 // Update entitlement with carry-forward
@@ -5757,19 +5838,19 @@ export class LeavesService {
                       $set: { carryForward: carryForwardAmount },
                       $inc: { remaining: -carryForwardAmount },
                     },
-                    { new: true },
+                    { new: true }
                   )
                   .exec();
 
                 if (updated) {
                   // Recalculate remaining
                   updated.remaining = this.calculateRemaining(updated);
-                  
+
                   // Calculate next reset date (one year from today)
                   const nextReset = new Date(today);
                   nextReset.setFullYear(nextReset.getFullYear() + 1);
                   updated.nextResetDate = nextReset;
-                  
+
                   await updated.save();
                   totalSuccessful++;
                 } else {
@@ -5790,7 +5871,7 @@ export class LeavesService {
             } catch (err) {
               console.error(
                 `[Automated Carry-Forward] Error processing entitlement ${entitlementId}:`,
-                (err as any).message,
+                (err as any).message
               );
               totalFailed++;
             }
@@ -5798,18 +5879,18 @@ export class LeavesService {
         } catch (err) {
           console.error(
             `[Automated Carry-Forward] Error processing leave type ${leaveTypeId}:`,
-            (err as any).message,
+            (err as any).message
           );
         }
       }
 
       console.log(
-        `[Automated Carry-Forward] Completed. Processed: ${totalProcessed}, Successful: ${totalSuccessful}, Failed: ${totalFailed}`,
+        `[Automated Carry-Forward] Completed. Processed: ${totalProcessed}, Successful: ${totalSuccessful}, Failed: ${totalFailed}`
       );
     } catch (error) {
       console.error(
         '[Automated Carry-Forward] Fatal error in scheduled job:',
-        (error as any).message,
+        (error as any).message
       );
     }
   }

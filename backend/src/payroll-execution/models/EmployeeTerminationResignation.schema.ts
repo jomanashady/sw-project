@@ -36,5 +36,6 @@ export class EmployeeTerminationResignation {
   status: BenefitStatus; // pending, paid, approved ,rejected
 }
 
-export const EmployeeTerminationResignationSchema =
-  SchemaFactory.createForClass(EmployeeTerminationResignation);
+export const EmployeeTerminationResignationSchema = SchemaFactory.createForClass(
+  EmployeeTerminationResignation
+);

@@ -35,9 +35,7 @@ describe('EmployeeProfileController', () => {
       ],
     }).compile();
 
-    controller = module.get<EmployeeProfileController>(
-      EmployeeProfileController,
-    );
+    controller = module.get<EmployeeProfileController>(EmployeeProfileController);
     service = module.get<EmployeeProfileService>(EmployeeProfileService);
     reflector = module.get<Reflector>(Reflector);
   });
@@ -208,16 +206,11 @@ describe('EmployeeProfileController', () => {
         ...updateDto,
       };
 
-      mockEmployeeProfileService.updateSelfService.mockResolvedValue(
-        mockEmployee,
-      );
+      mockEmployeeProfileService.updateSelfService.mockResolvedValue(mockEmployee);
 
       const result = await controller.updateMyProfile(mockUser, updateDto);
 
-      expect(service.updateSelfService).toHaveBeenCalledWith(
-        mockUser.userId,
-        updateDto,
-      );
+      expect(service.updateSelfService).toHaveBeenCalledWith(mockUser.userId, updateDto);
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('data');
     });
@@ -287,16 +280,14 @@ describe('EmployeeProfileController', () => {
         ...assignDto,
       };
 
-      mockEmployeeProfileService.assignSystemRoles.mockResolvedValue(
-        mockSystemRole,
-      );
+      mockEmployeeProfileService.assignSystemRoles.mockResolvedValue(mockSystemRole);
 
       const result = await controller.assignRoles(assignDto);
 
       expect(service.assignSystemRoles).toHaveBeenCalledWith(
         assignDto.employeeProfileId,
         assignDto.roles,
-        assignDto.permissions,
+        assignDto.permissions
       );
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('data');

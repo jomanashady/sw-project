@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsEnum,
-  IsOptional,
-  MinLength,
-  MaxLength,
-} from 'class-validator';
+import { IsString, IsEnum, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateProfileChangeRequestDto {

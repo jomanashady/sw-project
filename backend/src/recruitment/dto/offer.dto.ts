@@ -1,15 +1,5 @@
-import {
-  IsString,
-  IsArray,
-  IsNumber,
-  IsOptional,
-  IsEnum,
-  Validate,
-} from 'class-validator';
-import {
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
+import { IsString, IsArray, IsNumber, IsOptional, IsEnum, Validate } from 'class-validator';
+import { ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { OfferResponseStatus } from '../enums/offer-response-status.enum';
 import { OfferFinalStatus } from '../enums/offer-final-status.enum';
 

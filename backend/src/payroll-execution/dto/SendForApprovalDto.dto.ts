@@ -1,6 +1,4 @@
-import {
-  IsMongoId,
-} from 'class-validator';
+import { IsMongoId } from 'class-validator';
 
 export class SendForApprovalDto {
   @IsMongoId()
@@ -12,4 +10,3 @@ export class SendForApprovalDto {
   @IsMongoId()
   financeStaffId: string; // MongoDB ObjectId of Finance Staff
 }
-

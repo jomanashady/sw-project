@@ -4,8 +4,7 @@ import { EmployeeProfile as Employee } from '../../employee-profile/models/emplo
 import { payrollRuns } from './payrollRuns.schema';
 import { BankStatus } from '../enums/payroll-execution-enum';
 
-export type employeePayrollDetailsDocument =
-  HydratedDocument<employeePayrollDetails>;
+export type employeePayrollDetailsDocument = HydratedDocument<employeePayrollDetails>;
 
 @Schema({ timestamps: true })
 export class employeePayrollDetails {
@@ -42,6 +41,4 @@ export class employeePayrollDetails {
   payrollRunId: mongoose.Types.ObjectId;
 }
 
-export const employeePayrollDetailsSchema = SchemaFactory.createForClass(
-  employeePayrollDetails,
-);
+export const employeePayrollDetailsSchema = SchemaFactory.createForClass(employeePayrollDetails);

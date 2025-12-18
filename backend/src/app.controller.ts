@@ -8,7 +8,7 @@ import { Public } from './common/decorators/public.decorator';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    @InjectConnection() private connection: Connection,
+    @InjectConnection() private connection: Connection
   ) {}
 
   @Public()

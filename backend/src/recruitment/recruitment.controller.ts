@@ -25,19 +25,9 @@ import { DocumentType } from './enums/document-type.enum';
 
 import { RecruitmentService } from './recruitment.service';
 import { CreateJobRequisitionDto } from './dto/job-requisition.dto';
-import {
-  CreateApplicationDto,
-  UpdateApplicationStatusDto,
-} from './dto/application.dto';
-import {
-  ScheduleInterviewDto,
-  UpdateInterviewStatusDto,
-} from './dto/interview.dto';
-import {
-  CreateOfferDto,
-  RespondToOfferDto,
-  FinalizeOfferDto,
-} from './dto/offer.dto';
+import { CreateApplicationDto, UpdateApplicationStatusDto } from './dto/application.dto';
+import { ScheduleInterviewDto, UpdateInterviewStatusDto } from './dto/interview.dto';
+import { CreateOfferDto, RespondToOfferDto, FinalizeOfferDto } from './dto/offer.dto';
 import { CreateOnboardingDto } from './dto/create-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import { UpdateOnboardingTaskDto } from './dto/update-task.dto';
@@ -133,14 +123,14 @@ export class RecruitmentController {
   updateJobTemplate(@Param('id') id: string, @Body() dto: UpdateJobTemplateDto) {
     return this.service.updateJobTemplate(id, dto);
   }
-//--------------------------APPLICATION--------------------------------------------------
+  //--------------------------APPLICATION--------------------------------------------------
   @UseGuards(RolesGuard)
   @Roles(SystemRole.JOB_CANDIDATE)
   @Post('application')
   apply(@Body() dto: CreateApplicationDto & { consentGiven: boolean }) {
     if (!dto.consentGiven) {
       throw new BadRequestException(
-        'Consent for data processing is required to submit application',
+        'Consent for data processing is required to submit application'
       );
     }
     return this.service.apply(dto, dto.consentGiven);
@@ -154,15 +144,17 @@ export class RecruitmentController {
   async uploadCandidateCV(
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: any,
-    @Body() body: any,
+    @Body() body: any
   ) {
     // Parse body - handles both form-data and manual entry
     const manualEntry = body?.manualEntry === true || body?.manualEntry === 'true';
     const resumeUrl = body?.resumeUrl;
 
-    const manualDocumentData = manualEntry ? {
-      resumeUrl,
-    } : undefined;
+    const manualDocumentData = manualEntry
+      ? {
+          resumeUrl,
+        }
+      : undefined;
 
     return this.service.uploadCandidateCV(candidateId, file, manualDocumentData);
   }
@@ -171,7 +163,7 @@ export class RecruitmentController {
   @Get('application')
   getAllApplications(
     @Query('requisitionId') requisitionId?: string,
-    @Query('prioritizeReferrals') prioritizeReferrals?: string,
+    @Query('prioritizeReferrals') prioritizeReferrals?: string
   ) {
     const prioritize = prioritizeReferrals !== 'false';
     return this.service.getAllApplications(requisitionId, prioritize);
@@ -190,7 +182,7 @@ export class RecruitmentController {
   updateAppStatus(
     @Param('id') id: string,
     @Body() dto: UpdateApplicationStatusDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     const changedBy = req.user?.id || req.user?._id;
     return this.service.updateApplicationStatus(id, dto, changedBy);
@@ -205,7 +197,12 @@ export class RecruitmentController {
   // when scheduling interviews (recruiters need to assign HR employees to panels)
   // =============================================================
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.RECRUITER)
+  @Roles(
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN,
+    SystemRole.RECRUITER
+  )
   @Get('hr-employees')
   getHREmployeesForPanel() {
     return this.service.getHREmployeesForPanel();
@@ -216,7 +213,7 @@ export class RecruitmentController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
     SystemRole.RECRUITER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   @Post('interview')
   scheduleInterview(@Body() dto: ScheduleInterviewDto, @Req() req: any) {
@@ -225,7 +222,7 @@ export class RecruitmentController {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
     const userRoles = req.user?.roles || [];
     const isRecruiter = userRoles.includes(SystemRole.RECRUITER);
-    
+
     // If recruiter schedules interview, automatically add them to panel
     if (isRecruiter && currentUserId) {
       // Ensure panel array exists
@@ -238,7 +235,7 @@ export class RecruitmentController {
         dto.panel.push(recruiterIdStr);
       }
     }
-    
+
     return this.service.scheduleInterview(dto);
   }
 
@@ -247,13 +244,10 @@ export class RecruitmentController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
     SystemRole.RECRUITER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   @Patch('interview/:id/status')
-  updateInterviewStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateInterviewStatusDto,
-  ) {
+  updateInterviewStatus(@Param('id') id: string, @Body() dto: UpdateInterviewStatusDto) {
     return this.service.updateInterviewStatus(id, dto);
   }
   // CHANGED: Added RECRUITER role to allow recruiters to submit feedback
@@ -264,13 +258,13 @@ export class RecruitmentController {
     SystemRole.HR_EMPLOYEE,
     SystemRole.HR_MANAGER,
     SystemRole.RECRUITER,
-    SystemRole.SYSTEM_ADMIN,
+    SystemRole.SYSTEM_ADMIN
   )
   @Post('interview/:id/feedback')
   submitInterviewFeedback(
     @Param('id') interviewId: string,
     @Body() dto: { score: number; comments?: string },
-    @Req() req: any,
+    @Req() req: any
   ) {
     const interviewerId = req.user?.userId || req.user?.id || req.user?._id;
     if (!interviewerId) {
@@ -280,7 +274,7 @@ export class RecruitmentController {
       interviewId,
       interviewerId,
       dto.score,
-      dto.comments,
+      dto.comments
     );
   }
 
@@ -343,13 +337,18 @@ export class RecruitmentController {
 
   // changed - modified to accept either file upload OR manual JSON body for testing
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.JOB_CANDIDATE, SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.JOB_CANDIDATE,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN
+  )
   @Post('offer/:id/upload-contract')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadContractDocument(
     @Param('id') offerId: string,
     @UploadedFile() file: any,
-    @Body() body: any,
+    @Body() body: any
   ) {
     // Parse body - handles both form-data and JSON
     const documentType = body?.documentType || DocumentType.CONTRACT;
@@ -358,28 +357,31 @@ export class RecruitmentController {
     const manualEntry = body?.manualEntry === true || body?.manualEntry === 'true';
 
     // If manual entry flag is set and no file, use manual data
-    const manualDocumentData = manualEntry && !file ? {
-      nationalId,
-      documentDescription,
-    } : undefined;
+    const manualDocumentData =
+      manualEntry && !file
+        ? {
+            nationalId,
+            documentDescription,
+          }
+        : undefined;
 
-    return this.service.uploadContractDocument(
-      offerId,
-      file,
-      documentType,
-      manualDocumentData,
-    );
+    return this.service.uploadContractDocument(offerId, file, documentType, manualDocumentData);
   }
 
   // changed - modified to accept either file upload OR manual entry for testing
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.JOB_CANDIDATE, SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.JOB_CANDIDATE,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN
+  )
   @Post('offer/:id/upload-form')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadCandidateForm(
     @Param('id') offerId: string,
     @UploadedFile() file: any,
-    @Body() body: any,
+    @Body() body: any
   ) {
     // Parse body - handles both form-data and manual entry
     const documentType = body?.documentType || DocumentType.ID;
@@ -388,10 +390,13 @@ export class RecruitmentController {
     const manualEntry = body?.manualEntry === true || body?.manualEntry === 'true';
 
     // If manual entry flag is set and no file, use manual data
-    const manualDocumentData = manualEntry && !file ? {
-      nationalId,
-      documentDescription,
-    } : undefined;
+    const manualDocumentData =
+      manualEntry && !file
+        ? {
+            nationalId,
+            documentDescription,
+          }
+        : undefined;
 
     return this.service.uploadCandidateForm(offerId, file, documentType, manualDocumentData);
   }
@@ -401,7 +406,7 @@ export class RecruitmentController {
   @Post('offer/:id/create-employee')
   async createEmployeeFromContract(
     @Param('id') offerId: string,
-    @Body() dto: CreateEmployeeFromContractDto,
+    @Body() dto: CreateEmployeeFromContractDto
   ) {
     return this.service.createEmployeeFromContract(offerId, dto);
   }
@@ -416,7 +421,7 @@ export class RecruitmentController {
       undefined, // contractSigningDate
       undefined, // startDate
       undefined, // workEmail
-      createOnboardingDto.contractId, // contractId from DTO
+      createOnboardingDto.contractId // contractId from DTO
     );
   }
 
@@ -448,11 +453,7 @@ export class RecruitmentController {
 
   // Check if employee already exists for an application
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.HR_EMPLOYEE,
-    SystemRole.SYSTEM_ADMIN,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.HR_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
   @Get('application/:id/employee-status')
   async checkEmployeeExistsForApplication(@Param('id') applicationId: string) {
     return this.service.checkEmployeeExistsForApplication(applicationId);
@@ -463,7 +464,7 @@ export class RecruitmentController {
   @Put('onboarding/:id')
   async updateOnboarding(
     @Param('id') id: string,
-    @Body() updateOnboardingDto: UpdateOnboardingDto,
+    @Body() updateOnboardingDto: UpdateOnboardingDto
   ) {
     return this.service.updateOnboarding(id, updateOnboardingDto);
   }
@@ -474,13 +475,9 @@ export class RecruitmentController {
   async updateOnboardingTask(
     @Param('id') id: string,
     @Param('taskIndex') taskIndex: string,
-    @Body() updateTaskDto: UpdateOnboardingTaskDto,
+    @Body() updateTaskDto: UpdateOnboardingTaskDto
   ) {
-    return this.service.updateOnboardingTask(
-      id,
-      parseInt(taskIndex),
-      updateTaskDto,
-    );
+    return this.service.updateOnboardingTask(id, parseInt(taskIndex), updateTaskDto);
   }
 
   @UseGuards(RolesGuard)
@@ -494,10 +491,7 @@ export class RecruitmentController {
   @Roles(SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Delete('onboarding/:id/task/:taskIndex')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async removeTaskFromOnboarding(
-    @Param('id') id: string,
-    @Param('taskIndex') taskIndex: string,
-  ) {
+  async removeTaskFromOnboarding(@Param('id') id: string, @Param('taskIndex') taskIndex: string) {
     return this.service.removeTaskFromOnboarding(id, parseInt(taskIndex, 10));
   }
 
@@ -512,14 +506,19 @@ export class RecruitmentController {
   // changed - modified to accept either file upload OR manual entry for testing
   // ONB-007: New hires can upload their own documents for onboarding tasks
   @UseGuards(RolesGuard)
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.HR_EMPLOYEE, SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.HR_EMPLOYEE,
+    SystemRole.HR_MANAGER,
+    SystemRole.SYSTEM_ADMIN
+  )
   @Post('onboarding/:id/task/:taskIndex/upload')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadTaskDocument(
     @Param('id') onboardingId: string,
     @Param('taskIndex') taskIndex: string,
     @UploadedFile() file: any,
-    @Body() body: any,
+    @Body() body: any
   ) {
     // Parse body - handles both form-data and manual entry
     const documentType = body?.documentType || DocumentType.ID;
@@ -528,26 +527,26 @@ export class RecruitmentController {
     const manualEntry = body?.manualEntry === true || body?.manualEntry === 'true';
 
     // If manual entry flag is set and no file, use manual data
-    const manualDocumentData = manualEntry && !file ? {
-      nationalId,
-      documentDescription,
-    } : undefined;
+    const manualDocumentData =
+      manualEntry && !file
+        ? {
+            nationalId,
+            documentDescription,
+          }
+        : undefined;
 
     return this.service.uploadTaskDocument(
       onboardingId,
       parseInt(taskIndex, 10),
       file,
       documentType,
-      manualDocumentData,
+      manualDocumentData
     );
   }
 
   @UseGuards(RolesGuard)
   @Get('document/:documentId/download')
-  async downloadDocument(
-    @Param('documentId') documentId: string,
-    @Res() res: Response,
-  ) {
+  async downloadDocument(@Param('documentId') documentId: string, @Res() res: Response) {
     return this.service.downloadDocument(documentId, res);
   }
 
@@ -559,22 +558,16 @@ export class RecruitmentController {
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.HR_EMPLOYEE,
-    SystemRole.RECRUITER,
+    SystemRole.RECRUITER
   )
   @Get('candidate/:candidateId/resume/download')
-  async downloadCandidateResume(
-    @Param('candidateId') candidateId: string,
-    @Res() res: Response,
-  ) {
+  async downloadCandidateResume(@Param('candidateId') candidateId: string, @Res() res: Response) {
     return this.service.downloadCandidateResume(candidateId, res);
   }
 
   @UseGuards(RolesGuard)
   @Get('onboarding/:id/task/:taskIndex/document')
-  async getTaskDocument(
-    @Param('id') onboardingId: string,
-    @Param('taskIndex') taskIndex: string,
-  ) {
+  async getTaskDocument(@Param('id') onboardingId: string, @Param('taskIndex') taskIndex: string) {
     return this.service.getTaskDocument(onboardingId, parseInt(taskIndex, 10));
   }
 
@@ -599,12 +592,9 @@ export class RecruitmentController {
   @Post('onboarding/:employeeId/provision-access/:taskIndex')
   async provisionSystemAccess(
     @Param('employeeId') employeeId: string,
-    @Param('taskIndex') taskIndex: string,
+    @Param('taskIndex') taskIndex: string
   ) {
-    return this.service.provisionSystemAccess(
-      employeeId,
-      parseInt(taskIndex, 10),
-    );
+    return this.service.provisionSystemAccess(employeeId, parseInt(taskIndex, 10));
   }
 
   @UseGuards(RolesGuard)
@@ -612,13 +602,9 @@ export class RecruitmentController {
   @Post('onboarding/:employeeId/reserve-equipment')
   async reserveEquipment(
     @Param('employeeId') employeeId: string,
-    @Body() dto: { equipmentType: string; equipmentDetails: any },
+    @Body() dto: { equipmentType: string; equipmentDetails: any }
   ) {
-    return this.service.reserveEquipment(
-      employeeId,
-      dto.equipmentType,
-      dto.equipmentDetails,
-    );
+    return this.service.reserveEquipment(employeeId, dto.equipmentType, dto.equipmentDetails);
   }
 
   @UseGuards(RolesGuard)
@@ -626,15 +612,11 @@ export class RecruitmentController {
   @Post('onboarding/:employeeId/schedule-access')
   async scheduleAccessProvisioning(
     @Param('employeeId') employeeId: string,
-    @Body() dto: { startDate: string; endDate?: string },
+    @Body() dto: { startDate: string; endDate?: string }
   ) {
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
-    return this.service.scheduleAccessProvisioning(
-      employeeId,
-      startDate,
-      endDate,
-    );
+    return this.service.scheduleAccessProvisioning(employeeId, startDate, endDate);
   }
 
   @UseGuards(RolesGuard)
@@ -642,14 +624,10 @@ export class RecruitmentController {
   @Post('onboarding/:employeeId/trigger-payroll')
   async triggerPayrollInitiation(
     @Param('employeeId') employeeId: string,
-    @Body() dto: { contractSigningDate: string; grossSalary: number },
+    @Body() dto: { contractSigningDate: string; grossSalary: number }
   ) {
     const contractSigningDate = new Date(dto.contractSigningDate);
-    return this.service.triggerPayrollInitiation(
-      employeeId,
-      contractSigningDate,
-      dto.grossSalary,
-    );
+    return this.service.triggerPayrollInitiation(employeeId, contractSigningDate, dto.grossSalary);
   }
 
   @UseGuards(RolesGuard)
@@ -657,23 +635,16 @@ export class RecruitmentController {
   @Post('onboarding/:employeeId/process-bonus')
   async processSigningBonus(
     @Param('employeeId') employeeId: string,
-    @Body() dto: { signingBonus: number; contractSigningDate: string },
+    @Body() dto: { signingBonus: number; contractSigningDate: string }
   ) {
     const contractSigningDate = new Date(dto.contractSigningDate);
-    return this.service.processSigningBonus(
-      employeeId,
-      dto.signingBonus,
-      contractSigningDate,
-    );
+    return this.service.processSigningBonus(employeeId, dto.signingBonus, contractSigningDate);
   }
 
   @UseGuards(RolesGuard)
   @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN)
   @Post('onboarding/:employeeId/cancel')
-  async cancelOnboarding(
-    @Param('employeeId') employeeId: string,
-    @Body() dto: { reason: string },
-  ) {
+  async cancelOnboarding(@Param('employeeId') employeeId: string, @Body() dto: { reason: string }) {
     return this.service.cancelOnboarding(employeeId, dto.reason);
   }
 
@@ -683,10 +654,9 @@ export class RecruitmentController {
   tagCandidateAsReferral(
     @Param('candidateId') candidateId: string,
     @Body() dto: { referringEmployeeId: string; role?: string; level?: string },
-    @Req() req: any,
+    @Req() req: any
   ) {
-    const referringEmployeeId =
-      dto.referringEmployeeId || req.user?.id || req.user?._id;
+    const referringEmployeeId = dto.referringEmployeeId || req.user?.id || req.user?._id;
     if (!referringEmployeeId) {
       throw new BadRequestException('Referring employee ID is required');
     }
@@ -694,7 +664,7 @@ export class RecruitmentController {
       candidateId,
       referringEmployeeId,
       dto.role,
-      dto.level,
+      dto.level
     );
   }
 
@@ -709,16 +679,16 @@ export class RecruitmentController {
   recordCandidateConsent(
     @Param('candidateId') candidateId: string,
     @Body()
-    dto: { consentGiven: boolean; consentType?: string; notes?: string },
+    dto: { consentGiven: boolean; consentType?: string; notes?: string }
   ) {
     return this.service.recordCandidateConsent(
       candidateId,
       dto.consentGiven,
       dto.consentType || 'data_processing',
-      dto.notes,
+      dto.notes
     );
   }
-//--------------------------OFFBOARDING--------------------------------------------------
+  //--------------------------OFFBOARDING--------------------------------------------------
 
   // ============================================================================
   // NEW CHANGES: RESIGNATION ENDPOINT - Any employee type can resign themselves
@@ -731,10 +701,7 @@ export class RecruitmentController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('offboarding/resign')
-  submitResignation(
-    @Body() dto: SubmitResignationDto,
-    @Req() req: any,
-  ) {
+  submitResignation(@Body() dto: SubmitResignationDto, @Req() req: any) {
     return this.service.submitResignation(dto, req.user);
   }
 
@@ -750,10 +717,7 @@ export class RecruitmentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(SystemRole.HR_MANAGER)
   @Post('offboarding/terminate')
-  terminateEmployee(
-    @Body() dto: TerminateEmployeeDto,
-    @Req() req: any,
-  ) {
+  terminateEmployee(@Body() dto: TerminateEmployeeDto, @Req() req: any) {
     return this.service.terminateEmployeeByHR(dto, req.user);
   }
 
@@ -763,10 +727,7 @@ export class RecruitmentController {
   // changed - added JwtAuthGuard to parse JWT token
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('offboarding/termination')
-  createTerminationRequest(
-    @Body() dto: CreateTerminationRequestDto,
-    @Req() req: any,
-  ) {
+  createTerminationRequest(@Body() dto: CreateTerminationRequestDto, @Req() req: any) {
     return this.service.createTerminationRequest(dto, req.user);
   }
 
@@ -800,7 +761,7 @@ export class RecruitmentController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.FINANCE_STAFF,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   getAllClearanceChecklists() {
     return this.service.getAllClearanceChecklists();
@@ -821,7 +782,7 @@ export class RecruitmentController {
   updateTerminationStatus(
     @Param('id') id: string,
     @Body() dto: UpdateTerminationStatusDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return this.service.updateTerminationStatus(id, dto, req.user);
   }
@@ -833,7 +794,7 @@ export class RecruitmentController {
   updateTerminationDetails(
     @Param('id') id: string,
     @Body() dto: UpdateTerminationDetailsDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return this.service.updateTerminationDetails(id, dto, req.user);
   }
@@ -842,10 +803,7 @@ export class RecruitmentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('offboarding/clearance')
   @Roles(SystemRole.HR_MANAGER)
-  createClearanceChecklist(
-    @Body() dto: CreateClearanceChecklistDto,
-    @Req() req: any,
-  ) {
+  createClearanceChecklist(@Body() dto: CreateClearanceChecklistDto, @Req() req: any) {
     return this.service.createClearanceChecklist(dto, req.user);
   }
 
@@ -875,12 +833,12 @@ export class RecruitmentController {
     SystemRole.DEPARTMENT_HEAD,
     SystemRole.FINANCE_STAFF,
     SystemRole.PAYROLL_MANAGER,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   updateClearanceItem(
     @Param('id') checklistId: string,
     @Body() dto: UpdateClearanceItemStatusDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return this.service.updateClearanceItemStatus(checklistId, dto, req.user);
   }
@@ -918,10 +876,7 @@ export class RecruitmentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('offboarding/final-settlement')
   @Roles(SystemRole.HR_MANAGER)
-  triggerFinalSettlement(
-    @Body() dto: TriggerFinalSettlementDto,
-    @Req() req: any,
-  ) {
+  triggerFinalSettlement(@Body() dto: TriggerFinalSettlementDto, @Req() req: any) {
     return this.service.triggerFinalSettlement(dto.employeeId, dto.terminationId);
   }
 

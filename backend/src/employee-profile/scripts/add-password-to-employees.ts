@@ -19,11 +19,8 @@ async function addPasswordsToEmployees() {
 
   try {
     // Get all employees
-    const result = await employeeService.findAll(
-      { limit: 1000, page: 1 },
-      undefined,
-    );
-    const employees = result.data as any[];
+    const result = await employeeService.findAll({ limit: 1000, page: 1 }, undefined);
+    const employees = result.data;
 
     if (!employees || employees.length === 0) {
       console.log('⚠️  No employees found in database.');
@@ -45,7 +42,7 @@ async function addPasswordsToEmployees() {
 
       if (!fullEmployee || fullEmployee.password) {
         console.log(
-          `⏭️  ${emp.fullName || emp.firstName} ${emp.lastName} - Already has password, skipping...`,
+          `⏭️  ${emp.fullName || emp.firstName} ${emp.lastName} - Already has password, skipping...`
         );
         continue;
       }
@@ -59,21 +56,17 @@ async function addPasswordsToEmployees() {
         .exec();
 
       console.log(
-        `✅ Added password to: ${emp.fullName || emp.firstName} ${emp.lastName} (${emp.employeeNumber})`,
+        `✅ Added password to: ${emp.fullName || emp.firstName} ${emp.lastName} (${emp.employeeNumber})`
       );
       updatedCount++;
     }
 
-    console.log(
-      `\n✅ Complete! Updated ${updatedCount} employees with password.`,
-    );
+    console.log(`\n✅ Complete! Updated ${updatedCount} employees with password.`);
     console.log(`\n📋 Login Credentials:`);
     console.log(`   Default password: ${defaultPassword}`);
     console.log(`\n🔐 To login, use:`);
     console.log(`   POST /api/v1/auth/login`);
-    console.log(
-      `   Body: { "employeeNumber": "EMP-XXXX-XXXX", "password": "${defaultPassword}" }`,
-    );
+    console.log(`   Body: { "employeeNumber": "EMP-XXXX-XXXX", "password": "${defaultPassword}" }`);
   } catch (error) {
     console.error('❌ Error adding passwords:', error);
   } finally {

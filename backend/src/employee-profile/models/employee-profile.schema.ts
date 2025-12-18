@@ -1,10 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import {
-  ContractType,
-  EmployeeStatus,
-  WorkType,
-} from '../enums/employee-profile.enums';
+import { ContractType, EmployeeStatus, WorkType } from '../enums/employee-profile.enums';
 import { AppraisalRatingScaleType } from '../../performance/enums/performance.enums';
 import { Department } from '../../organization-structure/models/department.schema';
 import { Position } from '../../organization-structure/models/position.schema';
@@ -110,5 +106,4 @@ export class EmployeeProfile extends UserProfileBase {
   lastDevelopmentPlanSummary?: string;
 }
 
-export const EmployeeProfileSchema =
-  SchemaFactory.createForClass(EmployeeProfile);
+export const EmployeeProfileSchema = SchemaFactory.createForClass(EmployeeProfile);

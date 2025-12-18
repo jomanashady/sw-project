@@ -52,5 +52,4 @@ export class AppraisalAssignment {
   latestAppraisalId?: Types.ObjectId;
 }
 
-export const AppraisalAssignmentSchema =
-  SchemaFactory.createForClass(AppraisalAssignment);
+export const AppraisalAssignmentSchema = SchemaFactory.createForClass(AppraisalAssignment);

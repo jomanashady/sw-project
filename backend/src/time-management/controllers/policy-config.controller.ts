@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { PolicyConfigService } from '../services/policy-config.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -39,24 +29,15 @@ export class PolicyConfigController {
   @Roles(SystemRole.HR_MANAGER)
   async createOvertimeRule(
     @Body() createOvertimeRuleDto: CreateOvertimeRuleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.policyConfigService.createOvertimeRule(
-      createOvertimeRuleDto,
-      user.userId,
-    );
+    return this.policyConfigService.createOvertimeRule(createOvertimeRuleDto, user.userId);
   }
 
   @Get('overtime')
   @Roles(SystemRole.HR_MANAGER)
-  async getOvertimeRules(
-    @Query() getPoliciesDto: GetPoliciesDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.policyConfigService.getOvertimeRules(
-      getPoliciesDto,
-      user.userId,
-    );
+  async getOvertimeRules(@Query() getPoliciesDto: GetPoliciesDto, @CurrentUser() user: any) {
+    return this.policyConfigService.getOvertimeRules(getPoliciesDto, user.userId);
   }
 
   @Get('overtime/:id')
@@ -70,13 +51,9 @@ export class PolicyConfigController {
   async updateOvertimeRule(
     @Param('id') id: string,
     @Body() updateOvertimeRuleDto: UpdateOvertimeRuleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.policyConfigService.updateOvertimeRule(
-      id,
-      updateOvertimeRuleDto,
-      user.userId,
-    );
+    return this.policyConfigService.updateOvertimeRule(id, updateOvertimeRuleDto, user.userId);
   }
 
   @Delete('overtime/:id')
@@ -96,16 +73,10 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
-  async getApplicableOvertimeRules(
-    @Param('date') date: string,
-    @CurrentUser() user: any,
-  ) {
-    return this.policyConfigService.getApplicableOvertimeRules(
-      new Date(date),
-      user.userId,
-    );
+  async getApplicableOvertimeRules(@Param('date') date: string, @CurrentUser() user: any) {
+    return this.policyConfigService.getApplicableOvertimeRules(new Date(date), user.userId);
   }
 
   /**
@@ -117,7 +88,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async calculateOvertimeForAttendance(
     @Body()
@@ -127,7 +98,7 @@ export class PolicyConfigController {
       standardWorkMinutes?: number;
       date: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.calculateOvertimeForAttendance(
       {
@@ -136,7 +107,7 @@ export class PolicyConfigController {
         standardWorkMinutes: body.standardWorkMinutes,
         date: new Date(body.date),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -149,7 +120,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getShortTimeConfig(@CurrentUser() user: any) {
     return this.policyConfigService.getShortTimeConfig(user.userId);
@@ -164,7 +135,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async calculateShortTimeForAttendance(
     @Body()
@@ -174,7 +145,7 @@ export class PolicyConfigController {
       standardWorkMinutes?: number;
       date: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.calculateShortTimeForAttendance(
       {
@@ -183,7 +154,7 @@ export class PolicyConfigController {
         standardWorkMinutes: body.standardWorkMinutes,
         date: new Date(body.date),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -196,7 +167,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async validateOvertimePreApproval(
     @Body()
@@ -205,7 +176,7 @@ export class PolicyConfigController {
       date: string;
       expectedOvertimeMinutes: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.validateOvertimePreApproval(
       {
@@ -213,7 +184,7 @@ export class PolicyConfigController {
         date: new Date(body.date),
         expectedOvertimeMinutes: body.expectedOvertimeMinutes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -222,11 +193,7 @@ export class PolicyConfigController {
    * BR-TM-08: Returns daily, weekly, and monthly overtime caps
    */
   @Get('overtime/limits/config')
-  @Roles(
-    SystemRole.HR_MANAGER,
-    SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
-  )
+  @Roles(SystemRole.HR_MANAGER, SystemRole.SYSTEM_ADMIN, SystemRole.PAYROLL_SPECIALIST)
   async getOvertimeLimitsConfig(@CurrentUser() user: any) {
     return this.policyConfigService.getOvertimeLimitsConfig(user.userId);
   }
@@ -240,7 +207,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async checkOvertimeLimits(
     @Body()
@@ -250,7 +217,7 @@ export class PolicyConfigController {
       period: 'daily' | 'weekly' | 'monthly';
       additionalOvertimeMinutes?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.checkOvertimeLimits(
       {
@@ -259,7 +226,7 @@ export class PolicyConfigController {
         period: body.period,
         additionalOvertimeMinutes: body.additionalOvertimeMinutes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -272,12 +239,10 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getOvertimeShortTimePolicySummary(@CurrentUser() user: any) {
-    return this.policyConfigService.getOvertimeShortTimePolicySummary(
-      user.userId,
-    );
+    return this.policyConfigService.getOvertimeShortTimePolicySummary(user.userId);
   }
 
   // ===== LATENESS RULES (BR-TM-11: HR Manager only) =====
@@ -285,24 +250,15 @@ export class PolicyConfigController {
   @Roles(SystemRole.HR_MANAGER)
   async createLatenessRule(
     @Body() createLatenessRuleDto: CreateLatenessRuleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.policyConfigService.createLatenessRule(
-      createLatenessRuleDto,
-      user.userId,
-    );
+    return this.policyConfigService.createLatenessRule(createLatenessRuleDto, user.userId);
   }
 
   @Get('lateness')
   @Roles(SystemRole.HR_MANAGER)
-  async getLatenessRules(
-    @Query() getPoliciesDto: GetPoliciesDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.policyConfigService.getLatenessRules(
-      getPoliciesDto,
-      user.userId,
-    );
+  async getLatenessRules(@Query() getPoliciesDto: GetPoliciesDto, @CurrentUser() user: any) {
+    return this.policyConfigService.getLatenessRules(getPoliciesDto, user.userId);
   }
 
   @Get('lateness/:id')
@@ -316,13 +272,9 @@ export class PolicyConfigController {
   async updateLatenessRule(
     @Param('id') id: string,
     @Body() updateLatenessRuleDto: UpdateLatenessRuleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.policyConfigService.updateLatenessRule(
-      id,
-      updateLatenessRuleDto,
-      user.userId,
-    );
+    return this.policyConfigService.updateLatenessRule(id, updateLatenessRuleDto, user.userId);
   }
 
   @Delete('lateness/:id')
@@ -342,7 +294,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getLatenessThresholdsConfig(@CurrentUser() user: any) {
     return this.policyConfigService.getLatenessThresholdsConfig(user.userId);
@@ -357,7 +309,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async calculateLatenessForAttendance(
     @Body()
@@ -367,7 +319,7 @@ export class PolicyConfigController {
       actualArrivalMinutes: number;
       gracePeriodMinutes?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.calculateLatenessForAttendance(
       {
@@ -376,7 +328,7 @@ export class PolicyConfigController {
         actualArrivalMinutes: body.actualArrivalMinutes,
         gracePeriodMinutes: body.gracePeriodMinutes,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -389,7 +341,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async checkLatenessEscalation(
     @Body()
@@ -398,7 +350,7 @@ export class PolicyConfigController {
       currentLatenessMinutes: number;
       periodDays?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.checkLatenessEscalation(
       {
@@ -406,7 +358,7 @@ export class PolicyConfigController {
         currentLatenessMinutes: body.currentLatenessMinutes,
         periodDays: body.periodDays,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -419,7 +371,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async applyLatenessDeduction(
     @Body()
@@ -429,7 +381,7 @@ export class PolicyConfigController {
       latenessMinutes: number;
       latenessRuleId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.applyLatenessDeduction(
       {
@@ -438,7 +390,7 @@ export class PolicyConfigController {
         latenessMinutes: body.latenessMinutes,
         latenessRuleId: body.latenessRuleId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -451,7 +403,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getLatenesPenaltySummary(@CurrentUser() user: any) {
     return this.policyConfigService.getLatenesPenaltySummary(user.userId);
@@ -466,7 +418,7 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async calculateEarlyLeavePenalty(
     @Body()
@@ -476,7 +428,7 @@ export class PolicyConfigController {
       actualDepartureMinutes: number;
       gracePeriodMinutes?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.calculateEarlyLeavePenalty(
       {
@@ -485,21 +437,15 @@ export class PolicyConfigController {
         actualDepartureMinutes: body.actualDepartureMinutes,
         gracePeriodMinutes: body.gracePeriodMinutes,
       },
-      user.userId,
+      user.userId
     );
   }
 
   // ===== HOLIDAYS =====
   @Post('holiday')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
-  async createHoliday(
-    @Body() createHolidayDto: CreateHolidayDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.policyConfigService.createHoliday(
-      createHolidayDto,
-      user.userId,
-    );
+  async createHoliday(@Body() createHolidayDto: CreateHolidayDto, @CurrentUser() user: any) {
+    return this.policyConfigService.createHoliday(createHolidayDto, user.userId);
   }
 
   @Get('holiday')
@@ -509,12 +455,9 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
-  async getHolidays(
-    @Query() getHolidaysDto: GetHolidaysDto,
-    @CurrentUser() user: any,
-  ) {
+  async getHolidays(@Query() getHolidaysDto: GetHolidaysDto, @CurrentUser() user: any) {
     return this.policyConfigService.getHolidays(getHolidaysDto, user.userId);
   }
 
@@ -525,16 +468,10 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
-  async getUpcomingHolidays(
-    @Query('days') days?: number,
-    @CurrentUser() user?: any,
-  ) {
-    return this.policyConfigService.getUpcomingHolidays(
-      days || 30,
-      user?.userId,
-    );
+  async getUpcomingHolidays(@Query('days') days?: number, @CurrentUser() user?: any) {
+    return this.policyConfigService.getUpcomingHolidays(days || 30, user?.userId);
   }
 
   @Get('holiday/:id')
@@ -548,13 +485,9 @@ export class PolicyConfigController {
   async updateHoliday(
     @Param('id') id: string,
     @Body() updateHolidayDto: UpdateHolidayDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
-    return this.policyConfigService.updateHoliday(
-      id,
-      updateHolidayDto,
-      user.userId,
-    );
+    return this.policyConfigService.updateHoliday(id, updateHolidayDto, user.userId);
   }
 
   @Delete('holiday/:id')
@@ -572,13 +505,14 @@ export class PolicyConfigController {
   @Post('rest-days/configure')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async configureWeeklyRestDays(
-    @Body() body: {
+    @Body()
+    body: {
       restDays: number[];
       effectiveFrom?: Date;
       effectiveTo?: Date;
       departmentId?: string;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.configureWeeklyRestDays(
       {
@@ -587,7 +521,7 @@ export class PolicyConfigController {
         effectiveTo: body.effectiveTo ? new Date(body.effectiveTo) : undefined,
         departmentId: body.departmentId,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -601,21 +535,22 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async checkRestDay(
-    @Body() body: {
+    @Body()
+    body: {
       date: Date;
       restDays?: number[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.checkRestDay(
       {
         date: new Date(body.date),
         restDays: body.restDays,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -626,7 +561,8 @@ export class PolicyConfigController {
   @Post('holiday/bulk')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async bulkCreateHolidays(
-    @Body() body: {
+    @Body()
+    body: {
       holidays: Array<{
         name: string;
         type: string;
@@ -635,18 +571,18 @@ export class PolicyConfigController {
       }>;
       year?: number;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.bulkCreateHolidays(
       {
-        holidays: body.holidays.map(h => ({
+        holidays: body.holidays.map((h) => ({
           ...h,
           startDate: new Date(h.startDate),
           endDate: h.endDate ? new Date(h.endDate) : undefined,
         })),
         year: body.year,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -661,13 +597,13 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async getHolidayCalendar(
     @Query('year') year?: number,
     @Query('month') month?: number,
     @Query('includeRestDays') includeRestDays?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: any
   ) {
     return this.policyConfigService.getHolidayCalendar(
       {
@@ -675,7 +611,7 @@ export class PolicyConfigController {
         month: month ? Number(month) : undefined,
         includeRestDays: includeRestDays !== 'false',
       },
-      user?.userId,
+      user?.userId
     );
   }
 
@@ -689,15 +625,16 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async checkPenaltySuppression(
-    @Body() body: {
+    @Body()
+    body: {
       employeeId: string;
       date: Date;
       restDays?: number[];
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.checkPenaltySuppression(
       {
@@ -705,7 +642,7 @@ export class PolicyConfigController {
         date: new Date(body.date),
         restDays: body.restDays,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -716,12 +653,13 @@ export class PolicyConfigController {
   @Post('holiday/link-to-shift')
   @Roles(SystemRole.HR_ADMIN, SystemRole.SYSTEM_ADMIN)
   async linkHolidaysToShift(
-    @Body() body: {
+    @Body()
+    body: {
       shiftId: string;
       holidayIds: string[];
       action: 'NO_WORK' | 'OPTIONAL' | 'OVERTIME_ELIGIBLE';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.linkHolidaysToShift(
       {
@@ -729,7 +667,7 @@ export class PolicyConfigController {
         holidayIds: body.holidayIds,
         action: body.action,
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -743,13 +681,13 @@ export class PolicyConfigController {
     SystemRole.HR_MANAGER,
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
-    SystemRole.DEPARTMENT_HEAD,
+    SystemRole.DEPARTMENT_HEAD
   )
   async getEmployeeHolidaySchedule(
     @Param('employeeId') employeeId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.getEmployeeHolidaySchedule(
       {
@@ -757,7 +695,7 @@ export class PolicyConfigController {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
       },
-      user.userId,
+      user.userId
     );
   }
 
@@ -769,12 +707,9 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
-  async checkHoliday(
-    @Body() checkHolidayDto: CheckHolidayDto,
-    @CurrentUser() user: any,
-  ) {
+  async checkHoliday(@Body() checkHolidayDto: CheckHolidayDto, @CurrentUser() user: any) {
     return this.policyConfigService.checkHoliday(checkHolidayDto, user.userId);
   }
 
@@ -784,15 +719,15 @@ export class PolicyConfigController {
     SystemRole.HR_ADMIN,
     SystemRole.SYSTEM_ADMIN,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_SPECIALIST
   )
   async validateAttendanceHoliday(
     @Body() validateAttendanceHolidayDto: ValidateAttendanceHolidayDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: any
   ) {
     return this.policyConfigService.validateAttendanceHoliday(
       validateAttendanceHolidayDto,
-      user.userId,
+      user.userId
     );
   }
 }

@@ -13,5 +13,4 @@ export class CompanyWideSettings {
   currency: string; //will allow only egp
 }
 
-export const CompanyWideSettingsSchema =
-  SchemaFactory.createForClass(CompanyWideSettings);
+export const CompanyWideSettingsSchema = SchemaFactory.createForClass(CompanyWideSettings);

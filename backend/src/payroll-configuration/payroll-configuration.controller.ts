@@ -10,14 +10,7 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBody,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { PayrollConfigurationService } from './payroll-configuration.service';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
@@ -28,26 +21,14 @@ import { FilterDto } from './dto/filter.dto';
 import { CreateAllowanceDto, UpdateAllowanceDto } from './dto/allowance.dto';
 import { CreatePayTypeDto, UpdatePayTypeDto } from './dto/pay-type.dto';
 import { CreateTaxRuleDto, UpdateTaxRuleDto } from './dto/tax-rule.dto';
-import {
-  CreateInsuranceBracketDto,
-  UpdateInsuranceBracketDto,
-} from './dto/insurance-bracket.dto';
-import {
-  CreateSigningBonusDto,
-  UpdateSigningBonusDto,
-} from './dto/signing-bonus.dto';
+import { CreateInsuranceBracketDto, UpdateInsuranceBracketDto } from './dto/insurance-bracket.dto';
+import { CreateSigningBonusDto, UpdateSigningBonusDto } from './dto/signing-bonus.dto';
 import {
   CreateTerminationBenefitDto,
   UpdateTerminationBenefitDto,
 } from './dto/termination-benefit.dto';
-import {
-  CreatePayrollPolicyDto,
-  UpdatePayrollPolicyDto,
-} from './dto/payroll-policy.dto';
-import {
-  CreateCompanySettingsDto,
-  UpdateCompanySettingsDto,
-} from './dto/company-settings.dto';
+import { CreatePayrollPolicyDto, UpdatePayrollPolicyDto } from './dto/payroll-policy.dto';
+import { CreateCompanySettingsDto, UpdateCompanySettingsDto } from './dto/company-settings.dto';
 import { ObjectIdPipe } from './common/pipes/object-id.pipe';
 
 // ✅ AUTH IMPORTS - FIXED PATHS
@@ -63,7 +44,7 @@ import { SystemRole } from '../employee-profile/enums/employee-profile.enums';
 export class PayrollConfigurationController {
   constructor(
     private readonly payrollConfigService: PayrollConfigurationService,
-    @InjectConnection() private readonly connection: Connection,
+    @InjectConnection() private readonly connection: Connection
   ) {}
 
   // ==================== PAY GRADES ====================
@@ -98,7 +79,7 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayGrade(
     @Body() createDto: CreatePayGradeDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createPayGrade(createDto, user.userId); // ✅ Use real userId
   }
@@ -117,7 +98,7 @@ export class PayrollConfigurationController {
   async updatePayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayGradeDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.updatePayGrade(id, updateDto, user.userId); // ✅ Use real userId
   }
@@ -150,13 +131,9 @@ export class PayrollConfigurationController {
   async approvePayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approvePayGrade(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approvePayGrade(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('pay-grades/:id/reject')
@@ -173,13 +150,9 @@ export class PayrollConfigurationController {
   async rejectPayGrade(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectPayGrade(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectPayGrade(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== DASHBOARD & UTILITIES ====================
@@ -235,15 +208,12 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.SYSTEM_ADMIN)
   async createCompanySettings(
     @Body() createDto: CreateCompanySettingsDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     if (!createDto) {
       throw new BadRequestException('Request body is required');
     }
-    return this.payrollConfigService.createCompanySettings(
-      createDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.createCompanySettings(createDto, user.userId); // ✅ Use real userId
   }
 
   @Put('company-settings')
@@ -253,12 +223,9 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.SYSTEM_ADMIN)
   async updateCompanySettings(
     @Body() updateDto: UpdateCompanySettingsDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.updateCompanySettings(
-      updateDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.updateCompanySettings(updateDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== ALLOWANCES ====================
@@ -284,7 +251,7 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createAllowance(
     @Body() createDto: CreateAllowanceDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createAllowance(createDto, user.userId); // ✅ Use real userId
   }
@@ -296,13 +263,9 @@ export class PayrollConfigurationController {
   async updateAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateAllowanceDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.updateAllowance(
-      id,
-      updateDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.updateAllowance(id, updateDto, user.userId); // ✅ Use real userId
   }
 
   @Delete('allowances/:id')
@@ -319,13 +282,9 @@ export class PayrollConfigurationController {
   async approveAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approveAllowance(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approveAllowance(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('allowances/:id/reject')
@@ -334,13 +293,9 @@ export class PayrollConfigurationController {
   async rejectAllowance(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectAllowance(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectAllowance(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== PAY TYPES ====================
@@ -361,7 +316,7 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayType(
     @Body() createDto: CreatePayTypeDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createPayType(createDto, user.userId); // ✅ Use real userId
   }
@@ -372,7 +327,7 @@ export class PayrollConfigurationController {
   async updatePayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayTypeDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.updatePayType(id, updateDto, user.userId); // ✅ Use real userId
   }
@@ -390,13 +345,9 @@ export class PayrollConfigurationController {
   async approvePayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approvePayType(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approvePayType(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('pay-types/:id/reject')
@@ -405,13 +356,9 @@ export class PayrollConfigurationController {
   async rejectPayType(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectPayType(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectPayType(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== TAX RULES ====================
@@ -432,7 +379,7 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.LEGAL_POLICY_ADMIN)
   async createTaxRule(
     @Body() createDto: CreateTaxRuleDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createTaxRule(createDto, user.userId); // ✅ Use real userId
   }
@@ -443,7 +390,7 @@ export class PayrollConfigurationController {
   async updateTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateTaxRuleDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.updateTaxRule(id, updateDto, user.userId); // ✅ Use real userId
   }
@@ -461,13 +408,9 @@ export class PayrollConfigurationController {
   async approveTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approveTaxRule(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approveTaxRule(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('tax-rules/:id/reject')
@@ -476,13 +419,9 @@ export class PayrollConfigurationController {
   async rejectTaxRule(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectTaxRule(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectTaxRule(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== INSURANCE BRACKETS ====================
@@ -505,12 +444,9 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createInsuranceBracket(
     @Body() createDto: CreateInsuranceBracketDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.createInsuranceBracket(
-      createDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.createInsuranceBracket(createDto, user.userId); // ✅ Use real userId
   }
 
   @Put('insurance-brackets/:id')
@@ -519,12 +455,12 @@ export class PayrollConfigurationController {
   async updateInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateInsuranceBracketDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.updateInsuranceBracket(
       id,
       updateDto,
-      user.userId, // ✅ Use real userId
+      user.userId // ✅ Use real userId
     );
   }
 
@@ -541,13 +477,9 @@ export class PayrollConfigurationController {
   async approveInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approveInsuranceBracket(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approveInsuranceBracket(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('insurance-brackets/:id/reject')
@@ -556,13 +488,9 @@ export class PayrollConfigurationController {
   async rejectInsuranceBracket(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectInsuranceBracket(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectInsuranceBracket(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== SIGNING BONUSES ====================
@@ -585,7 +513,7 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createSigningBonus(
     @Body() createDto: CreateSigningBonusDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createSigningBonus(createDto, user.userId); // ✅ Use real userId
   }
@@ -596,13 +524,9 @@ export class PayrollConfigurationController {
   async updateSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateSigningBonusDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.updateSigningBonus(
-      id,
-      updateDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.updateSigningBonus(id, updateDto, user.userId); // ✅ Use real userId
   }
 
   @Delete('signing-bonuses/:id')
@@ -618,13 +542,9 @@ export class PayrollConfigurationController {
   async approveSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approveSigningBonus(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approveSigningBonus(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('signing-bonuses/:id/reject')
@@ -633,13 +553,9 @@ export class PayrollConfigurationController {
   async rejectSigningBonus(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectSigningBonus(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectSigningBonus(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== TERMINATION BENEFITS ====================
@@ -662,11 +578,11 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createTerminationBenefit(
     @Body() createDto: CreateTerminationBenefitDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.createTerminationBenefit(
       createDto,
-      user.userId, // ✅ Use real userId
+      user.userId // ✅ Use real userId
     );
   }
 
@@ -676,12 +592,12 @@ export class PayrollConfigurationController {
   async updateTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdateTerminationBenefitDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
     return this.payrollConfigService.updateTerminationBenefit(
       id,
       updateDto,
-      user.userId, // ✅ Use real userId
+      user.userId // ✅ Use real userId
     );
   }
 
@@ -698,13 +614,9 @@ export class PayrollConfigurationController {
   async approveTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approveTerminationBenefit(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approveTerminationBenefit(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('termination-benefits/:id/reject')
@@ -713,13 +625,9 @@ export class PayrollConfigurationController {
   async rejectTerminationBenefit(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectTerminationBenefit(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectTerminationBenefit(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 
   // ==================== PAYROLL POLICIES ====================
@@ -742,12 +650,9 @@ export class PayrollConfigurationController {
   @Roles(SystemRole.PAYROLL_SPECIALIST)
   async createPayrollPolicy(
     @Body() createDto: CreatePayrollPolicyDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.createPayrollPolicy(
-      createDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.createPayrollPolicy(createDto, user.userId); // ✅ Use real userId
   }
 
   @Put('policies/:id')
@@ -756,13 +661,9 @@ export class PayrollConfigurationController {
   async updatePayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() updateDto: UpdatePayrollPolicyDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.updatePayrollPolicy(
-      id,
-      updateDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.updatePayrollPolicy(id, updateDto, user.userId); // ✅ Use real userId
   }
 
   @Delete('policies/:id')
@@ -778,13 +679,9 @@ export class PayrollConfigurationController {
   async approvePayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() approvalDto: ApprovalDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.approvePayrollPolicy(
-      id,
-      approvalDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.approvePayrollPolicy(id, approvalDto, user.userId); // ✅ Use real userId
   }
 
   @Post('policies/:id/reject')
@@ -793,12 +690,8 @@ export class PayrollConfigurationController {
   async rejectPayrollPolicy(
     @Param('id', ObjectIdPipe) id: string,
     @Body() rejectionDto: RejectionDto,
-    @CurrentUser() user: any, // ✅ ADDED: Current user context
+    @CurrentUser() user: any // ✅ ADDED: Current user context
   ) {
-    return this.payrollConfigService.rejectPayrollPolicy(
-      id,
-      rejectionDto,
-      user.userId,
-    ); // ✅ Use real userId
+    return this.payrollConfigService.rejectPayrollPolicy(id, rejectionDto, user.userId); // ✅ Use real userId
   }
 }

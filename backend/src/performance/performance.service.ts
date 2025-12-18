@@ -1,38 +1,22 @@
 // src/performance/performance.service.ts
 
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 // --------- MODELS ---------
-import {
-  AppraisalTemplate,
-  AppraisalTemplateDocument,
-} from './models/appraisal-template.schema';
+import { AppraisalTemplate, AppraisalTemplateDocument } from './models/appraisal-template.schema';
 
-import {
-  AppraisalCycle,
-  AppraisalCycleDocument,
-} from './models/appraisal-cycle.schema';
+import { AppraisalCycle, AppraisalCycleDocument } from './models/appraisal-cycle.schema';
 
 import {
   AppraisalAssignment,
   AppraisalAssignmentDocument,
 } from './models/appraisal-assignment.schema';
 
-import {
-  AppraisalRecord,
-  AppraisalRecordDocument,
-} from './models/appraisal-record.schema';
+import { AppraisalRecord, AppraisalRecordDocument } from './models/appraisal-record.schema';
 
-import {
-  AppraisalDispute,
-  AppraisalDisputeDocument,
-} from './models/appraisal-dispute.schema';
+import { AppraisalDispute, AppraisalDisputeDocument } from './models/appraisal-dispute.schema';
 
 // --------- ENUMS ---------
 import {
@@ -66,24 +50,18 @@ export class PerformanceService {
     private readonly recordModel: Model<AppraisalRecordDocument>,
 
     @InjectModel(AppraisalDispute.name)
-    private readonly disputeModel: Model<AppraisalDisputeDocument>,
+    private readonly disputeModel: Model<AppraisalDisputeDocument>
   ) {}
 
   // =============================================================
   //                     TEMPLATE LOGIC
   // =============================================================
 
-  async createTemplate(
-    dto: CreateAppraisalTemplateDto,
-  ): Promise<AppraisalTemplate> {
-    const totalWeight = (dto.criteria || [])
-      .map((c) => c.weight ?? 0)
-      .reduce((a, b) => a + b, 0);
+  async createTemplate(dto: CreateAppraisalTemplateDto): Promise<AppraisalTemplate> {
+    const totalWeight = (dto.criteria || []).map((c) => c.weight ?? 0).reduce((a, b) => a + b, 0);
 
     if (totalWeight > 0 && totalWeight !== 100) {
-      throw new BadRequestException(
-        'Sum of criteria weights must be either 0 or 100.',
-      );
+      throw new BadRequestException('Sum of criteria weights must be either 0 or 100.');
     }
 
     const created = new this.templateModel({
@@ -107,10 +85,7 @@ export class PerformanceService {
     return template;
   }
 
-  async updateTemplate(
-    id: string,
-    dto: UpdateAppraisalTemplateDto,
-  ): Promise<AppraisalTemplate> {
+  async updateTemplate(id: string, dto: UpdateAppraisalTemplateDto): Promise<AppraisalTemplate> {
     const updated = await this.templateModel
       .findByIdAndUpdate(id, { $set: dto }, { new: true })
       .exec();
@@ -143,8 +118,7 @@ export class PerformanceService {
       startDate: dto.startDate,
       endDate: dto.endDate,
       managerDueDate: dto.managerDueDate,
-      employeeAcknowledgementDueDate: dto
-        .employeeAcknowledgementDueDate,
+      employeeAcknowledgementDueDate: dto.employeeAcknowledgementDueDate,
       templateAssignments: dto.templateAssignments || [],
       status: AppraisalCycleStatus.PLANNED,
     }).save();
@@ -156,13 +130,11 @@ export class PerformanceService {
         employeeProfileId: new Types.ObjectId(a.employeeProfileId),
         managerProfileId: new Types.ObjectId(a.managerProfileId),
         departmentId: new Types.ObjectId(a.departmentId),
-        positionId: a.positionId
-          ? new Types.ObjectId(a.positionId)
-          : undefined,
+        positionId: a.positionId ? new Types.ObjectId(a.positionId) : undefined,
         status: AppraisalAssignmentStatus.NOT_STARTED,
         dueDate: a.dueDate ?? dto.managerDueDate ?? dto.endDate,
         assignedAt: new Date(),
-      })),
+      }))
     );
 
     return { cycle, assignments: assignmentDocs };
@@ -180,11 +152,7 @@ export class PerformanceService {
 
   async activateCycle(id: string): Promise<AppraisalCycle> {
     const cycle = await this.cycleModel
-      .findByIdAndUpdate(
-        id,
-        { $set: { status: AppraisalCycleStatus.ACTIVE } },
-        { new: true },
-      )
+      .findByIdAndUpdate(id, { $set: { status: AppraisalCycleStatus.ACTIVE } }, { new: true })
       .exec();
 
     if (!cycle) throw new NotFoundException('Appraisal cycle not found');
@@ -206,7 +174,7 @@ export class PerformanceService {
           status: AppraisalRecordStatus.HR_PUBLISHED,
           hrPublishedAt: new Date(),
         },
-      },
+      }
     );
 
     cycle.status = AppraisalCycleStatus.CLOSED;
@@ -226,7 +194,7 @@ export class PerformanceService {
             closedAt: new Date(),
           },
         },
-        { new: true },
+        { new: true }
       )
       .exec();
 
@@ -245,16 +213,13 @@ export class PerformanceService {
             archivedAt: new Date(),
           },
         },
-        { new: true },
+        { new: true }
       )
       .exec();
 
     if (!cycle) throw new NotFoundException('Appraisal cycle not found');
 
-    await this.recordModel.updateMany(
-      { cycleId: cycle._id },
-      { $set: { archivedAt: new Date() } },
-    );
+    await this.recordModel.updateMany({ cycleId: cycle._id }, { $set: { archivedAt: new Date() } });
 
     return cycle;
   }
@@ -267,10 +232,7 @@ export class PerformanceService {
     const cycle = await this.cycleModel.findById(cycleId).lean().exec();
     if (!cycle) throw new NotFoundException('Appraisal cycle not found');
 
-    const assignments = await this.assignmentModel
-      .find({ cycleId: cycle._id })
-      .lean()
-      .exec();
+    const assignments = await this.assignmentModel.find({ cycleId: cycle._id }).lean().exec();
 
     const total = assignments.length;
 
@@ -280,13 +242,9 @@ export class PerformanceService {
       byStatus[key] = (byStatus[key] || 0) + 1;
     }
 
-    const completedCount =
-      byStatus[AppraisalAssignmentStatus.SUBMITTED] || 0;
+    const completedCount = byStatus[AppraisalAssignmentStatus.SUBMITTED] || 0;
 
-    const byDepartmentMap: Record<
-      string,
-      { total: number; submitted: number }
-    > = {};
+    const byDepartmentMap: Record<string, { total: number; submitted: number }> = {};
 
     for (const a of assignments) {
       const depId = String(a.departmentId);
@@ -299,17 +257,12 @@ export class PerformanceService {
       }
     }
 
-    const byDepartment = Object.entries(byDepartmentMap).map(
-      ([departmentId, stats]) => ({
-        departmentId,
-        totalAssignments: stats.total,
-        submitted: stats.submitted,
-        completionRate:
-          stats.total === 0
-            ? 0
-            : Math.round((stats.submitted / stats.total) * 100),
-      }),
-    );
+    const byDepartment = Object.entries(byDepartmentMap).map(([departmentId, stats]) => ({
+      departmentId,
+      totalAssignments: stats.total,
+      submitted: stats.submitted,
+      completionRate: stats.total === 0 ? 0 : Math.round((stats.submitted / stats.total) * 100),
+    }));
 
     return {
       cycleId: cycle._id,
@@ -317,8 +270,7 @@ export class PerformanceService {
       status: cycle.status,
       totalAssignments: total,
       byStatus,
-      completionRate:
-        total === 0 ? 0 : Math.round((completedCount / total) * 100),
+      completionRate: total === 0 ? 0 : Math.round((completedCount / total) * 100),
       byDepartment,
     };
   }
@@ -331,10 +283,7 @@ export class PerformanceService {
       .find({
         cycleId: cycle._id,
         status: {
-          $in: [
-            AppraisalAssignmentStatus.NOT_STARTED,
-            AppraisalAssignmentStatus.IN_PROGRESS,
-          ],
+          $in: [AppraisalAssignmentStatus.NOT_STARTED, AppraisalAssignmentStatus.IN_PROGRESS],
         },
       })
       .lean()
@@ -355,51 +304,47 @@ export class PerformanceService {
   // =============================================================
 
   async getAssignmentsForManager(managerProfileId: string, cycleId?: string) {
-  if (!Types.ObjectId.isValid(managerProfileId)) {
-    throw new BadRequestException('Invalid managerProfileId');
-  }
-
-  const filter: any = {
-    managerProfileId: new Types.ObjectId(managerProfileId),
-  };
-  if (cycleId) {
-    if (!Types.ObjectId.isValid(cycleId)) {
-      throw new BadRequestException('Invalid cycleId');
+    if (!Types.ObjectId.isValid(managerProfileId)) {
+      throw new BadRequestException('Invalid managerProfileId');
     }
-    filter.cycleId = new Types.ObjectId(cycleId);
+
+    const filter: any = {
+      managerProfileId: new Types.ObjectId(managerProfileId),
+    };
+    if (cycleId) {
+      if (!Types.ObjectId.isValid(cycleId)) {
+        throw new BadRequestException('Invalid cycleId');
+      }
+      filter.cycleId = new Types.ObjectId(cycleId);
+    }
+
+    // Optional debug logging while you test
+    // console.log('getAssignmentsForManager filter =', filter);
+
+    return this.assignmentModel
+      .find(filter)
+      .populate('employeeProfileId templateId cycleId')
+      .lean()
+      .exec();
   }
-
-  // Optional debug logging while you test
-  // console.log('getAssignmentsForManager filter =', filter);
-
-  return this.assignmentModel
-    .find(filter)
-    .populate('employeeProfileId templateId cycleId')
-    .lean()
-    .exec();
-}
 
   async getAssignmentsForEmployee(employeeProfileId: string, cycleId?: string) {
-  if (!Types.ObjectId.isValid(employeeProfileId)) {
-    throw new BadRequestException('Invalid employeeProfileId');
-  }
-
-  const filter: any = {
-    employeeProfileId: new Types.ObjectId(employeeProfileId),
-  };
-  if (cycleId) {
-    if (!Types.ObjectId.isValid(cycleId)) {
-      throw new BadRequestException('Invalid cycleId');
+    if (!Types.ObjectId.isValid(employeeProfileId)) {
+      throw new BadRequestException('Invalid employeeProfileId');
     }
-    filter.cycleId = new Types.ObjectId(cycleId);
-  }
 
-  return this.assignmentModel
-    .find(filter)
-    .populate('templateId cycleId')
-    .lean()
-    .exec();
-}
+    const filter: any = {
+      employeeProfileId: new Types.ObjectId(employeeProfileId),
+    };
+    if (cycleId) {
+      if (!Types.ObjectId.isValid(cycleId)) {
+        throw new BadRequestException('Invalid cycleId');
+      }
+      filter.cycleId = new Types.ObjectId(cycleId);
+    }
+
+    return this.assignmentModel.find(filter).populate('templateId cycleId').lean().exec();
+  }
 
   // =============================================================
   //                 APPRAISAL RECORD LOGIC
@@ -408,11 +353,10 @@ export class PerformanceService {
   async upsertAppraisalRecord(
     assignmentId: string,
     managerProfileId: string,
-    dto: UpsertAppraisalRecordDto,
+    dto: UpsertAppraisalRecordDto
   ): Promise<AppraisalRecord> {
     const assignment = await this.assignmentModel.findById(assignmentId).exec();
-    if (!assignment)
-      throw new NotFoundException('Appraisal assignment not found');
+    if (!assignment) throw new NotFoundException('Appraisal assignment not found');
 
     if (assignment.managerProfileId.toString() !== managerProfileId) {
       throw new BadRequestException('Manager not authorized');
@@ -421,9 +365,7 @@ export class PerformanceService {
     let record: AppraisalRecordDocument | null = null;
 
     if (assignment.latestAppraisalId) {
-      record = await this.recordModel
-        .findById(assignment.latestAppraisalId)
-        .exec();
+      record = await this.recordModel.findById(assignment.latestAppraisalId).exec();
     }
 
     if (!record) {
@@ -457,7 +399,7 @@ export class PerformanceService {
 
   async submitAppraisalRecord(
     recordId: string,
-    managerProfileId: string,
+    managerProfileId: string
   ): Promise<AppraisalRecord> {
     const record = await this.recordModel.findById(recordId).exec();
     if (!record) throw new NotFoundException('Appraisal record not found');
@@ -536,9 +478,7 @@ export class PerformanceService {
 
     return this.recordModel
       .find(query)
-      .populate(
-        'assignmentId cycleId templateId employeeProfileId managerProfileId',
-      )
+      .populate('assignmentId cycleId templateId employeeProfileId managerProfileId')
       .lean()
       .exec();
   }
@@ -550,20 +490,16 @@ export class PerformanceService {
   async submitDispute(
     appraisalId: string,
     employeeProfileId: string,
-    dto: SubmitDisputeDto,
+    dto: SubmitDisputeDto
   ): Promise<AppraisalDispute> {
     const record = await this.recordModel.findById(appraisalId).exec();
     if (!record) throw new NotFoundException('Appraisal record not found');
 
     if (record.employeeProfileId.toString() !== employeeProfileId) {
-      throw new BadRequestException(
-        'Employee cannot dispute another employee’s record',
-      );
+      throw new BadRequestException('Employee cannot dispute another employee’s record');
     }
 
-    const assignment = await this.assignmentModel
-      .findById(record.assignmentId)
-      .exec();
+    const assignment = await this.assignmentModel.findById(record.assignmentId).exec();
     if (!assignment) throw new NotFoundException('Assignment not found');
 
     const dispute = new this.disputeModel({
@@ -584,7 +520,7 @@ export class PerformanceService {
   async resolveDispute(
     disputeId: string,
     resolverEmployeeId: string,
-    dto: ResolveDisputeDto,
+    dto: ResolveDisputeDto
   ): Promise<AppraisalDispute> {
     const dispute = await this.disputeModel.findById(disputeId).exec();
     if (!dispute) throw new NotFoundException('Dispute not found');

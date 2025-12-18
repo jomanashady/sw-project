@@ -1,4 +1,13 @@
-import { IsString, IsArray, ValidateNested, IsOptional, IsBoolean, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApplicationStage } from '../enums/application-stage.enum';
 
@@ -55,5 +64,3 @@ export class UpdateHiringProcessTemplateDto {
   @IsBoolean()
   isActive?: boolean;
 }
-
-

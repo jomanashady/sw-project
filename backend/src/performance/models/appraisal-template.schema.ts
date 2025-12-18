@@ -1,9 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import {
-  AppraisalRatingScaleType,
-  AppraisalTemplateType,
-} from '../enums/performance.enums';
+import { AppraisalRatingScaleType, AppraisalTemplateType } from '../enums/performance.enums';
 import { Department } from '../../organization-structure/models/department.schema';
 import { Position } from '../../organization-structure/models/position.schema';
 
@@ -31,9 +28,7 @@ export class RatingScaleDefinition {
   labels?: string[];
 }
 
-export const RatingScaleDefinitionSchema = SchemaFactory.createForClass(
-  RatingScaleDefinition,
-);
+export const RatingScaleDefinitionSchema = SchemaFactory.createForClass(RatingScaleDefinition);
 
 @Schema({ _id: false })
 export class EvaluationCriterion {
@@ -56,8 +51,7 @@ export class EvaluationCriterion {
   required: boolean;
 }
 
-export const EvaluationCriterionSchema =
-  SchemaFactory.createForClass(EvaluationCriterion);
+export const EvaluationCriterionSchema = SchemaFactory.createForClass(EvaluationCriterion);
 
 @Schema({ collection: 'appraisal_templates', timestamps: true })
 export class AppraisalTemplate {
@@ -93,5 +87,4 @@ export class AppraisalTemplate {
   isActive: boolean;
 }
 
-export const AppraisalTemplateSchema =
-  SchemaFactory.createForClass(AppraisalTemplate);
+export const AppraisalTemplateSchema = SchemaFactory.createForClass(AppraisalTemplate);
