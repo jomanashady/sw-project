@@ -11,31 +11,64 @@ async function bootstrap() {
     // CORS CONFIGURATION
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    
+    // Build allowed origins list
     const allowedOrigins = [
       frontendUrl,
       'http://localhost:3000',
       'http://localhost:3001',
       'https://hr-systemm.netlify.app',
-      'https://*.netlify.app', // Allow all Netlify previews
     ];
+    
+    // Remove duplicates and filter out undefined
+    const uniqueOrigins = [...new Set(allowedOrigins.filter(Boolean))];
+    
+    console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
+    console.log('🌐 Frontend URL from env:', frontendUrl);
+    
     app.enableCors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // Check if origin is in allowed list or is a Netlify domain
-        if (
-          allowedOrigins.includes(origin) ||
-          origin.endsWith('.netlify.app')
-        ) {
-          callback(null, true);
-        } else {
-          callback(null, true); // Temporarily allow all for debugging
+        // Allow requests with no origin (like mobile apps, Postman, or curl requests)
+        if (!origin) {
+          console.log('✅ CORS: Allowing request with no origin');
+          return callback(null, true);
         }
+        
+        // Check if origin is in allowed list
+        if (uniqueOrigins.includes(origin)) {
+          console.log(`✅ CORS: Allowing origin: ${origin}`);
+          return callback(null, true);
+        }
+        
+        // Allow all Netlify domains (including preview deployments)
+        if (origin.endsWith('.netlify.app')) {
+          console.log(`✅ CORS: Allowing Netlify domain: ${origin}`);
+          return callback(null, true);
+        }
+        
+        // Allow localhost for development
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+          console.log(`✅ CORS: Allowing localhost: ${origin}`);
+          return callback(null, true);
+        }
+        
+        // Log blocked origins for debugging
+        console.log(`❌ CORS: Blocking origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers',
+      ],
+      exposedHeaders: ['Authorization'],
+      maxAge: 86400, // 24 hours
     });
 
     // -----------------------------------
