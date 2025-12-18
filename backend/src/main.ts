@@ -12,7 +12,7 @@ async function bootstrap() {
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
-    // Build allowed origins list - use function to allow all Netlify domains
+    // Build allowed origins list - explicitly include all Netlify domains
     const allowedOrigins = [
       frontendUrl,
       'http://localhost:3000',
@@ -24,82 +24,38 @@ async function bootstrap() {
     console.log('🌐 CORS Allowed Origins:', allowedOrigins);
     console.log('🌐 Frontend URL from env:', frontendUrl);
     
-    // Get the underlying Express app to add middleware BEFORE NestJS processing
-    const expressApp = app.getHttpAdapter().getInstance();
-    
-    // CRITICAL: Handle CORS at Express level BEFORE any other middleware or guards
-    // This must be the FIRST middleware to ensure OPTIONS requests are handled correctly
-    expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-      const origin = req.headers.origin as string | undefined;
-      
-      // Check if origin should be allowed
-      let allowOrigin = false;
+    // Function to check if origin should be allowed
+    const isOriginAllowed = (origin: string | undefined): boolean => {
       if (!origin) {
-        // Allow requests with no origin (like mobile apps, Postman, curl)
-        allowOrigin = true;
-      } else if (allowedOrigins.includes(origin)) {
-        allowOrigin = true;
-      } else if (origin.endsWith('.netlify.app')) {
-        allowOrigin = true;
+        return true; // Allow requests with no origin (mobile apps, Postman, curl)
+      }
+      if (allowedOrigins.includes(origin)) {
+        return true;
+      }
+      if (origin.endsWith('.netlify.app')) {
         console.log(`✅ CORS: Allowing Netlify domain: ${origin}`);
-      } else if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-        allowOrigin = true;
+        return true; // Allow ALL Netlify domains
       }
-      
-      // Set CORS headers for allowed origins
-      if (allowOrigin) {
-        if (origin) {
-          // For browser requests with origin, echo back the origin
-          res.setHeader('Access-Control-Allow-Origin', origin);
-        }
-        // Note: We don't set '*' when credentials are true (browser restriction)
-        
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Max-Age', '86400');
-        res.setHeader('Access-Control-Expose-Headers', 'Authorization');
+      if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+        return true;
       }
-      
-      // Handle preflight OPTIONS requests
-      if (req.method === 'OPTIONS') {
-        if (allowOrigin) {
-          console.log(`✅ CORS Preflight ALLOWED: ${origin || 'no origin'}`);
-          return res.status(204).end();
-        } else {
-          console.log(`❌ CORS Preflight BLOCKED: ${origin || 'no origin'}`);
-          return res.status(403).json({ message: 'CORS policy: Origin not allowed' });
-        }
-      }
-      
-      next();
-    });
+      return false;
+    };
     
-    // NestJS CORS configuration (backup/secondary)
+    // NestJS CORS configuration - PRIMARY CORS HANDLER
+    // This handles both preflight OPTIONS and actual requests
     app.enableCors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, Postman, or curl requests)
-        if (!origin) {
-          return callback(null, true);
+        const isAllowed = isOriginAllowed(origin);
+        if (isAllowed) {
+          if (origin) {
+            console.log(`✅ CORS: Allowing origin: ${origin}`);
+          }
+          callback(null, true);
+        } else {
+          console.log(`❌ CORS: Blocking origin: ${origin || 'no origin'}`);
+          callback(null, false); // Reject by returning false, not an error
         }
-
-        // Check if origin is in the explicit allowed list
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-
-        // Allow all Netlify domains (including preview deployments)
-        if (origin.endsWith('.netlify.app')) {
-          return callback(null, true);
-        }
-
-        // Allow localhost for development
-        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-          return callback(null, true);
-        }
-
-        // Block other origins
-        callback(null, false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
@@ -114,8 +70,26 @@ async function bootstrap() {
       ],
       exposedHeaders: ['Authorization'],
       maxAge: 86400, // 24 hours
-      preflightContinue: false,
-      optionsSuccessStatus: 204,
+      preflightContinue: false, // Don't continue to next handler after preflight
+      optionsSuccessStatus: 204, // Return 204 for successful OPTIONS
+    });
+    
+    // Additional Express-level middleware as backup for edge cases
+    // This ensures CORS headers are set even if NestJS CORS somehow misses it
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+      const origin = req.headers.origin as string | undefined;
+      
+      // Only add headers if origin is allowed (NestJS CORS should handle this, but this is backup)
+      if (isOriginAllowed(origin) && origin) {
+        // Ensure headers are set (NestJS should have done this, but double-check)
+        if (!res.getHeader('Access-Control-Allow-Origin')) {
+          res.setHeader('Access-Control-Allow-Origin', origin);
+          res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+      }
+      
+      next();
     });
 
     // -----------------------------------
