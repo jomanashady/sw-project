@@ -1,10 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, LogLevel } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    // Disable NestJS default logger in production to reduce Railway log rate limits
+    const logger: LogLevel[] = process.env.NODE_ENV === 'production' 
+      ? ['error', 'warn'] // Only log errors and warnings in production
+      : ['log', 'error', 'warn', 'debug', 'verbose']; // Full logging in development
+    
+    const app = await NestFactory.create(AppModule, {
+      logger: logger,
+    });
 
     // -----------------------------------
     // CORS CONFIGURATION
@@ -84,6 +91,8 @@ async function bootstrap() {
         transformOptions: {
           enableImplicitConversion: true,
         },
+        // Disable detailed error messages in production to reduce Railway log rate limits
+        disableErrorMessages: process.env.NODE_ENV === 'production',
       }),
     );
 
@@ -112,22 +121,31 @@ async function bootstrap() {
   }
 }
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections (reduced logging in production)
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection:', reason);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('❌ Unhandled Rejection:', reason);
+  }
   // Don't exit - keep the server running
 });
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions (reduced logging in production)
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error.message);
-  console.error('Stack:', error.stack);
+  // Always log critical errors, but reduce verbosity in production
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ Uncaught Exception:', error.message);
+  } else {
+    console.error('❌ Uncaught Exception:', error.message);
+    console.error('Stack:', error.stack);
+  }
   // Don't exit - keep the server running
 });
 
 // Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('SIGTERM received, shutting down gracefully...');
+  }
   process.exit(0);
 });
 
