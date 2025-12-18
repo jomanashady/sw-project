@@ -1,13 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import * as Express from 'express';
 
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
 
     // -----------------------------------
-    // CORS CONFIGURATION
+    // CORS CONFIGURATION - MUST BE FIRST
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
@@ -23,6 +24,40 @@ async function bootstrap() {
     console.log('🌐 CORS Allowed Origins:', allowedOrigins);
     console.log('🌐 Frontend URL from env:', frontendUrl);
     
+    // Get the underlying Express app to add middleware BEFORE NestJS processing
+    const expressApp = app.getHttpAdapter().getInstance();
+    
+    // CRITICAL: Handle OPTIONS requests at Express level BEFORE any guards
+    expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+      if (req.method === 'OPTIONS') {
+        const origin = req.headers.origin;
+        
+        // Check if origin should be allowed
+        let allowOrigin = false;
+        if (!origin) {
+          allowOrigin = true;
+        } else if (allowedOrigins.includes(origin)) {
+          allowOrigin = true;
+        } else if (origin.endsWith('.netlify.app')) {
+          allowOrigin = true;
+        } else if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+          allowOrigin = true;
+        }
+        
+        if (allowOrigin && origin) {
+          res.setHeader('Access-Control-Allow-Origin', origin);
+        }
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        res.setHeader('Access-Control-Expose-Headers', 'Authorization');
+        return res.status(204).end();
+      }
+      next();
+    });
+    
+    // NestJS CORS configuration (backup/secondary)
     app.enableCors({
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
