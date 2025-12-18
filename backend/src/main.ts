@@ -11,23 +11,22 @@ async function bootstrap() {
     // -----------------------------------
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     
-    // Build allowed origins list
+    // Build allowed origins list - include all possible Netlify URLs
     const allowedOrigins = [
       frontendUrl,
       'http://localhost:3000',
       'http://localhost:3001',
       'https://hr-systemm.netlify.app',
-      'https://hr-syst.netlify.app', // Add the actual Netlify URL
-    ];
+      'https://hr-syst.netlify.app',
+    ].filter(Boolean);
     
-    // Remove duplicates and filter out undefined
-    const uniqueOrigins = [...new Set(allowedOrigins.filter(Boolean))];
+    console.log('🌐 CORS Configuration:');
+    console.log('   Frontend URL from env:', frontendUrl);
+    console.log('   Allowed origins:', allowedOrigins);
     
-    console.log('🌐 CORS Allowed Origins:', uniqueOrigins);
-    console.log('🌐 Frontend URL from env:', frontendUrl);
-    
-    app.enableCors({
-      origin: (origin, callback) => {
+    // Use a function to check origins dynamically
+    const corsOptions = {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps, Postman, or curl requests)
         if (!origin) {
           console.log('✅ CORS: Allowing request with no origin');
@@ -36,8 +35,8 @@ async function bootstrap() {
 
         console.log('🔍 CORS: Checking origin:', origin);
 
-        // Ensure the origin is in the allowed list
-        if (uniqueOrigins.includes(origin)) {
+        // Check if origin is in the allowed list
+        if (allowedOrigins.includes(origin)) {
           console.log('✅ CORS: Origin in allowed list');
           return callback(null, true);
         }
@@ -56,7 +55,7 @@ async function bootstrap() {
 
         // Block other origins
         console.log('❌ CORS: Blocking origin:', origin);
-        callback(null, false); // Use false instead of Error for better compatibility
+        callback(null, false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
@@ -73,7 +72,9 @@ async function bootstrap() {
       maxAge: 86400, // 24 hours
       preflightContinue: false,
       optionsSuccessStatus: 204,
-    });
+    };
+    
+    app.enableCors(corsOptions);
 
     // -----------------------------------
     // GLOBAL VALIDATION PIPE
