@@ -82,8 +82,9 @@ async function bootstrap() {
     // -----------------------------------
     // START SERVER
     // -----------------------------------
-    const port = process.env.PORT || 8080;
+    const port = process.env.PORT ? Number(process.env.PORT) : 8080;
     await app.listen(port, '0.0.0.0');
+
 
 
     console.log('='.repeat(50));
