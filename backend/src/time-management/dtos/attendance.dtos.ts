@@ -8,6 +8,7 @@ import {
   IsEnum,
   IsNumber,
   Validate,
+  ValidateNested,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -35,6 +36,20 @@ export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInt
   }
 }
 
+// Nested DTO for attendance punches
+// Needed because global ValidationPipe uses whitelist=true, which strips nested fields
+// unless they are defined in a class with decorators.
+export class AttendancePunchDto {
+  @IsNotEmpty()
+  @IsEnum(PunchType)
+  type: PunchType;
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  time: Date;
+}
+
 // DTO for creating an attendance record - ALL FIELDS FROM SCHEMA
 export class CreateAttendanceRecordDto {
   @IsNotEmpty()
@@ -43,7 +58,9 @@ export class CreateAttendanceRecordDto {
 
   @IsNotEmpty()
   @IsArray()
-  punches: { type: PunchType; time: Date }[]; // Array of punch records with PunchType enum (required)
+  @ValidateNested({ each: true })
+  @Type(() => AttendancePunchDto)
+  punches: AttendancePunchDto[];  // Array of punch records with PunchType enum (required)
 
   @IsNotEmpty()
   @IsNumber()
@@ -83,7 +100,9 @@ export class GetAttendanceRecordDto {
 export class UpdateAttendanceRecordDto {
   @IsNotEmpty()
   @IsArray()
-  punches: { type: PunchType; time: Date }[]; // Array of punch records with PunchType enum (required)
+  @ValidateNested({ each: true })
+  @Type(() => AttendancePunchDto)
+  punches: AttendancePunchDto[];  // Array of punch records with PunchType enum (required)
 
   @IsNotEmpty()
   @IsNumber()

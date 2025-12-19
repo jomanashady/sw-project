@@ -67,23 +67,48 @@ export default function PayrollExecutionPage() {
         </div>
       </div>
 
-      {/* Payroll Initiation */}
+      {/* Payroll Initiation Workflow */}
       <div className="mb-10">
         <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Payroll Initiation
+          Payroll Initiation Workflow
         </h2>
         <p className="text-gray-600 mb-4">
-          Process payroll initiation and create new payroll runs
+          Complete workflow: Review payroll period → Process initiation → Review & approve → Automatic draft generation
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Workflow Steps:</strong> 1) Review Payroll Period (Approve/Reject) → 2) Process Payroll Initiation → 3) Review & Approve Initiation → 4) Automatic Draft Generation starts
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="hover:shadow-lg transition-shadow border-2 border-purple-200">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-6 w-6 text-purple-600" />
+                <CardTitle>Step 1: Review Period</CardTitle>
+              </div>
+              <CardDescription>
+                Review and approve/reject payroll period (frontend-only workflow)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link
+                href="/dashboard/payroll-execution/pre-initiation/payroll-period"
+                className="block w-full text-center bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 transition font-medium"
+              >
+                Review Period →
+              </Link>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-lg transition-shadow border-2 border-blue-200">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FileText className="h-6 w-6 text-blue-600" />
-                <CardTitle>Process Initiation</CardTitle>
+                <CardTitle>Step 2: Process Initiation</CardTitle>
               </div>
               <CardDescription>
-                Automatically process payroll initiation to create a new payroll run
+                Automatically process payroll initiation to create a new payroll run in DRAFT status
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -100,10 +125,10 @@ export default function PayrollExecutionPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-6 w-6 text-green-600" />
-                <CardTitle>Review Initiation</CardTitle>
+                <CardTitle>Step 3: Review Initiation</CardTitle>
               </div>
               <CardDescription>
-                Review and approve processed payroll initiations
+                Review and approve/reject processed payroll initiations. Approving automatically starts draft generation.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -123,7 +148,7 @@ export default function PayrollExecutionPage() {
                 <CardTitle>Edit Initiation</CardTitle>
               </div>
               <CardDescription>
-                Manually edit payroll initiation when needed
+                Manually edit rejected payroll initiations. Edit period and other details, then re-review.
               </CardDescription>
             </CardHeader>
             <CardContent>

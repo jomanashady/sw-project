@@ -70,10 +70,17 @@ export default function TrackingPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "claims" | "disputes" | "refunds">("all");
 
-  // Allow employees, finance staff, and payroll specialists to access this page
+  // Allow all employee roles to access this page (all roles are employees and need to check their salary, claims, etc.)
+  // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can access any employee's data
   const hasAccess = user?.roles?.some(
     (role) => 
       role === SystemRole.DEPARTMENT_EMPLOYEE || 
+      role === SystemRole.DEPARTMENT_HEAD ||
+      role === SystemRole.HR_MANAGER ||
+      role === SystemRole.HR_EMPLOYEE ||
+      role === SystemRole.HR_ADMIN ||
+      role === SystemRole.RECRUITER ||
+      role === SystemRole.LEGAL_POLICY_ADMIN ||
       role === SystemRole.FINANCE_STAFF || 
       role === SystemRole.PAYROLL_SPECIALIST ||
       role === SystemRole.PAYROLL_MANAGER ||

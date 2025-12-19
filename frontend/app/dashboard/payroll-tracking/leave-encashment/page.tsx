@@ -62,7 +62,8 @@ export default function LeaveEncashmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useRequireAuth(SystemRole.DEPARTMENT_EMPLOYEE);
+  // All authenticated users can view their own leave encashment (all roles are employees)
+  // No need for restrictive useRequireAuth
 
   useEffect(() => {
     const fetchLeaveEncashment = async () => {

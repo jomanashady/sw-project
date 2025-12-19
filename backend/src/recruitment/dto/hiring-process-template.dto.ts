@@ -64,3 +64,7 @@ export class UpdateHiringProcessTemplateDto {
   @IsBoolean()
   isActive?: boolean;
 }
+
+
+
+

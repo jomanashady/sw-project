@@ -143,6 +143,51 @@ export class NotificationsService {
 
   // ===== TIME MANAGEMENT MODULE NOTIFICATIONS =====
 
+  private async getPayrollOfficerIds(): Promise<string[]> {
+    // "Payroll Officer" in this codebase maps to Payroll Specialist / Payroll Manager roles
+    const payrollRoles = await this.employeeSystemRoleModel
+      .find({
+        roles: { $in: [SystemRole.PAYROLL_SPECIALIST, SystemRole.PAYROLL_MANAGER] },
+        isActive: true,
+      })
+      .select('employeeProfileId')
+      .exec();
+
+    return payrollRoles
+      .map((r: any) => r.employeeProfileId?.toString())
+      .filter((id: any): id is string => !!id);
+  }
+
+  async getEmployeeAndLineManagerInfo(employeeId: string): Promise<{
+    employeeName: string;
+    managerId?: string;
+  }> {
+    const employee = await this.employeeProfileModel
+      .findById(employeeId)
+      .select('firstName lastName supervisorPositionId status')
+      .lean()
+      .exec();
+
+    const employeeName =
+      employee
+        ? `${(employee as any).firstName || ''} ${(employee as any).lastName || ''}`.trim() || 'Employee'
+        : 'Employee';
+
+    const supervisorPositionId = (employee as any)?.supervisorPositionId;
+    if (!supervisorPositionId) return { employeeName };
+
+    const manager = await this.employeeProfileModel
+      .findOne({
+        primaryPositionId: supervisorPositionId,
+        status: { $in: [EmployeeStatus.ACTIVE, EmployeeStatus.PROBATION] },
+      })
+      .select('_id')
+      .lean()
+      .exec();
+
+    return { employeeName, managerId: (manager as any)?._id?.toString() };
+  }
+
   /**
    * REQ: As an HR Admin, I want to be notified when a shift assignment is nearing expiry
    * so that schedules can be renewed or reassigned.
@@ -205,24 +250,35 @@ export class NotificationsService {
 
     const notifications: any[] = [];
 
+    // Create individual notifications for each assignment per HR admin (for Manage button support)
     for (const hrAdminId of targetAdminIds) {
-      // Create summary message for HR Admin
-      const message =
-        `${expiringAssignments.length} shift assignment(s) expiring soon:\n` +
-        expiringAssignments
-          .map(
-            (a) =>
-              `- ${a.employeeName || a.employeeId}: ${a.shiftName || 'Shift'} expires in ${a.daysRemaining} days`
-          )
-          .join('\n');
+      for (const assignment of expiringAssignments) {
+        const urgency =
+          assignment.daysRemaining <= 2
+            ? 'HIGH'
+            : assignment.daysRemaining <= 4
+              ? 'MEDIUM'
+              : 'LOW';
 
-      const notification = await this.notificationLogModel.create({
-        to: new Types.ObjectId(hrAdminId),
-        type: NotificationType.SHIFT_EXPIRY_BULK_ALERT,
-        message,
-      });
+        const notification = await this.notificationLogModel.create({
+          to: new Types.ObjectId(hrAdminId),
+          type: NotificationType.SHIFT_EXPIRY_ALERT,
+          message: `Shift assignment for ${assignment.employeeName || 'Unknown'} on shift "${assignment.shiftName || 'Unknown'}" expires in ${assignment.daysRemaining} days`,
+          title: `Shift Expiry Alert - ${assignment.daysRemaining} days remaining`,
+          data: {
+            assignmentId: assignment.assignmentId,
+            employeeId: assignment.employeeId,
+            employeeName: assignment.employeeName || 'Unknown Employee',
+            shiftName: assignment.shiftName || 'Unknown Shift',
+            endDate: assignment.endDate.toISOString(),
+            daysRemaining: assignment.daysRemaining,
+            urgency,
+          },
+          isRead: false,
+        });
 
-      notifications.push(notification);
+        notifications.push(notification);
+      }
     }
 
     return {
@@ -268,6 +324,33 @@ export class NotificationsService {
       to: new Types.ObjectId(recipientId),
       type: NotificationType.SHIFT_RENEWAL_CONFIRMATION,
       message,
+    });
+
+    return notification;
+  }
+
+  /**
+   * Send reassignment confirmation notification
+   * Sent when a shift assignment is reassigned to a different employee
+   */
+  async sendShiftReassignmentConfirmation(
+    newEmployeeId: string,
+    shiftAssignmentId: string,
+    shiftName: string,
+    endDate: Date,
+  ) {
+    const message = `You have been assigned to shift "${shiftName}". Assignment ends on ${endDate.toISOString().split('T')[0]}.`;
+
+    const notification = await this.notificationLogModel.create({
+      to: new Types.ObjectId(newEmployeeId),
+      type: NotificationType.SHIFT_REASSIGNMENT_CONFIRMATION,
+      message,
+      title: 'Shift Assignment',
+      data: {
+        assignmentId: shiftAssignmentId,
+        shiftName,
+        endDate: endDate.toISOString(),
+      },
     });
 
     return notification;
@@ -336,6 +419,132 @@ export class NotificationsService {
   }
 
   /**
+   * Send repeated lateness flag notification to HR admins
+   * BR-TM-09: Notify HR when employee is flagged for repeated lateness
+   */
+  async sendRepeatedLatenessFlagNotification(
+    employeeId: string,
+    occurrenceCount: number,
+    status: string,
+  ) {
+    // Get all HR Admins to notify
+    const hrAdminRoles = await this.employeeSystemRoleModel
+      .find({
+        role: 'HR_ADMIN',
+      })
+      .exec();
+
+    // Filter out roles with null employeeProfileId
+    const hrAdmins = hrAdminRoles
+      .filter((role) => role.employeeProfileId)
+      .map((role) => role.employeeProfileId!.toString());
+
+    if (hrAdmins.length === 0) {
+      console.log('[REPEATED LATENESS] No HR admins found to notify');
+      return null;
+    }
+
+    // Get employee name for the message
+    let employeeName = 'Unknown Employee';
+    try {
+      const employee = await this.employeeProfileModel.findById(employeeId).exec();
+      if (employee) {
+        employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown Employee';
+      }
+    } catch (err) {
+      console.error('[REPEATED LATENESS] Failed to get employee name:', err);
+    }
+
+    const message = `⚠️ Repeated Lateness: Employee ${employeeName} has been flagged with ${occurrenceCount} late arrivals in the last 30 days. Please review for disciplinary tracking.`;
+
+    const notifications: any[] = [];
+    for (const hrAdminId of hrAdmins) {
+      try {
+        const notification = await this.notificationLogModel.create({
+          to: new Types.ObjectId(hrAdminId),
+          type: NotificationType.REPEATED_LATENESS_FLAGGED,
+          message,
+          title: `Repeated Lateness: ${employeeName}`,
+          isRead: false,
+          data: {
+            employeeId,
+            employeeName,
+            occurrenceCount,
+            flaggedAt: new Date().toISOString(),
+          },
+        });
+        notifications.push(notification);
+      } catch (err) {
+        console.error(`[REPEATED LATENESS] Failed to notify HR admin ${hrAdminId}:`, err);
+      }
+    }
+
+    console.log(`[REPEATED LATENESS] Sent ${notifications.length} notifications for employee ${employeeName}`);
+    return notifications;
+  }
+
+  /**
+   * Send payroll cut-off escalation notification to HR admins
+   * US18: Notify HR when requests are auto-escalated due to approaching payroll cut-off
+   */
+  async sendPayrollCutoffEscalationNotification(
+    hrAdminIds: string[],
+    escalatedExceptions: number,
+    escalatedCorrections: number,
+    pendingLeaves: number,
+    payrollCutoffDate: Date,
+    daysUntilCutoff: number,
+  ): Promise<{ notificationsSent: number; notifications: any[] }> {
+    const notifications: any[] = [];
+    const totalEscalated = escalatedExceptions + escalatedCorrections;
+    const urgency = daysUntilCutoff <= 1 ? 'CRITICAL' : 'HIGH';
+
+    let message = `⚠️ PAYROLL CUTOFF ALERT [${urgency}]: `;
+    
+    if (totalEscalated > 0) {
+      message += `${totalEscalated} time request(s) auto-escalated (${escalatedExceptions} exception(s), ${escalatedCorrections} correction(s)). `;
+    }
+    
+    if (pendingLeaves > 0) {
+      message += `${pendingLeaves} leave request(s) pending review. `;
+    }
+    
+    message += `Payroll cut-off: ${payrollCutoffDate.toLocaleDateString()}. ${daysUntilCutoff} day(s) remaining. Immediate review required.`;
+
+    const title = `Payroll Cut-off Alert: ${daysUntilCutoff} day(s) remaining`;
+
+    for (const hrAdminId of hrAdminIds) {
+      try {
+        const notification = await this.notificationLogModel.create({
+          to: new Types.ObjectId(hrAdminId),
+          type: NotificationType.PAYROLL_CUTOFF_ESCALATION_ALERT,
+          message,
+          title,
+          isRead: false,
+          data: {
+            payrollCutoffDate: payrollCutoffDate.toISOString(),
+            daysUntilCutoff,
+            escalatedExceptions,
+            escalatedCorrections,
+            pendingLeaves,
+            urgency,
+            escalatedAt: new Date().toISOString(),
+          },
+        });
+        notifications.push(notification);
+      } catch (err) {
+        console.error(`[PAYROLL CUTOFF] Failed to notify HR admin ${hrAdminId}:`, err);
+      }
+    }
+
+    console.log(`[PAYROLL CUTOFF] Sent ${notifications.length} notifications to HR admins`);
+    return {
+      notificationsSent: notifications.length,
+      notifications,
+    };
+  }
+
+  /**
    * REQ: Missed punches/late sign-ins must be handled via auto-flagging, notifications, or payroll blocking.
    * Send missed punch alert to employee
    */
@@ -378,6 +587,44 @@ export class NotificationsService {
     });
 
     return notification;
+  }
+
+  /**
+   * Send missed punch alert to Payroll Officers (Payroll Specialist/Manager)
+   */
+  async sendMissedPunchAlertToPayrollTeam(
+    employeeId: string,
+    employeeName: string,
+    attendanceRecordId: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    date: Date,
+    currentUserId: string,
+  ) {
+    const payrollOfficerIds = await this.getPayrollOfficerIds();
+    if (!payrollOfficerIds.length) {
+      return { success: false, notificationsCreated: 0, payrollOfficerIds: [] as string[] };
+    }
+
+    const message =
+      `Missed ${missedPunchType === 'CLOCK_IN' ? 'clock-in' : 'clock-out'} detected for ` +
+      `${employeeName} (${employeeId}) on ${date.toISOString().split('T')[0]}. ` +
+      `This may impact payroll; please follow up if unresolved.`;
+
+    const notifications = await Promise.all(
+      payrollOfficerIds.map((id) =>
+        this.notificationLogModel.create({
+          to: new Types.ObjectId(id),
+          type: NotificationType.MISSED_PUNCH_PAYROLL_ALERT,
+          message,
+        }),
+      ),
+    );
+
+    return {
+      success: true,
+      notificationsCreated: notifications.length,
+      payrollOfficerIds,
+    };
   }
 
   /**
@@ -480,6 +727,7 @@ export class NotificationsService {
         $in: [
           NotificationType.MISSED_PUNCH_EMPLOYEE_ALERT,
           NotificationType.MISSED_PUNCH_MANAGER_ALERT,
+          NotificationType.MISSED_PUNCH_PAYROLL_ALERT,
         ],
       },
     };
@@ -605,7 +853,18 @@ export class NotificationsService {
         .lean()
         .exec();
 
-      console.log(`Found ${allNotifications.length} notifications for user ${userId}`);
+      console.log(
+        `Found ${allNotifications.length} notifications for user ${userId}`,
+      );
+      
+      // Debug: Log the first few shift expiry notifications to verify data field
+      const shiftExpiryNotifs = allNotifications.filter(
+        (n: any) => n.type === 'SHIFT_EXPIRY_ALERT' || n.type === 'SHIFT_EXPIRY_BULK_ALERT'
+      );
+      console.log(`[DEBUG] Found ${shiftExpiryNotifs.length} shift expiry notifications`);
+      if (shiftExpiryNotifs.length > 0) {
+        console.log('[DEBUG] First shift expiry notification:', JSON.stringify(shiftExpiryNotifs[0], null, 2));
+      }
 
       // Ensure isRead field is always present (default to false if not set)
       const transformed = allNotifications.map((notif: any) => ({
@@ -665,7 +924,7 @@ export class NotificationsService {
    * Runs every day at 9:00 AM
    * This ensures HR admins are notified of shifts expiring within 7 days
    */
-  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  @Cron('0 21 21 * * *') // Every day at 4:50 PM
   async handleShiftExpiryNotifications() {
     try {
       console.log('[SCHEDULED TASK] Running shift expiry notification check...');
@@ -710,12 +969,14 @@ export class NotificationsService {
         })
         .populate('employeeProfileId', 'firstName lastName')
         .exec();
-
-      const hrAdmins = hrAdminRoles.map((role) => ({
-        _id: role.employeeProfileId,
-        firstName: role.employeeProfileId?.firstName,
-        lastName: role.employeeProfileId?.lastName,
-      }));
+      
+      const hrAdmins = hrAdminRoles
+        .filter(role => role.employeeProfileId != null)
+        .map(role => ({
+          _id: role.employeeProfileId,
+          firstName: (role.employeeProfileId as any)?.firstName,
+          lastName: (role.employeeProfileId as any)?.lastName,
+        }));
 
       if (!hrAdmins || hrAdmins.length === 0) {
         console.log('[SCHEDULED TASK] No HR admins found to notify');
@@ -745,7 +1006,7 @@ export class NotificationsService {
               : 'Unknown Shift';
 
           const notification = {
-            recipientId: hrAdmin._id.toString(),
+            to: hrAdmin._id,
             type: NotificationType.SHIFT_EXPIRY_ALERT,
             message: `Shift assignment for ${employeeName} on shift "${shiftName}" expires in ${daysRemaining} days`,
             title: `Shift Expiry Alert - ${daysRemaining} days remaining`,
@@ -767,6 +1028,9 @@ export class NotificationsService {
       }
 
       if (notifications.length > 0) {
+        // Debug: Log the first notification's data before saving
+        console.log('[DEBUG] First notification to save:', JSON.stringify(notifications[0], null, 2));
+        
         await this.notificationLogModel.insertMany(notifications);
         console.log(`[SCHEDULED TASK] Successfully created ${notifications.length} notifications`);
       }
@@ -1108,7 +1372,9 @@ export class NotificationsService {
       startDate: Date;
       totalTasks: number;
       onboardingId: string;
-    }
+      // NEW: Specific document upload tasks for the new hire
+      documentUploadTasks?: { name: string; notes?: string; deadline?: Date }[];
+    },
   ) {
     return this.recruitmentNotificationsService.notifyNewHireWelcome(newHireId, welcomeDetails);
   }

@@ -140,9 +140,21 @@ function EditInitiationPageContent() {
       // Format entity with currency
       const entityWithCurrency = `${entity.trim()}|${currency}`;
 
+      // Automatically adjust to first day of the selected month (backend requirement)
+      const [year, month, day] = payrollPeriod.split('-').map(Number);
+      const firstDayOfMonth = new Date(year, month - 1, 1);
+      const formatDate = (date: Date): string => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+      const periodToUse = formatDate(firstDayOfMonth);
+      const periodDateISO = `${periodToUse}T00:00:00.000Z`;
+
       await payrollExecutionApi.editPayrollInitiation({
         runId: runId,
-        payrollPeriod: new Date(payrollPeriod).toISOString(),
+        payrollPeriod: periodDateISO,
         entity: entityWithCurrency,
       });
 
@@ -264,7 +276,7 @@ function EditInitiationPageContent() {
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Select the first day of the payroll period (month)
+              Select any date in the target month. The system will automatically use the first day of that month as the payroll period (required by business rules).
             </p>
           </div>
 

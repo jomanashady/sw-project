@@ -58,42 +58,38 @@ export default function ClaimsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Allow employees, payroll specialists, payroll managers, finance staff, and system admins
+  // Allow ALL authenticated users (all roles are employees and need to check their claims)
+  // Staff roles can view all claims, regular employees can only view their own
   const isPayrollSpecialist = user?.roles?.includes(SystemRole.PAYROLL_SPECIALIST);
   const isPayrollManager = user?.roles?.includes(SystemRole.PAYROLL_MANAGER);
   const isFinanceStaff = user?.roles?.includes(SystemRole.FINANCE_STAFF);
   const isSystemAdmin = user?.roles?.includes(SystemRole.SYSTEM_ADMIN);
   const isEmployee = user?.roles?.includes(SystemRole.DEPARTMENT_EMPLOYEE);
   
-  const allowedRoles = [
-    SystemRole.DEPARTMENT_EMPLOYEE,
-    SystemRole.PAYROLL_SPECIALIST,
-    SystemRole.PAYROLL_MANAGER,
-    SystemRole.FINANCE_STAFF,
-    SystemRole.SYSTEM_ADMIN,
-  ];
-  
-  useRequireAuth(allowedRoles);
+  // All authenticated users have access to view their own claims
+  // No need for useRequireAuth since we check authentication in the component
 
   useEffect(() => {
     const fetchClaims = async () => {
       try {
         let data;
         
-        // If user is an employee, fetch only their claims
+        // All authenticated users can fetch their own claims
+        // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can fetch all claims
         let refundsData: Refund[] = [];
         
-        if (isEmployee && (user?.id || user?.userId)) {
-          const employeeId = user.id || user.userId;
-          [data, refundsData] = await Promise.all([
-            payslipsApi.getClaimsByEmployeeId(employeeId!),
-            payslipsApi.getRefundsByEmployeeId(employeeId!),
-          ]);
-        } else if (isPayrollSpecialist || isPayrollManager || isFinanceStaff || isSystemAdmin) {
+        if (isPayrollSpecialist || isPayrollManager || isFinanceStaff || isSystemAdmin) {
           // For payroll staff, fetch all claims (regardless of status)
           [data, refundsData] = await Promise.all([
             payslipsApi.getAllClaims(),
             payslipsApi.getAllRefunds(),
+          ]);
+        } else if (user?.id || user?.userId) {
+          // For all other users (all roles are employees), fetch only their own claims
+          const employeeId = user.id || user.userId;
+          [data, refundsData] = await Promise.all([
+            payslipsApi.getClaimsByEmployeeId(employeeId!),
+            payslipsApi.getRefundsByEmployeeId(employeeId!),
           ]);
         } else {
           setError("User ID not found");

@@ -19,7 +19,8 @@ export default function SalaryHistoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(12);
 
-  useRequireAuth(SystemRole.DEPARTMENT_EMPLOYEE);
+  // All authenticated users can view their own salary history (all roles are employees)
+  // No need for restrictive useRequireAuth
 
   useEffect(() => {
     const fetchSalaryHistory = async () => {

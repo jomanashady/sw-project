@@ -3,8 +3,10 @@ import axios from "axios";
 import { Payslip } from "../../../types/payslip";
 import { authApi } from "../auth/auth";
 
+// Use the same base URL as the api client to avoid port conflicts
+// The api client uses port 5000 by default, not 6000 (6000 is an unsafe port)
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export const payslipsApi = {
   // Get all payslips for an employee

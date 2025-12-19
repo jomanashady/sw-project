@@ -1,18 +1,16 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import StatusBadge from '@/components/payroll-configuration/StatusBadge';
 import { payGradesApi } from '@/lib/api/payroll-configuration/payGrades';
-import { PayGrade } from '@/lib/api/payroll-configuration/types';
 
 export default function PayGradeDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const payGradeId = params.id as string;
-  const [payGrade, setPayGrade] = useState<PayGrade | null>(null);
+  const [payGrade, setPayGrade] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPayGrade();
@@ -20,19 +18,17 @@ export default function PayGradeDetailsPage() {
 
   const loadPayGrade = async () => {
     try {
-      setIsLoading(true);
       const data = await payGradesApi.getById(payGradeId);
       setPayGrade(data);
-    } catch (err) {
-      console.error('Error loading pay grade:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load pay grade');
+    } catch (error) {
+      console.error('Error loading pay grade:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEdit = () => {
-    if (payGrade && payGrade.status === 'draft') {
+    if (payGrade?.status === 'draft') {
       router.push(`/dashboard/payroll-configuration/pay-grades/${payGradeId}/edit`);
     }
   };
@@ -48,15 +44,15 @@ export default function PayGradeDetailsPage() {
     );
   }
 
-  if (error || !payGrade) {
+  if (!payGrade) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6 flex items-center gap-3">
-            <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl p-8 max-w-md">
+          <div className="text-center">
+            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <p className="text-red-800 font-semibold">{error || 'Pay grade not found'}</p>
+            <p className="text-gray-600 font-medium text-lg">Pay grade not found</p>
           </div>
         </div>
       </div>
@@ -64,29 +60,17 @@ export default function PayGradeDetailsPage() {
   }
 
   const getCreatedByName = () => {
-    if (!payGrade.createdBy) return 'N/A';
-    if (typeof payGrade.createdBy === 'string') return payGrade.createdBy;
-    const createdBy = payGrade.createdBy as any;
-    if (createdBy && typeof createdBy === 'object') {
-      if (createdBy.firstName && createdBy.lastName) {
-        return `${createdBy.firstName} ${createdBy.lastName}`;
-      }
-      return createdBy.email || createdBy.fullName || (createdBy as any).createdByName || 'N/A';
+    const createdBy = payGrade.createdBy;
+    if (!createdBy) return 'N/A';
+    if (typeof createdBy === 'string') return createdBy;
+    if (typeof createdBy === 'object') {
+      const obj = createdBy as any;
+      if (obj.firstName && obj.lastName) return `${obj.firstName} ${obj.lastName}`;
+      if (obj.fullName) return obj.fullName;
+      if (obj.email) return obj.email;
+      return 'Unknown';
     }
     return 'N/A';
-  };
-
-  const getApprovedByName = () => {
-    if (!payGrade.approvedBy) return null;
-    if (typeof payGrade.approvedBy === 'string') return payGrade.approvedBy;
-    const approvedBy = payGrade.approvedBy as any;
-    if (approvedBy && typeof approvedBy === 'object') {
-      if (approvedBy.firstName && approvedBy.lastName) {
-        return `${approvedBy.firstName} ${approvedBy.lastName}`;
-      }
-      return approvedBy.email || approvedBy.fullName || 'Unknown';
-    }
-    return 'Unknown';
   };
 
   return (
@@ -113,7 +97,7 @@ export default function PayGradeDetailsPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {payGrade.name}
+                  {payGrade.name || 'Pay Grade'}
                 </h1>
                 <div className="flex items-center gap-3 mt-2">
                   <StatusBadge status={payGrade.status} />
@@ -137,155 +121,82 @@ export default function PayGradeDetailsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Details Card */}
+          {/* Details Column */}
           <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl border border-white/20 overflow-hidden">
             <div className="p-8">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Pay Grade Details</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Salary Range</h2>
               </div>
-
-              <div className="space-y-6">
-                {/* Name */}
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Name</label>
-                  <p className="mt-1 text-lg font-medium text-gray-900">{payGrade.name}</p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Base Salary</label>
+                  <p className="text-3xl font-bold text-green-700">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'EGP'
+                    }).format(payGrade.minSalary || 0)}
+                  </p>
                 </div>
-
-                {/* Description */}
-                {payGrade.description && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Description</label>
-                    <p className="mt-1 text-gray-700">{payGrade.description}</p>
-                  </div>
-                )}
-
-                {/* Salary Range */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Minimum Salary</label>
-                    <p className="mt-1 text-xl font-bold text-blue-600">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'EGP',
-                        minimumFractionDigits: 0
-                      }).format(payGrade.minSalary || 0)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Maximum Salary</label>
-                    <p className="mt-1 text-xl font-bold text-indigo-600">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'EGP',
-                        minimumFractionDigits: 0
-                      }).format(payGrade.maxSalary || 0)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Benefits */}
-                {payGrade.benefits && payGrade.benefits.length > 0 && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 block">Benefits</label>
-                    <div className="flex flex-wrap gap-2">
-                      {payGrade.benefits.map((benefit, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
-                        >
-                          {benefit}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Is Active */}
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-                  <div className="mt-1">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      payGrade.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {payGrade.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+                <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Gross Salary</label>
+                  <p className="text-3xl font-bold text-blue-700">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'EGP'
+                    }).format(payGrade.maxSalary || 0)}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Metadata Card */}
+          {/* Sidebar Column */}
           <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl border border-white/20 overflow-hidden">
             <div className="p-8">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900">Metadata</h2>
               </div>
-
+              
               <div className="space-y-4">
-                {/* Status */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-                  <div className="mt-1">
-                    <StatusBadge status={payGrade.status} />
-                  </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Created By</label>
+                  <p className="text-sm font-medium text-gray-900">{getCreatedByName()}</p>
                 </div>
-
-                {/* Created By */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Created By</label>
-                  <p className="mt-1 text-sm font-medium text-gray-900">{getCreatedByName()}</p>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Created At</label>
+                  <p className="text-sm font-medium text-gray-900">
+                    {payGrade.createdAt ? new Date(payGrade.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    }) : 'N/A'}
+                  </p>
                 </div>
-
-                {/* Created At */}
-                {payGrade.createdAt && (
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Created At</label>
-                    <p className="mt-1 text-sm text-gray-700">
-                      {new Date(payGrade.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-
-                {/* Updated At */}
-                {payGrade.updatedAt && (
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Updated</label>
-                    <p className="mt-1 text-sm text-gray-700">
-                      {new Date(payGrade.updatedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-
-                {/* Approved By */}
-                {getApprovedByName() && (
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Approved By</label>
-                    <p className="mt-1 text-sm font-medium text-gray-900">{getApprovedByName()}</p>
-                  </div>
-                )}
-
-                {/* Approved At */}
-                {payGrade.approvedAt && (
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Approved At</label>
-                    <p className="mt-1 text-sm text-gray-700">
-                      {new Date(payGrade.approvedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Last Updated</label>
+                  <p className="text-sm font-medium text-gray-900">
+                    {payGrade.updatedAt ? new Date(payGrade.updatedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    }) : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Version</label>
+                  <p className="text-sm font-medium text-gray-900">{payGrade.version || 1}</p>
+                </div>
               </div>
             </div>
           </div>

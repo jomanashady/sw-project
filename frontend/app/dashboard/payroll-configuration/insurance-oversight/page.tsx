@@ -59,8 +59,8 @@ export default function InsuranceOversightPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const status = statusFilter !== 'all' ? statusFilter as 'draft' | 'approved' | 'rejected' : undefined;
-      const data = await insuranceBracketsApi.getAll(status);
+      const filters = statusFilter !== 'all' ? { status: statusFilter } : undefined;
+      const data = await insuranceBracketsApi.getAll(filters);
       // Ensure data is always an array
       if (Array.isArray(data)) {
         setInsuranceBrackets(data);
@@ -86,9 +86,8 @@ export default function InsuranceOversightPage() {
     try {
       setIsProcessing(true);
       setError(null);
-      const id = approvalModal.item.id;
       await insuranceBracketsApi.approve(
-        id,
+        approvalModal.item._id,
         comment ? { comment } : undefined
       );
       setSuccess('Insurance bracket approved successfully');
@@ -107,8 +106,7 @@ export default function InsuranceOversightPage() {
     try {
       setIsProcessing(true);
       setError(null);
-      const id = rejectionModal.item.id;
-      await insuranceBracketsApi.reject(id, { comment: reason });
+      await insuranceBracketsApi.reject(rejectionModal.item._id, { comment: reason });
       setSuccess('Insurance bracket rejected successfully');
       setRejectionModal({ isOpen: false, item: null });
       await loadInsuranceBrackets();
@@ -127,8 +125,7 @@ export default function InsuranceOversightPage() {
     try {
       setIsProcessing(true);
       setError(null);
-      const id = item.id;
-      await insuranceBracketsApi.delete(id);
+      await insuranceBracketsApi.delete(item._id);
       setSuccess('Insurance bracket deleted successfully');
       await loadInsuranceBrackets();
     } catch (err: any) {
@@ -141,8 +138,7 @@ export default function InsuranceOversightPage() {
   const handleView = async (item: InsuranceBracket) => {
     try {
       setIsLoadingDetails(true);
-      const id = item.id;
-      const details = await insuranceBracketsApi.getById(id);
+      const details = await insuranceBracketsApi.getById(item._id);
       setViewModal({
         isOpen: true,
         item,
@@ -160,12 +156,6 @@ export default function InsuranceOversightPage() {
     }
   };
 
-  const handleEdit = (item: InsuranceBracket) => {
-    // Navigate to edit page - HR Managers can edit insurance brackets
-    // Pattern: /dashboard/payroll-configuration/insurance-brackets/{id}/edit
-    const editUrl = `/dashboard/payroll-configuration/insurance-brackets/${item.id}/edit`;
-    router.push(editUrl);
-  };
 
   // Filter brackets by status
   const filteredBrackets = Array.isArray(insuranceBrackets)
@@ -176,8 +166,7 @@ export default function InsuranceOversightPage() {
 
   // Transform to table format
   const tableData: ConfigurationItem[] = filteredBrackets.map((item) => ({
-    _id: item.id, // Map id to _id for table compatibility
-    ...item, // This already includes id and status
+    ...item,
   }));
 
   const columns = [
@@ -194,11 +183,11 @@ export default function InsuranceOversightPage() {
       key: 'employeeContribution',
       label: 'Employee Contribution',
       render: (item: ConfigurationItem) => {
-        const employeeRate = (item as any).employeeRate || (item as any).employeeContribution;
+        const employeeRate = (item as any).employeeRate || item.employeeContribution;
         const value = employeeRate !== undefined && employeeRate !== null ? employeeRate : 'N/A';
         return (
           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-semibold">
-            {typeof value === 'number' ? value.toFixed(2) : value}%
+            {value}%
           </span>
         );
       },
@@ -207,11 +196,11 @@ export default function InsuranceOversightPage() {
       key: 'employerContribution',
       label: 'Employer Contribution',
       render: (item: ConfigurationItem) => {
-        const employerRate = (item as any).employerRate || (item as any).employerContribution;
+        const employerRate = (item as any).employerRate || item.employerContribution;
         const value = employerRate !== undefined && employerRate !== null ? employerRate : 'N/A';
         return (
           <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg font-semibold">
-            {typeof value === 'number' ? value.toFixed(2) : value}%
+            {value}%
           </span>
         );
       },
@@ -242,7 +231,7 @@ export default function InsuranceOversightPage() {
                 Insurance Oversight
               </h1>
               <p className="text-gray-600 mt-1 text-sm">
-                Review and update insurance bracket configurations when policies or regulations change, so that payroll calculations remain accurate, compliant, and reflect the most current insurance requirements. (Approve/reject, Edit, View, Delete)
+                Review and approve insurance bracket configurations (HR Manager only)
               </p>
             </div>
           </div>
@@ -338,42 +327,34 @@ export default function InsuranceOversightPage() {
               </div>
             </div>
             <div>
-              <ConfigurationTable
-                data={tableData}
-                columns={columns}
-                isLoading={isLoading}
-                onView={(item) => {
-                  const found = Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b.id === (item._id || item.id)) : null;
-                  if (found) handleView(found);
-                }}
-                onEdit={(item) => {
-                  const found = Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b.id === (item._id || item.id)) : null;
-                  if (found) handleEdit(found);
-                }}
-                onApprove={(item) =>
-                  setApprovalModal({
-                    isOpen: true,
-                    item: (Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b.id === (item._id || item.id)) : null) || null,
-                  })
-                }
-                onReject={(item) =>
-                  setRejectionModal({
-                    isOpen: true,
-                    item: (Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b.id === (item._id || item.id)) : null) || null,
-                  })
-                }
-                onDelete={(item) => {
-                  const found = Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b.id === (item._id || item.id)) : null;
-                  if (found) handleDelete(found);
-                }}
-                canApprove={(item) => item.status === 'draft'}
-                canReject={(item) => item.status === 'draft'}
-                canEdit={(item) => {
-                  // HR Managers can edit draft or approved items (approved items will revert to draft when edited)
-                  return item.status === 'draft' || item.status === 'approved';
-                }}
-                canDelete={(item) => item.status === 'draft'}
-              />
+          <ConfigurationTable
+            data={tableData}
+            columns={columns}
+            isLoading={isLoading}
+            onView={(item) => {
+              const found = Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b._id === item._id) : null;
+              if (found) handleView(found);
+            }}
+            onApprove={(item) =>
+              setApprovalModal({
+                isOpen: true,
+                item: (Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b._id === item._id) : null) || null,
+              })
+            }
+            onReject={(item) =>
+              setRejectionModal({
+                isOpen: true,
+                item: (Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b._id === item._id) : null) || null,
+              })
+            }
+            onDelete={(item) => {
+              const found = Array.isArray(insuranceBrackets) ? insuranceBrackets.find((b) => b._id === item._id) : null;
+              if (found) handleDelete(found);
+            }}
+            canApprove={(item) => item.status === 'draft'}
+            canReject={(item) => item.status === 'draft'}
+            canDelete={(item) => item.status === 'draft'}
+          />
             </div>
           </div>
         </div>

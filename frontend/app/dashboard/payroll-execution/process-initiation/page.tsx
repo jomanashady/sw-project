@@ -113,12 +113,6 @@ export default function ProcessInitiationPage() {
   };
 
   const handleProcess = async () => {
-    // Check if period is approved
-    if (!approvedPeriod) {
-      setError("Please approve the payroll period first before creating a payroll run. Go to Pre-Initiation > Payroll Period to approve it.");
-      return;
-    }
-
     if (!payrollPeriod) {
       setError("Please select a payroll period");
       return;
@@ -137,25 +131,61 @@ export default function ProcessInitiationPage() {
       return;
     }
 
-    // Use the approved period
-    const periodToUse = approvedPeriod.period;
+    // Automatically adjust to first day of the selected month (backend requirement)
+    // Backend validation requires payroll period to be the first day of the month
+    // Parse the date string as local date (YYYY-MM-DD format)
+    const [year, month, day] = payrollPeriod.split('-').map(Number);
+    
+    // Calculate first day of the selected month
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    
+    // Format as YYYY-MM-DD string for the first day
+    const formatDate = (date: Date): string => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
+    const periodToUse = formatDate(firstDayOfMonth);
+    
+    // Track if adjustment was made for later message
+    const wasAdjusted = day !== 1;
+    const selectedDate = new Date(year, month - 1, day);
+    const monthName = wasAdjusted 
+      ? selectedDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+      : null;
 
     setProcessing(true);
     setError(null);
     setSuccess(null);
 
     try {
+      // Create ISO string at midnight UTC for the first day of month
+      // This ensures the backend receives the correct date regardless of timezone
+      const periodDateISO = `${periodToUse}T00:00:00.000Z`;
+      
+      console.log('Date adjustment:', {
+        original: payrollPeriod,
+        adjusted: periodToUse,
+        iso: periodDateISO,
+        wasAdjusted
+      });
+      
       const result = await payrollExecutionApi.processPayrollInitiation({
-        payrollPeriod: new Date(periodToUse).toISOString(),
+        payrollPeriod: periodDateISO,
         entity: entity.trim(),
         payrollSpecialistId: userId,
         currency: currency || undefined,
         payrollManagerId: payrollManagerId || undefined,
       });
 
-      setSuccess(
-        `Payroll initiation processed successfully! Run ID: ${result.runId || result._id}`
-      );
+      // Show success message, including adjustment info if applicable
+      let successMessage = `Payroll initiation processed successfully! Run ID: ${result.runId || result._id}`;
+      if (wasAdjusted && monthName) {
+        successMessage += `\n\nNote: Payroll period was automatically adjusted to the first day of ${monthName} (${periodToUse}) as required by business rules.`;
+      }
+      setSuccess(successMessage);
 
       // Clear approved period from localStorage after successful creation
       localStorage.removeItem(APPROVED_PERIOD_KEY);
@@ -227,7 +257,6 @@ export default function ProcessInitiationPage() {
                 value={payrollPeriod}
                 onChange={(e) => setPayrollPeriod(e.target.value)}
                 className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!!approvedPeriod}
                 required
               />
             </div>
@@ -235,25 +264,23 @@ export default function ProcessInitiationPage() {
               <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-800">
                   <CheckCircle className="h-4 w-4 inline mr-1" />
-                  <strong>Period Approved:</strong> This period has been approved. It will be used when creating the payroll run.
+                  <strong>Period Approved:</strong> An approved period is available. You can use it or select a different period.
                 </p>
               </div>
             ) : (
               <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                 <p className="text-sm text-yellow-800">
                   <AlertCircle className="h-4 w-4 inline mr-1" />
-                  <strong>Period Not Approved:</strong> Please go to{" "}
+                  <strong>Period Not Approved:</strong> You can still proceed, but it's recommended to approve the period first at{" "}
                   <Link href="/dashboard/payroll-execution/pre-initiation/payroll-period" className="underline font-medium">
                     Pre-Initiation → Payroll Period
-                  </Link>{" "}
-                  to approve this period before creating a payroll run.
+                  </Link>
+                  .
                 </p>
               </div>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              {approvedPeriod
-                ? "Using approved payroll period (cannot be changed)"
-                : "Select the first day of the payroll period (month)"}
+              Select any date in the target month. The system will automatically use the first day of that month as the payroll period (required by business rules).
             </p>
           </div>
 
@@ -346,7 +373,7 @@ export default function ProcessInitiationPage() {
             <Button
               onClick={handleProcess}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={processing || !payrollPeriod || !entity.trim() || !approvedPeriod}
+              disabled={processing || !payrollPeriod || !entity.trim()}
             >
               {processing ? (
                 <>

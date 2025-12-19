@@ -286,8 +286,8 @@ export class PayrollTrackingService {
    *
    * Security Rule:
    * - DEPARTMENT_EMPLOYEE can only access their own data
-   * - PAYROLL_SPECIALIST, FINANCE_STAFF, and SYSTEM_ADMIN can access any employee's data
-   *
+   * - PAYROLL_SPECIALIST, PAYROLL_MANAGER, FINANCE_STAFF, and SYSTEM_ADMIN can access any employee's data
+   * 
    * @param requestedEmployeeId - The employee ID being accessed
    * @param authenticatedUserId - The authenticated user's ID (from req.user)
    * @param userRoles - The authenticated user's roles (from EmployeeSystemRole)
@@ -316,6 +316,7 @@ export class PayrollTrackingService {
       (role) =>
         role === SystemRole.DEPARTMENT_EMPLOYEE &&
         !userRoles.includes(SystemRole.PAYROLL_SPECIALIST) &&
+        !userRoles.includes(SystemRole.PAYROLL_MANAGER) &&
         !userRoles.includes(SystemRole.FINANCE_STAFF) &&
         !userRoles.includes(SystemRole.SYSTEM_ADMIN)
     );
@@ -327,7 +328,7 @@ export class PayrollTrackingService {
       );
     }
 
-    // Staff roles (PAYROLL_SPECIALIST, FINANCE_STAFF, SYSTEM_ADMIN) can access any employee's data
+    // Staff roles (PAYROLL_SPECIALIST, PAYROLL_MANAGER, FINANCE_STAFF, SYSTEM_ADMIN) can access any employee's data
     // No additional validation needed
   }
 
@@ -674,21 +675,80 @@ export class PayrollTrackingService {
         throw new BadRequestException('Claim ID is required');
       }
 
-      const claim = await this.claimModel.findOne({ claimId });
-      if (!claim) {
-        throw new NotFoundException(`Claim with ID ${claimId} not found`);
+    const claim = await this.claimModel.findOne({ claimId });
+    if (!claim) {
+      throw new NotFoundException(`Claim with ID ${claimId} not found`);
+    }
+
+      // Only allow updates if claim is still under review (employees can only update before resolution)
+      if (claim.status !== ClaimStatus.UNDER_REVIEW) {
+        throw new BadRequestException(
+          `Cannot update claim. Claim status is ${claim.status}. Only claims under review can be updated.`,
+        );
       }
+
+      // Validate employee ownership: employees can only update their own claims
+      // System admins can update any claim (handled by controller role check)
+      const claimEmployeeId = claim.employeeId instanceof Types.ObjectId
+        ? claim.employeeId.toString()
+        : (claim.employeeId as any)?._id?.toString() || String(claim.employeeId);
+      
+      const currentUserProfile = await this.employeeProfileService.findOne(currentUserId);
+      if (!currentUserProfile) {
+        throw new NotFoundException('Current user profile not found');
+      }
+
+      // Check if current user has staff/admin roles
+      const userSystemRole = await this.employeeSystemRoleModel.findOne({
+        employeeProfileId: new Types.ObjectId(currentUserId),
+        isActive: true,
+      }).exec();
+
+      const userRoles = userSystemRole?.roles || [];
+      const isStaff = userRoles.some(
+        (role) =>
+          role === SystemRole.PAYROLL_SPECIALIST ||
+          role === SystemRole.PAYROLL_MANAGER ||
+          role === SystemRole.FINANCE_STAFF ||
+          role === SystemRole.SYSTEM_ADMIN
+      );
+
+      // If user is not staff/admin and doesn't own the claim, deny access
+      const currentUserEmployeeId = (currentUserProfile as any)._id?.toString() || currentUserId;
+      if (!isStaff && currentUserEmployeeId !== claimEmployeeId) {
+        throw new ForbiddenException('You can only update your own claims');
+      }
+
+      // Calculate effective amount (use updated amount if provided, otherwise current amount)
+      const effectiveAmount = updateClaimDTO.amount !== undefined 
+        ? updateClaimDTO.amount 
+        : claim.amount;
 
       // Validate update data
       if (updateClaimDTO.amount !== undefined && updateClaimDTO.amount <= 0) {
         throw new BadRequestException('Amount must be greater than 0');
       }
+
+      // Prevent reducing claim amount below approved amount
+      if (updateClaimDTO.amount !== undefined && claim.approvedAmount) {
+        if (updateClaimDTO.amount < claim.approvedAmount) {
+          throw new BadRequestException(
+            `Cannot reduce claim amount to ${updateClaimDTO.amount} because it is below the approved amount (${claim.approvedAmount})`,
+          );
+        }
+      }
+
       if (updateClaimDTO.approvedAmount !== undefined) {
         if (updateClaimDTO.approvedAmount <= 0) {
-          throw new BadRequestException('Approved amount must be greater than 0');
+          throw new BadRequestException(
+            'Approved amount must be greater than 0',
+          );
         }
-        if (updateClaimDTO.approvedAmount > claim.amount) {
-          throw new BadRequestException('Approved amount cannot exceed the original claim amount');
+        // Use effective amount (accounts for concurrent amount updates)
+        if (updateClaimDTO.approvedAmount > effectiveAmount) {
+          throw new BadRequestException(
+            `Approved amount (${updateClaimDTO.approvedAmount}) cannot exceed the claim amount (${effectiveAmount})`,
+          );
         }
       }
       if (
@@ -1095,8 +1155,40 @@ export class PayrollTrackingService {
       // Only allow updates if dispute is still under review (employees can only update before resolution)
       if (dispute.status !== DisputeStatus.UNDER_REVIEW) {
         throw new BadRequestException(
-          `Cannot update dispute. Dispute status is ${dispute.status}. Only disputes under review can be updated.`
+          `Cannot update dispute. Dispute status is ${dispute.status}. Only disputes under review can be updated.`,
         );
+      }
+
+      // Validate employee ownership: employees can only update their own disputes
+      // System admins can update any dispute (handled by controller role check)
+      const disputeEmployeeId = dispute.employeeId instanceof Types.ObjectId
+        ? dispute.employeeId.toString()
+        : (dispute.employeeId as any)?._id?.toString() || String(dispute.employeeId);
+      
+      const currentUserProfile = await this.employeeProfileService.findOne(currentUserId);
+      if (!currentUserProfile) {
+        throw new NotFoundException('Current user profile not found');
+      }
+
+      // Check if current user has staff/admin roles
+      const userSystemRole = await this.employeeSystemRoleModel.findOne({
+        employeeProfileId: new Types.ObjectId(currentUserId),
+        isActive: true,
+      }).exec();
+
+      const userRoles = userSystemRole?.roles || [];
+      const isStaff = userRoles.some(
+        (role) =>
+          role === SystemRole.PAYROLL_SPECIALIST ||
+          role === SystemRole.PAYROLL_MANAGER ||
+          role === SystemRole.FINANCE_STAFF ||
+          role === SystemRole.SYSTEM_ADMIN
+      );
+
+      // If user is not staff/admin and doesn't own the dispute, deny access
+      const currentUserEmployeeId = (currentUserProfile as any)._id?.toString() || currentUserId;
+      if (!isStaff && currentUserEmployeeId !== disputeEmployeeId) {
+        throw new ForbiddenException('You can only update your own disputes');
       }
 
       // Validate update data
@@ -1413,32 +1505,40 @@ export class PayrollTrackingService {
             `Claim must be approved before creating a refund. Current status: ${claim.status}`
           );
         }
-        // Check if refund already exists for this claim
+        // Check if refund already exists for this claim (pending OR paid)
         const existingRefund = await this.refundModel.findOne({
           claimId: createRefundDTO.claimId,
-          status: RefundStatus.PENDING,
+          status: { $in: [RefundStatus.PENDING, RefundStatus.PAID] },
         });
         if (existingRefund) {
-          throw new BadRequestException('A pending refund already exists for this claim');
-        }
+          throw new BadRequestException(
+            `A refund already exists for this claim (status: ${existingRefund.status}). Cannot create duplicate refunds.`,
+          );
       }
-      if (createRefundDTO.disputeId) {
-        const dispute = await this.disputeModel.findById(createRefundDTO.disputeId);
-        if (!dispute) {
-          throw new NotFoundException(`Dispute with ID ${createRefundDTO.disputeId} not found`);
-        }
-        if (dispute.status !== DisputeStatus.APPROVED) {
+    }
+    if (createRefundDTO.disputeId) {
+        const dispute = await this.disputeModel.findById(
+          createRefundDTO.disputeId,
+        );
+      if (!dispute) {
+          throw new NotFoundException(
+            `Dispute with ID ${createRefundDTO.disputeId} not found`,
+          );
+      }
+      if (dispute.status !== DisputeStatus.APPROVED) {
           throw new BadRequestException(
             `Dispute must be approved before creating a refund. Current status: ${dispute.status}`
           );
         }
-        // Check if refund already exists for this dispute
+        // Check if refund already exists for this dispute (pending OR paid)
         const existingRefund = await this.refundModel.findOne({
           disputeId: createRefundDTO.disputeId,
-          status: RefundStatus.PENDING,
+          status: { $in: [RefundStatus.PENDING, RefundStatus.PAID] },
         });
         if (existingRefund) {
-          throw new BadRequestException('A pending refund already exists for this dispute');
+          throw new BadRequestException(
+            `A refund already exists for this dispute (status: ${existingRefund.status}). Cannot create duplicate refunds.`,
+          );
         }
       }
 
@@ -1544,9 +1644,16 @@ export class PayrollTrackingService {
         throw new BadRequestException('Valid refund ID is required');
       }
 
-      const refund = await this.refundModel.findById(refundId);
-      if (!refund) {
-        throw new NotFoundException(`Refund with ID ${refundId} not found`);
+    const refund = await this.refundModel.findById(refundId);
+    if (!refund) {
+      throw new NotFoundException(`Refund with ID ${refundId} not found`);
+    }
+
+      // Prevent ALL updates to paid refunds (paid refunds are immutable)
+      if (refund.status === RefundStatus.PAID) {
+        throw new BadRequestException(
+          'Cannot update a refund that has already been paid. Paid refunds are immutable.',
+        );
       }
 
       // Validate update data
@@ -1564,9 +1671,6 @@ export class PayrollTrackingService {
 
       // Prevent status changes that violate business rules
       if (updateRefundDTO.status) {
-        if (refund.status === RefundStatus.PAID && updateRefundDTO.status !== RefundStatus.PAID) {
-          throw new BadRequestException('Cannot change status of a paid refund');
-        }
         if (
           refund.status === RefundStatus.PENDING &&
           updateRefundDTO.status === RefundStatus.PAID &&
@@ -2547,13 +2651,15 @@ export class PayrollTrackingService {
         );
       }
 
-      // Check if refund already exists for this dispute
+      // Check if refund already exists for this dispute (pending OR paid)
       const existingRefund = await this.refundModel.findOne({
         disputeId: dispute._id,
-        status: RefundStatus.PENDING,
+        status: { $in: [RefundStatus.PENDING, RefundStatus.PAID] },
       });
       if (existingRefund) {
-        throw new BadRequestException('A pending refund already exists for this dispute');
+        throw new BadRequestException(
+          `A refund already exists for this dispute (status: ${existingRefund.status}). Cannot create duplicate refunds.`,
+        );
       }
 
       // Get MongoDB _id for createRefund (which uses findById)
@@ -2598,13 +2704,15 @@ export class PayrollTrackingService {
         );
       }
 
-      // Check if refund already exists for this claim
+      // Check if refund already exists for this claim (pending OR paid)
       const existingRefund = await this.refundModel.findOne({
         claimId: claim._id,
-        status: RefundStatus.PENDING,
+        status: { $in: [RefundStatus.PENDING, RefundStatus.PAID] },
       });
       if (existingRefund) {
-        throw new BadRequestException('A pending refund already exists for this claim');
+        throw new BadRequestException(
+          `A refund already exists for this claim (status: ${existingRefund.status}). Cannot create duplicate refunds.`,
+        );
       }
 
       const employeeId = claim.employeeId.toString();

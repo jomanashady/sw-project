@@ -93,7 +93,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Payroll</CardTitle>
-            <CardDescription>View payslips and salary</CardDescription>
+            <CardDescription>View payslips, salary details, claims, disputes, and refunds. Configure payroll settings and execute payroll runs.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link

@@ -37,7 +37,7 @@ interface PayrollReport {
     totalNetPay: number;
     averageSalary: number;
   };
-  employees: Array<{
+  employees?: Array<{
     employeeId: string;
     employeeNumber: string;
     firstName: string;
@@ -92,7 +92,12 @@ export default function DepartmentReportsPage() {
         selectedDepartmentId,
         payrollRunId || undefined
       );
-      setReport(data);
+      // Ensure employees array exists, default to empty array if missing
+      const reportData = {
+        ...data,
+        employees: data?.employees || [],
+      };
+      setReport(reportData);
     } catch (err: any) {
       setError(err.message || "Failed to generate report");
     } finally {
@@ -264,7 +269,7 @@ export default function DepartmentReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.employees.length > 0 ? (
+                    {report.employees && report.employees.length > 0 ? (
                       report.employees.map((employee, index) => (
                         <tr key={employee.employeeId} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                           <td className="px-4 py-3 border-b border-gray-100">
@@ -297,7 +302,7 @@ export default function DepartmentReportsPage() {
                       </tr>
                     )}
                   </tbody>
-                  {report.employees.length > 0 && (
+                  {report.employees && report.employees.length > 0 && (
                     <tfoot className="bg-gray-100">
                       <tr>
                         <td colSpan={2} className="px-4 py-3 border-t-2 border-gray-300 font-semibold text-gray-900">

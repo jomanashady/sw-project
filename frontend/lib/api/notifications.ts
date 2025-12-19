@@ -52,6 +52,8 @@ export async function getNotifications(): Promise<Notification[]> {
       createdAt: notif.createdAt ? new Date(notif.createdAt) : new Date(),
       updatedAt: notif.updatedAt ? new Date(notif.updatedAt) : undefined,
       source: notif.source,
+      title: notif.title,
+      data: notif.data, // Include assignment data for shift expiry notifications
     }));
 
     console.log(`Transformed ${transformed.length} notifications`);

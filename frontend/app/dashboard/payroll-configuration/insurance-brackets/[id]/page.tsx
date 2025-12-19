@@ -90,8 +90,8 @@ export default function InsuranceBracketDetailsPage() {
   };
 
   const name = (insuranceBracket as any).name || 'Insurance Bracket';
-  const employeeRate = (insuranceBracket as any).employeeRate || (insuranceBracket as any).employeeContribution || 0;
-  const employerRate = (insuranceBracket as any).employerRate || (insuranceBracket as any).employerContribution || 0;
+  const employeeRate = (insuranceBracket as any).employeeRate || insuranceBracket.employeeContribution;
+  const employerRate = (insuranceBracket as any).employerRate || insuranceBracket.employerContribution;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 p-6">
@@ -121,7 +121,7 @@ export default function InsuranceBracketDetailsPage() {
                 </h1>
                 <div className="flex items-center gap-3 mt-2">
                   <StatusBadge status={insuranceBracket.status} />
-                  <span className="text-sm text-gray-500 font-mono">ID: {insuranceBracket.id}</span>
+                  <span className="text-sm text-gray-500 font-mono">ID: {insuranceBracket._id}</span>
                 </div>
               </div>
             </div>

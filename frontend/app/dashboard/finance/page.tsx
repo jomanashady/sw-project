@@ -47,7 +47,7 @@ export default function FinanceDashboardPage() {
           Payroll Approval
         </h2>
         <p className="text-white mb-4">
-           Approve payroll disbursements before execution, so that no incorrect payments are made
+           Approve payroll disbursements before execution, so that no incorrect payments are made. Only payroll runs approved by Payroll Manager will appear here. After approval, payment status becomes "Paid" and payslips are automatically generated.
         </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-indigo-200">
@@ -79,7 +79,7 @@ export default function FinanceDashboardPage() {
           Refunds & Reimbursements
         </h2>
         <p className="text-white mb-4">
-           View approved disputes and claims, generate refunds for next payroll cycle
+           View and get notified with approved disputes and expense claims (approved by both Payroll Specialist and Payroll Manager). Generate refunds for approved items (status: pending until executed in next payroll cycle).
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-green-200">
@@ -89,7 +89,7 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-xl font-bold">Approved Claims</CardTitle>
               </div>
               <CardDescription>
-                 View and get notified with approved expense claims, so that adjustments can be done
+                 View and get notified with approved expense claims (approved by Payroll Specialist and Payroll Manager), so that refunds can be generated for next payroll cycle
               </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -113,7 +113,7 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-xl font-bold">Approved Disputes</CardTitle>
               </div>
               <CardDescription>
-                 View and get notified with approved disputes, so that adjustments can be done
+                 View and get notified with approved disputes (approved by Payroll Specialist and Payroll Manager), so that refunds can be generated for next payroll cycle
               </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -137,7 +137,7 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-xl font-bold">Generate Refund (Disputes)</CardTitle>
               </div>
               <CardDescription>
-                 Generate refund for disputes on approval so that it will be included in next payroll cycle
+                 Generate refund for approved disputes (status: pending until executed in payroll cycle) so that it will be included in next payroll cycle
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -161,7 +161,7 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-xl font-bold">Generate Refund (Claims)</CardTitle>
               </div>
               <CardDescription>
-                 Generate refund for expense claims on approval so that it will be included in next payroll cycle
+                 Generate refund for approved expense claims (status: pending until executed in payroll cycle) so that it will be included in next payroll cycle
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -211,7 +211,7 @@ export default function FinanceDashboardPage() {
           Reports & Analytics
         </h2>
         <p className="text-white mb-4">
-           Generate reports about taxes, insurance contributions, benefits, and payroll summaries
+           Generate reports about taxes, insurance contributions, and benefits (REQ-PY-25) so that accounting books are compliant. Generate month-end and year-end payroll summaries (REQ-PY-29) so that audits and reporting are simplified.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-blue-200">

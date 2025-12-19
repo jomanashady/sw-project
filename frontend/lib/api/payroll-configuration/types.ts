@@ -38,27 +38,18 @@ export interface RejectionDto {
   comment?: string;
 }
 
-export interface BaseConfiguration {
-  id: string;
-  name: string;
-  description?: string;
-  status: 'draft' | 'approved' | 'rejected';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  version: number;
-  comments?: string;
+export interface InsuranceBracket {
+  _id: string;
+  minSalary: number;
+  maxSalary: number;
+  employeeContribution: number;
+  employerContribution: number;
+  status: ConfigStatus;
+  createdBy?: string;
   approvedBy?: string;
   approvedAt?: string;
-}
-
-export interface InsuranceBracket extends BaseConfiguration {
-  name: string; // Insurance bracket name (e.g., social, health insurance)
-  minSalary: number; // Minimum salary for bracket
-  maxSalary: number; // Maximum salary for bracket
-  employeeRate: number; // Employee contribution rate (%)
-  employerRate: number; // Employer contribution rate (%)
-  amount?: number; // Fixed insurance amount (optional)
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateInsuranceBracketDto {
@@ -141,6 +132,20 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+export interface BaseConfiguration {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'draft' | 'approved' | 'rejected';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  comments?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
 export interface PayrollPolicy extends BaseConfiguration {
   policyType: 'attendance' | 'overtime' | 'bonus' | 'deduction' | 'other';
   effectiveDate: string;
@@ -181,15 +186,89 @@ export interface Allowance extends BaseConfiguration {
   expirationDate?: string;
 }
 
-export interface TaxRule extends BaseConfiguration {
-  rate: number; // Tax rate in percentage
-  effectiveDate?: string;
-  exemptions?: string[]; // List of exemptions
-  thresholds?: {
-    minAmount?: number;
-    maxAmount?: number;
-  };
-  isProgressive?: boolean; // Whether this is a progressive tax rate
+
+
+// ============================================
+// Signing Bonus Types
+// ============================================
+
+export interface SigningBonus {
+  _id: string;
+  positionName: string; // Backend field name
+  amount: number;
+  status: 'draft' | 'approved' | 'rejected';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSigningBonusDto {
+  positionName: string;
+  amount: number;
+}
+
+export interface UpdateSigningBonusDto {
+  positionName?: string;
+  amount?: number;
+}
+
+
+
+// ============================================
+// Termination Benefit Types
+// ============================================
+
+export interface TerminationBenefit {
+  _id: string;
+  name: string;
+  benefitType: 'severance' | 'resignation' | 'retirement' | 'other';
+  calculationMethod: string;
+  eligibilityCriteria?: string;
+  amount?: number;
+  description?: string;
+  status: 'draft' | 'approved' | 'rejected';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTerminationBenefitDto {
+  name: string;
+  amount: number;
+  terms?: string;
+}
+
+export interface UpdateTerminationBenefitDto {
+  name?: string;
+  amount?: number;
+  terms?: string;
+}
+
+
+
+
+
+
+
+// ============================================
+// Tax Rule Types
+// ============================================
+
+export interface TaxRule {
+  _id: string;
+  name: string;
+  taxType: 'income' | 'social_security' | 'health' | 'other';
+  rate: number;
+  brackets?: Array<{
+    min: number;
+    max?: number;
+    rate: number;
+  }>;
+  description?: string;
+  status: 'draft' | 'approved' | 'rejected';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTaxRuleDto {
@@ -204,35 +283,4 @@ export interface UpdateTaxRuleDto {
   description?: string;
 }
 
-export interface SigningBonus extends BaseConfiguration {
-  positionName: string; // Position name eligible for signing bonus (e.g., Junior TA, Mid TA, Senior TA)
-  amount: number; // Signing bonus amount
-}
-
-export interface CreateSigningBonusDto {
-  positionName: string;
-  amount: number;
-}
-
-export interface UpdateSigningBonusDto {
-  positionName?: string;
-  amount?: number;
-}
-
-export interface TerminationBenefit extends BaseConfiguration {
-  amount: number; // Termination/resignation benefit amount
-  terms?: string; // Terms and conditions for the benefit
-}
-
-export interface CreateTerminationBenefitDto {
-  name: string;
-  amount: number;
-  terms?: string;
-}
-
-export interface UpdateTerminationBenefitDto {
-  name?: string;
-  amount?: number;
-  terms?: string;
-}
 

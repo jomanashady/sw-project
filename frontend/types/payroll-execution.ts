@@ -81,7 +81,7 @@ export interface EmployeeTerminationBenefit {
   _id: string;
   employeeId: string | { _id: string; firstName: string; lastName: string; employeeNumber: string };
   benefitId: string | { _id: string; name: string; amount: number };
-  terminationId: string | { _id: string; reason: string; type: "TERMINATION" | "RESIGNATION" };
+  terminationId: string | { _id: string; reason: string; initiator: "employee" | "hr" | "manager"; type?: "TERMINATION" | "RESIGNATION" };
   givenAmount: number;
   status: BenefitStatus;
   createdAt?: string;

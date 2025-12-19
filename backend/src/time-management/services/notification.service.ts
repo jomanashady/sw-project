@@ -18,6 +18,7 @@ import {
 import { LeavesService } from '../../leaves/leaves.service';
 import { PayrollExecutionService } from '../../payroll-execution/payroll-execution.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { TimeManagementService } from './time-management.service';
 import { Inject, forwardRef } from '@nestjs/common';
 import { Types } from 'mongoose';
 
@@ -41,7 +42,9 @@ export class NotificationService {
     private leavesService: LeavesService,
     @Inject(forwardRef(() => PayrollExecutionService))
     private payrollExecutionService: PayrollExecutionService,
-    private unifiedNotificationsService: NotificationsService
+    @Inject(forwardRef(() => TimeManagementService))
+    private timeManagementService: TimeManagementService,
+    private unifiedNotificationsService: NotificationsService,
   ) {}
 
   // ===== NOTIFICATIONS =====
@@ -297,26 +300,44 @@ export class NotificationService {
       .populate('attendanceRecordId')
       .exec();
 
-    // Calculate overtime hours from attendance records
-    const overtimeData = overtimeExceptions.map((exception: any) => {
-      const record = exception.attendanceRecordId;
-      const standardMinutes = 480; // 8 hours
-      const overtimeMinutes =
-        record && record.totalWorkMinutes
-          ? Math.max(0, record.totalWorkMinutes - standardMinutes)
-          : 0;
+    // Calculate overtime hours from attendance records using shift-based calculation
+    const overtimeData = await Promise.all(
+      overtimeExceptions.map(async (exception: any) => {
+        const record = exception.attendanceRecordId as any;
+        let overtimeMinutes = 0;
 
-      return {
-        exceptionId: exception._id,
-        employeeId: exception.employeeId?._id || exception.employeeId,
-        attendanceRecordId: exception.attendanceRecordId?._id || exception.attendanceRecordId,
-        date: exception.createdAt || record?.createdAt,
-        overtimeMinutes,
-        overtimeHours: Math.round((overtimeMinutes / 60) * 100) / 100,
-        status: exception.status,
-        reason: exception.reason,
-      };
-    });
+        if (record) {
+          try {
+            // Use shift-based overtime calculation
+            const overtimeCalc = await this.timeManagementService.calculateOvertimeBasedOnShift(
+              exception.employeeId?._id || exception.employeeId,
+              record,
+              480, // Fallback standard
+            );
+            overtimeMinutes = overtimeCalc.overtimeMinutes;
+          } catch (error) {
+            // Fallback to simple calculation if shift-based fails
+            console.warn('Shift-based overtime calculation failed, using fallback:', error);
+            const standardMinutes = 480;
+            overtimeMinutes = record.totalWorkMinutes
+              ? Math.max(0, record.totalWorkMinutes - standardMinutes)
+              : 0;
+          }
+        }
+
+        return {
+          exceptionId: exception._id,
+          employeeId: exception.employeeId?._id || exception.employeeId,
+          attendanceRecordId:
+            exception.attendanceRecordId?._id || exception.attendanceRecordId,
+          date: exception.createdAt || record?.createdAt,
+          overtimeMinutes,
+          overtimeHours: Math.round((overtimeMinutes / 60) * 100) / 100,
+          status: exception.status,
+          reason: exception.reason,
+        };
+      })
+    );
 
     return {
       employeeId,
@@ -1042,9 +1063,42 @@ export class NotificationService {
         shiftAssignmentId,
         newEndDate,
       },
-      currentUserId
+      currentUserId,
     );
+    
+    return notification;
+  }
 
+  /**
+   * Send reassignment confirmation notification
+   * Sent when a shift assignment is reassigned to a different employee
+   * Now uses unified notification service
+   */
+  async sendShiftReassignmentConfirmation(
+    newEmployeeId: string,
+    shiftAssignmentId: string,
+    shiftName: string,
+    endDate: Date,
+    currentUserId: string,
+  ) {
+    const notification = await this.unifiedNotificationsService.sendShiftReassignmentConfirmation(
+      newEmployeeId,
+      shiftAssignmentId,
+      shiftName,
+      endDate,
+    );
+    
+    await this.logTimeManagementChange(
+      'SHIFT_REASSIGNMENT_NOTIFICATION_SENT',
+      {
+        newEmployeeId,
+        shiftAssignmentId,
+        shiftName,
+        endDate,
+      },
+      currentUserId,
+    );
+    
     return notification;
   }
 
@@ -1085,6 +1139,72 @@ export class NotificationService {
    */
   async getAllShiftNotifications(hrAdminId: string, currentUserId: string) {
     return this.unifiedNotificationsService.getAllShiftNotifications(hrAdminId);
+  }
+
+  /**
+   * Send repeated lateness flag notification to HR admins
+   * BR-TM-09: Notify HR when employee is flagged for repeated lateness
+   */
+  async sendRepeatedLatenessFlagNotification(
+    employeeId: string,
+    occurrenceCount: number,
+    status: string,
+    currentUserId: string,
+  ) {
+    const notification = await this.unifiedNotificationsService.sendRepeatedLatenessFlagNotification(
+      employeeId,
+      occurrenceCount,
+      status,
+    );
+    
+    await this.logTimeManagementChange(
+      'REPEATED_LATENESS_FLAG_NOTIFICATION_SENT',
+      {
+        employeeId,
+        occurrenceCount,
+      },
+      currentUserId,
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send payroll cut-off escalation notification to HR admins
+   * US18: Notify HR when requests are auto-escalated due to approaching payroll cut-off
+   */
+  async sendPayrollCutoffEscalationNotification(
+    hrAdminIds: string[],
+    escalatedExceptions: number,
+    escalatedCorrections: number,
+    pendingLeaves: number,
+    payrollCutoffDate: Date,
+    daysUntilCutoff: number,
+    currentUserId: string,
+  ) {
+    const result = await this.unifiedNotificationsService.sendPayrollCutoffEscalationNotification(
+      hrAdminIds,
+      escalatedExceptions,
+      escalatedCorrections,
+      pendingLeaves,
+      payrollCutoffDate,
+      daysUntilCutoff,
+    );
+    
+    await this.logTimeManagementChange(
+      'PAYROLL_CUTOFF_ESCALATION_NOTIFICATION_SENT',
+      {
+        hrAdminIds,
+        escalatedExceptions,
+        escalatedCorrections,
+        pendingLeaves,
+        payrollCutoffDate,
+        daysUntilCutoff,
+      },
+      currentUserId,
+    );
+    
+    return result;
   }
 
   // ===== US8: MISSED PUNCH MANAGEMENT & ALERTS =====
@@ -1159,6 +1279,44 @@ export class NotificationService {
         date,
       },
       currentUserId
+    );
+    
+    return notification;
+  }
+
+  /**
+   * Send missed punch alert to Payroll Officers (Payroll Specialist/Manager)
+   * Uses unified notification service
+   */
+  async sendMissedPunchAlertToPayrollTeam(
+    employeeId: string,
+    employeeName: string,
+    attendanceRecordId: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    date: Date,
+    currentUserId: string,
+  ) {
+    const notification =
+      await this.unifiedNotificationsService.sendMissedPunchAlertToPayrollTeam(
+        employeeId,
+        employeeName,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+        currentUserId,
+      );
+
+    await this.logTimeManagementChange(
+      'MISSED_PUNCH_PAYROLL_ALERT_SENT',
+      {
+        employeeId,
+        employeeName,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+        notificationsCreated: (notification as any)?.notificationsCreated,
+      },
+      currentUserId,
     );
 
     return notification;
@@ -1237,8 +1395,26 @@ export class NotificationService {
     managerId: string,
     employeeName: string,
     missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
-    currentUserId: string
+    currentUserId: string,
   ) {
+    // Prevent duplicate exceptions/notifications for the same record
+    const existing = await this.timeExceptionModel
+      .findOne({
+        attendanceRecordId,
+        type: TimeExceptionType.MISSED_PUNCH,
+      })
+      .exec();
+    if (existing) {
+      return {
+        attendanceRecord: await this.attendanceRecordModel.findById(attendanceRecordId),
+        timeException: existing,
+        notifications: {
+          skipped: true,
+          reason: 'Missed punch already flagged for this attendance record',
+        },
+      };
+    }
+
     // Update attendance record
     const attendanceRecord = await this.attendanceRecordModel.findByIdAndUpdate(
       attendanceRecordId,
@@ -1287,6 +1463,15 @@ export class NotificationService {
       currentUserId
     );
 
+    const payrollNotification = await this.sendMissedPunchAlertToPayrollTeam(
+      employeeId,
+      employeeName,
+      attendanceRecordId,
+      missedPunchType,
+      recordDate,
+      currentUserId,
+    );
+    
     await this.logTimeManagementChange(
       'MISSED_PUNCH_FLAGGED_WITH_NOTIFICATION',
       {
@@ -1305,8 +1490,68 @@ export class NotificationService {
       notifications: {
         employee: employeeNotification,
         manager: managerNotification,
+        payroll: payrollNotification,
       },
     };
+  }
+
+  /**
+   * Convenience method: flag missed punch with notifications by resolving line manager automatically.
+   */
+  async flagMissedPunchWithNotificationAuto(
+    attendanceRecordId: string,
+    employeeId: string,
+    missedPunchType: 'CLOCK_IN' | 'CLOCK_OUT',
+    date: Date,
+    currentUserId: string,
+  ) {
+    const { employeeName, managerId } =
+      await this.unifiedNotificationsService.getEmployeeAndLineManagerInfo(
+        employeeId,
+      );
+
+    if (!managerId) {
+      // Still notify employee + payroll team, but cannot create TimeException without assignedTo
+      const employeeNotification = await this.sendMissedPunchAlertToEmployee(
+        employeeId,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+        currentUserId,
+      );
+      const payrollNotification = await this.sendMissedPunchAlertToPayrollTeam(
+        employeeId,
+        employeeName,
+        attendanceRecordId,
+        missedPunchType,
+        date,
+        currentUserId,
+      );
+
+      return {
+        attendanceRecord: await this.attendanceRecordModel.findByIdAndUpdate(
+          attendanceRecordId,
+          { hasMissedPunch: true, updatedBy: currentUserId },
+          { new: true },
+        ),
+        timeException: null,
+        notifications: {
+          employee: employeeNotification,
+          payroll: payrollNotification,
+          manager: null,
+        },
+        warning: 'No line manager found for employee; time exception not created',
+      };
+    }
+
+    return this.flagMissedPunchWithNotification(
+      attendanceRecordId,
+      employeeId,
+      managerId,
+      employeeName,
+      missedPunchType,
+      currentUserId,
+    );
   }
 
   /**
@@ -1782,7 +2027,11 @@ export class NotificationService {
    */
   async getPayrollCutoffConfig(currentUserId: string) {
     // Return standard payroll cutoff configuration
+    // Cutoff is calculated from the current payroll period (derived from Payroll module)
     // These could be made configurable via database in future
+    const { payrollPeriodEnd, cutoffDate, daysUntilCutoff } =
+      await this.getNextPayrollCutoffFromPayrollPeriod(currentUserId, 25);
+
     return {
       cutoffSchedule: {
         dayOfMonth: 25, // Payroll cutoff on 25th of each month
@@ -1804,12 +2053,13 @@ export class NotificationService {
         dailyDigestEnabled: true,
       },
       currentMonth: {
-        cutoffDate: this.getNextPayrollCutoffDate(25),
-        daysUntilCutoff: this.getDaysUntilCutoff(25),
+        payrollPeriodEnd,
+        cutoffDate,
+        daysUntilCutoff,
         status:
-          this.getDaysUntilCutoff(25) <= 3
+          daysUntilCutoff <= 3
             ? 'CRITICAL'
-            : this.getDaysUntilCutoff(25) <= 5
+            : daysUntilCutoff <= 5
               ? 'WARNING'
               : 'NORMAL',
       },
@@ -1827,7 +2077,10 @@ export class NotificationService {
     },
     currentUserId: string
   ) {
-    const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
+    const cutoffDate =
+      params.payrollCutoffDate ||
+      (await this.getNextPayrollCutoffFromPayrollPeriod(currentUserId, 25))
+        .cutoffDate;
     const now = new Date();
     const daysUntilCutoff = Math.ceil(
       (cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -1974,7 +2227,16 @@ export class NotificationService {
     },
     currentUserId: string
   ) {
-    const { payrollCutoffDate, escalationDaysBefore, notifyManagers } = params;
+    const {
+      payrollCutoffDate: payrollCutoffDateParam,
+      escalationDaysBefore = 3,
+      notifyManagers = true,
+    } = params;
+
+    const payrollCutoffDate =
+      payrollCutoffDateParam ||
+      (await this.getNextPayrollCutoffFromPayrollPeriod(currentUserId, 25))
+        .cutoffDate;
 
     const now = new Date();
     const daysUntilCutoff = Math.ceil(
@@ -2073,7 +2335,10 @@ export class NotificationService {
     },
     currentUserId: string
   ) {
-    const cutoffDate = params.payrollCutoffDate || this.getNextPayrollCutoffDate(25);
+    const cutoffDate =
+      params.payrollCutoffDate ||
+      (await this.getNextPayrollCutoffFromPayrollPeriod(currentUserId, 25))
+        .cutoffDate;
     const now = new Date();
     const daysUntilCutoff = Math.ceil(
       (cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -2241,7 +2506,15 @@ export class NotificationService {
     },
     currentUserId: string
   ) {
-    const { payrollCutoffDate, reminderDaysBefore } = params;
+    const {
+      payrollCutoffDate: payrollCutoffDateParam,
+      reminderDaysBefore = 5,
+    } = params;
+
+    const payrollCutoffDate =
+      payrollCutoffDateParam ||
+      (await this.getNextPayrollCutoffFromPayrollPeriod(currentUserId, 25))
+        .cutoffDate;
 
     const now = new Date();
     const daysUntilCutoff = Math.ceil(
@@ -2343,27 +2616,93 @@ export class NotificationService {
   }
 
   /**
-   * Helper: Get next payroll cutoff date
+   * Get a payroll period end date from Payroll module.
+   *
+   * - If Payroll has runs, we derive the period from the latest run's `payrollPeriod`.
+   * - If not, we fallback to end of the current month.
    */
-  private getNextPayrollCutoffDate(dayOfMonth: number): Date {
-    const now = new Date();
-    const cutoff = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+  private async getPayrollPeriodEndFromPayroll(
+    currentUserId: string,
+  ): Promise<Date> {
+    try {
+      const status =
+        await this.payrollExecutionService.getPreInitiationValidationStatus(
+          currentUserId,
+        );
 
-    // If we've passed this month's cutoff, get next month's
-    if (now > cutoff) {
-      cutoff.setMonth(cutoff.getMonth() + 1);
+      if (status?.payrollPeriod?.period) {
+        const d = new Date(status.payrollPeriod.period);
+        if (!isNaN(d.getTime())) return d;
+      }
+    } catch {
+      // Fallback below
     }
 
-    return cutoff;
+    const now = new Date();
+    // Last day of current month
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0);
   }
 
   /**
-   * Helper: Get days until payroll cutoff
+   * Given a payroll period end (e.g. end-of-month), compute the cut-off date for that same month.
+   * If the dayOfMonth exceeds the number of days in the month (e.g. Feb 30), clamp to the month's last day.
    */
-  private getDaysUntilCutoff(dayOfMonth: number): number {
-    const cutoff = this.getNextPayrollCutoffDate(dayOfMonth);
+  private getPayrollCutoffDateForPayrollPeriod(
+    payrollPeriodEnd: Date,
+    dayOfMonth: number,
+  ): Date {
+    const year = payrollPeriodEnd.getFullYear();
+    const month = payrollPeriodEnd.getMonth();
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const clampedDay = Math.min(Math.max(dayOfMonth, 1), lastDayOfMonth);
+    return new Date(year, month, clampedDay);
+  }
+
+  /**
+   * Compute the next upcoming payroll cut-off using the payroll period as the source of truth.
+   *
+   * Behavior:
+   * - Use latest payroll run period if available; otherwise current month.
+   * - Ensure the returned cut-off is in the future; if we've passed it, shift to next month.
+   */
+  private async getNextPayrollCutoffFromPayrollPeriod(
+    currentUserId: string,
+    dayOfMonth: number,
+  ): Promise<{
+    payrollPeriodEnd: Date;
+    cutoffDate: Date;
+    daysUntilCutoff: number;
+  }> {
     const now = new Date();
-    return Math.ceil((cutoff.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    let payrollPeriodEnd = await this.getPayrollPeriodEndFromPayroll(
+      currentUserId,
+    );
+
+    let cutoffDate = this.getPayrollCutoffDateForPayrollPeriod(
+      payrollPeriodEnd,
+      dayOfMonth,
+    );
+
+    // If we've already passed the cutoff for that payroll period's month,
+    // move to next month's payroll period and recompute.
+    if (now > cutoffDate) {
+      payrollPeriodEnd = new Date(
+        payrollPeriodEnd.getFullYear(),
+        payrollPeriodEnd.getMonth() + 2,
+        0,
+      );
+      cutoffDate = this.getPayrollCutoffDateForPayrollPeriod(
+        payrollPeriodEnd,
+        dayOfMonth,
+      );
+    }
+
+    const daysUntilCutoff = Math.ceil(
+      (cutoffDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    return { payrollPeriodEnd, cutoffDate, daysUntilCutoff };
   }
 
   /**

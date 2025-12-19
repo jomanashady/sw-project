@@ -73,13 +73,25 @@ export default function DisputeDetailsPage() {
     : SystemRole.DEPARTMENT_EMPLOYEE;
   useRequireAuth(allowedRole);
 
+  // Helper function to extract error message from API response
+  const getErrorMessage = (err: any): string => {
+    // Try to get the specific backend error message
+    if (err.response?.data?.message) {
+      return err.response.data.message;
+    }
+    if (err.message) {
+      return err.message;
+    }
+    return "An error occurred. Please try again.";
+  };
+
   const fetchDispute = async () => {
     try {
       const disputeId = params.id as string;
       const data = await payslipsApi.getDisputeById(disputeId);
       setDispute(data);
     } catch (err: any) {
-      setError(err.message || "Failed to load dispute details");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -107,8 +119,14 @@ export default function DisputeDetailsPage() {
       setShowApproveModal(false);
       setApproveComment("");
       await fetchDispute(); // Refresh dispute data
+      // Redirect to pending disputes page after successful approval
+      setTimeout(() => {
+        if (isPayrollSpecialist) {
+          router.push("/dashboard/payroll-tracking/pending-disputes");
+        }
+      }, 1500);
     } catch (err: any) {
-      setError(err.message || "Failed to approve dispute");
+      setError(getErrorMessage(err));
     } finally {
       setProcessing(false);
     }
@@ -135,8 +153,14 @@ export default function DisputeDetailsPage() {
       setShowRejectModal(false);
       setRejectReason("");
       await fetchDispute(); // Refresh dispute data
+      // Redirect to pending disputes page after successful rejection
+      setTimeout(() => {
+        if (isPayrollSpecialist) {
+          router.push("/dashboard/payroll-tracking/pending-disputes");
+        }
+      }, 1500);
     } catch (err: any) {
-      setError(err.message || "Failed to reject dispute");
+      setError(getErrorMessage(err));
     } finally {
       setProcessing(false);
     }
@@ -157,9 +181,17 @@ export default function DisputeDetailsPage() {
       });
       setShowConfirmModal(false);
       setConfirmComment("");
+      // Show success message
+      alert(`Dispute ${dispute.disputeId} has been confirmed and forwarded to Finance for refund processing. Finance staff have been notified.`);
       await fetchDispute(); // Refresh dispute data
+      // Redirect to manager disputes page after successful confirmation
+      setTimeout(() => {
+        if (isPayrollManager) {
+          router.push("/dashboard/payroll-tracking/manager-disputes");
+        }
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || "Failed to confirm dispute approval");
+      setError(getErrorMessage(err));
     } finally {
       setProcessing(false);
     }
@@ -185,26 +217,30 @@ export default function DisputeDetailsPage() {
     const statusLower = status.toLowerCase();
     if (statusLower === "approved") {
       return (
-        <span className="px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800 border border-green-300">
-          Approved
+        <span className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-300 shadow-sm flex items-center gap-2">
+          <span>✓</span>
+          <span>Approved</span>
         </span>
       );
     } else if (statusLower === "rejected") {
       return (
-        <span className="px-3 py-1 rounded text-sm font-medium bg-red-100 text-red-800 border border-red-300">
-          Rejected
+        <span className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border-2 border-red-300 shadow-sm flex items-center gap-2">
+          <span>✗</span>
+          <span>Rejected</span>
         </span>
       );
     } else if (statusLower === "pending payroll manager approval" || statusLower.includes("pending")) {
       return (
-        <span className="px-3 py-1 rounded text-sm font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
-          Pending Manager Approval
+        <span className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border-2 border-yellow-300 shadow-sm flex items-center gap-2 animate-pulse">
+          <span>⏳</span>
+          <span>Pending Manager Approval</span>
         </span>
       );
     } else {
       return (
-        <span className="px-3 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800 border border-blue-300">
-          Under Review
+        <span className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border-2 border-blue-300 shadow-sm flex items-center gap-2">
+          <span>🔄</span>
+          <span>Under Review</span>
         </span>
       );
     }
@@ -212,12 +248,11 @@ export default function DisputeDetailsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading dispute details...</p>
-          </div>
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded-lg"></div>
+          <div className="h-96 bg-gray-200 rounded-lg"></div>
         </div>
       </div>
     );
@@ -225,14 +260,31 @@ export default function DisputeDetailsPage() {
 
   if (error || !dispute) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <Card>
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-red-600 mb-4">{error || "Dispute not found"}</p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => router.push("/dashboard/payroll-tracking/disputes")}>
-                  Back to Disputes
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-xl font-semibold text-red-900 mb-2">
+                {error ? "Error Loading Dispute" : "Dispute Not Found"}
+              </h3>
+              <p className="text-red-700 mb-6 max-w-md mx-auto">
+                {error || "The dispute you're looking for doesn't exist or has been removed."}
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push("/dashboard/payroll-tracking/disputes")}
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  ← Back to Disputes
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={() => window.location.reload()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Retry
                 </Button>
               </div>
             </div>
@@ -243,24 +295,40 @@ export default function DisputeDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8 max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dispute Details</h1>
-          <p className="text-gray-600 mt-1">Dispute ID: {dispute.disputeId}</p>
+    <div className="container mx-auto px-6 py-8 max-w-5xl">
+      {/* Enhanced Header */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg">
+            <span className="text-3xl">⚖️</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dispute Details</h1>
+            <p className="text-gray-600 mt-1 flex items-center gap-2">
+              <span className="font-mono bg-gray-100 px-2 py-1 rounded">{dispute.disputeId}</span>
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/dashboard/payroll-tracking/disputes")}>
-            Back to Disputes
+          <Button 
+            variant="outline" 
+            onClick={() => router.push("/dashboard/payroll-tracking/disputes")}
+            className="flex items-center gap-2"
+          >
+            <span>←</span>
+            <span>Back to Disputes</span>
           </Button>
         </div>
       </div>
 
-      {/* Status Card */}
-      <Card className="mb-6">
-        <CardHeader>
+      {/* Enhanced Status Card */}
+      <Card className="mb-6 shadow-lg border-2">
+        <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b">
           <div className="flex items-center justify-between">
-            <CardTitle>Status</CardTitle>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📊</span>
+              <CardTitle className="text-xl">Status</CardTitle>
+            </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(dispute.status)}
               {/* Payroll Specialist Actions */}
@@ -269,16 +337,18 @@ export default function DisputeDetailsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setShowApproveModal(true)}
-                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100 hover:shadow-md transition-all flex items-center gap-2"
                   >
-                    Approve
+                    <span>✓</span>
+                    <span>Approve</span>
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setShowRejectModal(true)}
-                    className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
+                    className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100 hover:shadow-md transition-all flex items-center gap-2"
                   >
-                    Reject
+                    <span>✗</span>
+                    <span>Reject</span>
                   </Button>
                 </div>
               )}
@@ -288,9 +358,10 @@ export default function DisputeDetailsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setShowConfirmModal(true)}
-                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 hover:shadow-md transition-all flex items-center gap-2"
                   >
-                    Confirm Approval
+                    <span>✓</span>
+                    <span>Confirm Approval</span>
                   </Button>
                 </div>
               )}
@@ -299,30 +370,34 @@ export default function DisputeDetailsPage() {
         </CardHeader>
       </Card>
 
-      {/* Dispute Information */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Dispute Information</CardTitle>
+      {/* Enhanced Dispute Information */}
+      <Card className="mb-6 shadow-lg border-2">
+        <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📋</span>
+            <CardTitle className="text-xl">Dispute Information</CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
-              <p className="text-gray-900">{dispute.description}</p>
+        <CardContent className="pt-6">
+          <div className="space-y-6">
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Description</p>
+              <p className="text-gray-900 leading-relaxed">{dispute.description}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Payslip</p>
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Payslip</p>
                 <Link
                   href={`/dashboard/payroll-tracking/${dispute.payslipId._id}`}
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-700 hover:text-blue-900 font-bold text-lg hover:underline flex items-center gap-2"
                 >
-                  {dispute.payslipId.payrollRunId?.runId || "View Payslip"}
+                  <span>📄</span>
+                  <span>{dispute.payslipId.payrollRunId?.runId || "View Payslip"}</span>
                 </Link>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Payroll Period</p>
-                <p className="text-gray-900">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payroll Period</p>
+                <p className="text-gray-900 font-medium">
                   {dispute.payslipId.payrollRunId?.payrollPeriod
                     ? new Date(dispute.payslipId.payrollRunId.payrollPeriod).toLocaleDateString("en-US", {
                         year: "numeric",

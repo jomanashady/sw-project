@@ -171,12 +171,17 @@ export class EmployeeProfileController {
     };
   }
 
+  // CHANGED BY TIME MANAGEMENT MODULE
+  // Added DEPARTMENT_EMPLOYEE role to allow employees to access their department's employee list.
+  // This is needed for the overtime request form to automatically find and assign the employee's
+  // department head/manager when submitting overtime requests.
   @Get('department/:departmentId')
   @Roles(
     SystemRole.SYSTEM_ADMIN,
     SystemRole.HR_MANAGER,
     SystemRole.DEPARTMENT_HEAD,
-    SystemRole.HR_ADMIN
+    SystemRole.HR_ADMIN,
+    SystemRole.DEPARTMENT_EMPLOYEE,
   )
   async findByDepartment(@Param('departmentId') departmentId: string) {
     const employees = await this.employeeProfileService.findByDepartment(departmentId);

@@ -452,18 +452,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-1 & REQ-PY-2: Employees view/download a specific payslip and see its status
   @Get('employee/:employeeId/payslips/:payslipId')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getPayslipById(
     @Param('employeeId') employeeId: string,
     @Param('payslipId') payslipId: string,
     @CurrentUser() user: any
   ) {
     // Security: Employees can only view their own payslips
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's payslips
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own payslips
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -476,7 +489,13 @@ export class PayrollTrackingController {
 
   // REQ-PY-1: Employees download a specific payslip as PDF
   @Get('employee/:employeeId/payslips/:payslipId/download')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async downloadPayslip(
     @Param('employeeId') employeeId: string,
     @Param('payslipId') payslipId: string,
@@ -484,11 +503,18 @@ export class PayrollTrackingController {
     @Res() res: Response
   ) {
     // Security: Employees can only download their own payslips
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can download any employee's payslips
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own payslips
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -505,14 +531,30 @@ export class PayrollTrackingController {
 
   // REQ-PY-3: Employees view base salary according to employment contract
   @Get('employee/:employeeId/base-salary')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
-  async getEmployeeBaseSalary(@Param('employeeId') employeeId: string, @CurrentUser() user: any) {
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
+  async getEmployeeBaseSalary(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: any,
+  ) {
     // Security: Employees can only view their own base salary
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's base salary
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own base salary
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -525,18 +567,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-5: Employees view compensation for unused/encashed leave days
   @Get('employee/:employeeId/leave-encashment')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getLeaveEncashmentByEmployeeId(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payrollRunId') payrollRunId?: string
   ) {
     // Security: Employees can only view their own leave encashment
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's leave encashment
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own leave encashment
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -552,18 +607,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-7: Employees view transportation/commuting compensation
   @Get('employee/:employeeId/transportation-allowance')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getTransportationAllowance(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own transportation allowance
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's transportation allowance
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own transportation allowance
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -576,18 +644,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-8: Employees view detailed tax deductions with law/rule applied
   @Get('employee/:employeeId/tax-deductions')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getTaxDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own tax deductions
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's tax deductions
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own tax deductions
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -600,18 +681,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-9: Employees view insurance deductions itemized
   @Get('employee/:employeeId/insurance-deductions')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getInsuranceDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own insurance deductions
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's insurance deductions
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own insurance deductions
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -624,18 +718,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-10: Employees view salary deductions due to misconduct/absenteeism
   @Get('employee/:employeeId/misconduct-deductions')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getMisconductDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own misconduct deductions
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's misconduct deductions
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own misconduct deductions
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -648,18 +755,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-11: Employees view deductions for unpaid leave days
   @Get('employee/:employeeId/unpaid-leave-deductions')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getUnpaidLeaveDeductions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own unpaid leave deductions
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's unpaid leave deductions
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own unpaid leave deductions
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -672,18 +792,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-13: Employees access salary history
   @Get('employee/:employeeId/salary-history')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getSalaryHistory(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('limit') limit?: string
   ) {
     // Security: Employees can only view their own salary history
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's salary history
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own salary history
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {
@@ -699,18 +832,31 @@ export class PayrollTrackingController {
 
   // REQ-PY-14: Employees view employer contributions
   @Get('employee/:employeeId/employer-contributions')
-  @Roles(SystemRole.DEPARTMENT_EMPLOYEE, SystemRole.SYSTEM_ADMIN)
+  @Roles(
+    SystemRole.DEPARTMENT_EMPLOYEE,
+    SystemRole.PAYROLL_SPECIALIST,
+    SystemRole.PAYROLL_MANAGER,
+    SystemRole.FINANCE_STAFF,
+    SystemRole.SYSTEM_ADMIN
+  )
   async getEmployerContributions(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: any,
     @Query('payslipId') payslipId?: string
   ) {
     // Security: Employees can only view their own employer contributions
+    // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can view any employee's employer contributions
     const userRoles = user?.roles || [];
     const isEmployee = userRoles.includes(SystemRole.DEPARTMENT_EMPLOYEE);
-    const isAdmin = userRoles.includes(SystemRole.SYSTEM_ADMIN);
+    const isStaff = userRoles.some(
+      (role) =>
+        role === SystemRole.PAYROLL_SPECIALIST ||
+        role === SystemRole.PAYROLL_MANAGER ||
+        role === SystemRole.FINANCE_STAFF ||
+        role === SystemRole.SYSTEM_ADMIN
+    );
 
-    if (isEmployee && !isAdmin) {
+    if (isEmployee && !isStaff) {
       // Employee can only access their own employer contributions
       const userEmployeeId = user?.id || user?.userId;
       if (userEmployeeId && userEmployeeId.toString() !== employeeId.toString()) {

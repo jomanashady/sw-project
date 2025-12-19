@@ -78,10 +78,19 @@ export enum NotificationType {
   SHIFT_EXPIRY_ALERT = 'SHIFT_EXPIRY_ALERT',
   SHIFT_EXPIRY_BULK_ALERT = 'SHIFT_EXPIRY_BULK_ALERT',
   SHIFT_RENEWAL_CONFIRMATION = 'SHIFT_RENEWAL_CONFIRMATION',
+  SHIFT_REASSIGNMENT_CONFIRMATION = 'SHIFT_REASSIGNMENT_CONFIRMATION',
   SHIFT_ARCHIVE_NOTIFICATION = 'SHIFT_ARCHIVE_NOTIFICATION',
   MISSED_PUNCH = 'missed_punch',
   MISSED_PUNCH_EMPLOYEE_ALERT = 'MISSED_PUNCH_EMPLOYEE_ALERT',
   MISSED_PUNCH_MANAGER_ALERT = 'MISSED_PUNCH_MANAGER_ALERT',
+  MISSED_PUNCH_PAYROLL_ALERT = 'MISSED_PUNCH_PAYROLL_ALERT',
+  
+  // Repeated Lateness Disciplinary Notifications
+  REPEATED_LATENESS_FLAGGED = 'REPEATED_LATENESS_FLAGGED',
+  REPEATED_LATENESS_ESCALATED = 'REPEATED_LATENESS_ESCALATED',
+
+  // Payroll Cut-off Escalation Notifications (US18)
+  PAYROLL_CUTOFF_ESCALATION_ALERT = 'PAYROLL_CUTOFF_ESCALATION_ALERT',
 
   // Employee Profile Module Notifications
   PROFILE_CHANGE_REQUEST_SUBMITTED = 'profile_change_request_submitted',
@@ -96,4 +105,21 @@ export enum NotificationType {
   CLAIM_APPROVED = 'claim_approved',
   DISPUTE_REJECTED = 'dispute_rejected',
   CLAIM_REJECTED = 'claim_rejected',
+
+  // =============================================================================
+  // PAYROLL EXECUTION MODULE NOTIFICATIONS
+  // =============================================================================
+  PAYROLL_INITIATION_CREATED = 'payroll_initiation_created',
+  PAYROLL_INITIATION_APPROVED = 'payroll_initiation_approved',
+  PAYROLL_INITIATION_REJECTED = 'payroll_initiation_rejected',
+  PAYROLL_SENT_FOR_APPROVAL = 'payroll_sent_for_approval',
+  PAYROLL_MANAGER_APPROVED = 'payroll_manager_approved',
+  PAYROLL_MANAGER_REJECTED = 'payroll_manager_rejected',
+  PAYROLL_FINANCE_APPROVED = 'payroll_finance_approved',
+  PAYROLL_FINANCE_REJECTED = 'payroll_finance_rejected',
+  PAYROLL_LOCKED = 'payroll_locked',
+  PAYROLL_UNLOCKED = 'payroll_unlocked',
+  PAYROLL_PAYSLIPS_GENERATED = 'payroll_payslips_generated',
+  PAYROLL_IRREGULARITY_FLAGGED = 'payroll_irregularity_flagged',
+  PAYROLL_IRREGULARITY_RESOLVED = 'payroll_irregularity_resolved',
 }

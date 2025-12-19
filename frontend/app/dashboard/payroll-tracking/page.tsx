@@ -16,15 +16,10 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Allow employees, finance staff, and payroll specialists to access this page
-  const hasAccess = user?.roles?.some(
-    (role) => 
-      role === SystemRole.DEPARTMENT_EMPLOYEE || 
-      role === SystemRole.FINANCE_STAFF || 
-      role === SystemRole.PAYROLL_SPECIALIST ||
-      role === SystemRole.PAYROLL_MANAGER ||
-      role === SystemRole.SYSTEM_ADMIN
-  );
+  // Allow ALL authenticated users to access this page (all roles are employees and need to check their salary, claims, etc.)
+  // Staff roles (Payroll Specialist, Payroll Manager, Finance Staff, System Admin) can access any employee's data
+  // But all users should be able to access their own payroll-tracking information
+  // No need for hasAccess variable - all authenticated users have access
 
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -37,21 +32,17 @@ export default function PayrollPage() {
     // Wait for mount and auth initialization before redirecting
     if (!mounted || authLoading) return;
     
+    // All authenticated users have access (all roles are employees)
     if (!isAuthenticated) {
       router.replace("/auth/login");
       return;
     }
-    
-    if (!hasAccess) {
-      router.replace("/dashboard");
-      return;
-    }
-  }, [mounted, hasAccess, isAuthenticated, authLoading, router]);
+  }, [mounted, isAuthenticated, authLoading, router]);
 
   useEffect(() => {
     const fetchPayslips = async () => {
-      // Only fetch data if user is authenticated and has access
-      if (authLoading || !isAuthenticated || !hasAccess) {
+      // Only fetch data if user is authenticated (all authenticated users have access)
+      if (authLoading || !isAuthenticated) {
         return;
       }
 
@@ -85,7 +76,7 @@ export default function PayrollPage() {
     };
 
     fetchPayslips();
-  }, [user, isAuthenticated, hasAccess, authLoading]);
+  }, [user, isAuthenticated, authLoading]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -143,10 +134,12 @@ export default function PayrollPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading payroll information...</p>
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-gray-200 rounded w-1/2"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -156,11 +149,18 @@ export default function PayrollPage() {
   if (error) {
     return (
       <div className="container mx-auto px-6 py-8">
-        <Card>
+        <Card className="border-red-200 bg-red-50 shadow-lg">
           <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={() => window.location.reload()}>Retry</Button>
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-xl font-semibold text-red-900 mb-2">Error Loading Payroll Information</h3>
+              <p className="text-red-700 mb-6 max-w-md mx-auto">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Retry
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -168,156 +168,257 @@ export default function PayrollPage() {
     );
   }
 
+  // Calculate statistics
+  const totalPayslips = payslips.length;
+  const paidPayslips = payslips.filter(p => p.paymentStatus === "PAID").length;
+  const pendingPayslips = payslips.filter(p => p.paymentStatus !== "PAID").length;
+  const totalNetPay = payslips.reduce((sum, p) => sum + (p.netPay || 0), 0);
+  const disputedPayslips = payslips.filter(p => p.hasActiveDispute).length;
+
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Header */}
+      {/* Enhanced Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Payroll Tracking</h1>
-        <p className="text-gray-600 mt-1">As an Employee, view and download your payslips online so you can see your monthly salary. Manage and track your payroll information, claims, and disputes.</p>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+            <span className="text-4xl">💰</span>
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Payroll Tracking</h1>
+            <p className="text-gray-600 mt-2 text-lg">View and download your payslips, manage claims, and track disputes</p>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Actions Grid */}
+      {/* Statistics Cards */}
+      {totalPayslips > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Total Payslips</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalPayslips}</p>
+                </div>
+                <span className="text-4xl">📄</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Paid</p>
+                  <p className="text-3xl font-bold text-gray-900">{paidPayslips}</p>
+                </div>
+                <span className="text-4xl">✅</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Pending</p>
+                  <p className="text-3xl font-bold text-gray-900">{pendingPayslips}</p>
+                </div>
+                <span className="text-4xl">⏳</span>
+              </div>
+            </CardContent>
+          </Card>
+          {disputedPayslips > 0 && (
+            <Card className="bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Disputed</p>
+                    <p className="text-3xl font-bold text-gray-900">{disputedPayslips}</p>
+                  </div>
+                  <span className="text-4xl">⚠️</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Enhanced Quick Actions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {/* Salary Information Section */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Salary Information</CardTitle>
-            <CardDescription>View your salary details and history</CardDescription>
+        {/* Enhanced Salary Information Section */}
+        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-300 bg-gradient-to-br from-white to-blue-50/30">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <span className="text-2xl">💰</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Salary Information</CardTitle>
+                <CardDescription className="mt-1">View your salary details and history</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-6 space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-blue-50 hover:border-blue-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/base-salary")}
             >
-              <span className="mr-2">💰</span>
-              Base Salary
+              <span className="mr-2 text-lg">💰</span>
+              <span>Base Salary</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-blue-50 hover:border-blue-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/salary-history")}
             >
-              <span className="mr-2">📊</span>
-              Salary History
+              <span className="mr-2 text-lg">📊</span>
+              <span>Salary History</span>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Earnings & Benefits Section */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Earnings & Benefits</CardTitle>
-            <CardDescription>View your additional earnings and benefits</CardDescription>
+        {/* Enhanced Earnings & Benefits Section */}
+        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-green-300 bg-gradient-to-br from-white to-green-50/30">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <span className="text-2xl">📈</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Earnings & Benefits</CardTitle>
+                <CardDescription className="mt-1">View your additional earnings and benefits</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-6 space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-green-50 hover:border-green-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/leave-encashment")}
             >
-              <span className="mr-2">🏖️</span>
-              Leave Encashment
+              <span className="mr-2 text-lg">🏖️</span>
+              <span>Leave Encashment</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-green-50 hover:border-green-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/transportation")}
             >
-              <span className="mr-2">🚗</span>
-              Transportation Allowance
+              <span className="mr-2 text-lg">🚗</span>
+              <span>Transportation Allowance</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-green-50 hover:border-green-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/employer-contributions")}
             >
-              <span className="mr-2">💼</span>
-              Employer Contributions
+              <span className="mr-2 text-lg">💼</span>
+              <span>Employer Contributions</span>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Deductions Section */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Deductions</CardTitle>
-            <CardDescription>View detailed breakdown of deductions</CardDescription>
+        {/* Enhanced Deductions Section */}
+        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-red-300 bg-gradient-to-br from-white to-red-50/30">
+          <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <span className="text-2xl">📉</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Deductions</CardTitle>
+                <CardDescription className="mt-1">View detailed breakdown of deductions</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-6 space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-red-50 hover:border-red-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/tax-deductions")}
             >
-              <span className="mr-2">📋</span>
-              Tax Deductions
+              <span className="mr-2 text-lg">📋</span>
+              <span>Tax Deductions</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-red-50 hover:border-red-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/insurance-deductions")}
             >
-              <span className="mr-2">🛡️</span>
-              Insurance Deductions
+              <span className="mr-2 text-lg">🛡️</span>
+              <span>Insurance Deductions</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-red-50 hover:border-red-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/misconduct-deductions")}
             >
-              <span className="mr-2">⚠️</span>
-              Misconduct Deductions
+              <span className="mr-2 text-lg">⚠️</span>
+              <span>Misconduct Deductions</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-red-50 hover:border-red-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/unpaid-leave-deductions")}
             >
-              <span className="mr-2">📅</span>
-              Unpaid Leave Deductions
+              <span className="mr-2 text-lg">📅</span>
+              <span>Unpaid Leave Deductions</span>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Documents & Reports Section */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Documents & Reports</CardTitle>
-            <CardDescription>Access official documents and reports</CardDescription>
+        {/* Enhanced Documents & Reports Section */}
+        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-purple-300 bg-gradient-to-br from-white to-purple-50/30">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <span className="text-2xl">📄</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Documents & Reports</CardTitle>
+                <CardDescription className="mt-1">Access official documents and reports</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-6 space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/tax-documents")}
             >
-              <span className="mr-2">📄</span>
-              Tax Documents
+              <span className="mr-2 text-lg">📄</span>
+              <span>Tax Documents</span>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Claims & Disputes Section */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Claims & Disputes</CardTitle>
-            <CardDescription>Manage your expense claims and disputes</CardDescription>
+        {/* Enhanced Claims & Disputes Section */}
+        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-orange-300 bg-gradient-to-br from-white to-orange-50/30">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <span className="text-2xl">⚖️</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">Claims & Disputes</CardTitle>
+                <CardDescription className="mt-1">Manage your expense claims and disputes</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-6 space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-orange-50 hover:border-orange-300 transition-colors" 
               size="sm"
               onClick={() => {
                 // Route Payroll Specialists to pending claims, employees to their claims
@@ -329,12 +430,12 @@ export default function PayrollPage() {
                 }
               }}
             >
-              <span className="mr-2">💵</span>
-              Expense Claims
+              <span className="mr-2 text-lg">💵</span>
+              <span>Expense Claims</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-orange-50 hover:border-orange-300 transition-colors" 
               size="sm"
               onClick={() => {
                 // Route Payroll Specialists to pending disputes, employees to their disputes
@@ -346,35 +447,44 @@ export default function PayrollPage() {
                 }
               }}
             >
-              <span className="mr-2">⚖️</span>
-              Payroll Disputes
+              <span className="mr-2 text-lg">⚖️</span>
+              <span>Payroll Disputes</span>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start hover:bg-orange-50 hover:border-orange-300 transition-colors" 
               size="sm"
               onClick={() => router.push("/dashboard/payroll-tracking/tracking")}
             >
-              <span className="mr-2">📈</span>
-              Track Status
+              <span className="mr-2 text-lg">📈</span>
+              <span>Track Status</span>
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Payslips Section */}
+      {/* Enhanced Payslips Section */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">My Payslips</h2>
-        <p className="text-gray-600 mb-4">View and download your monthly payslips online. Click "View Details" to see a complete breakdown of your earnings and deductions, or "Download PDF" to save a copy.</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <span className="text-2xl">📋</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">My Payslips</h2>
+            <p className="text-gray-600 mt-1">View and download your monthly payslips online. Click "View Details" to see a complete breakdown of your earnings and deductions.</p>
+          </div>
+        </div>
       </div>
 
       {payslips.length === 0 ? (
-        <Card>
+        <Card className="border-2 border-dashed border-gray-300 bg-gray-50">
           <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No payslips found</p>
-              <p className="text-gray-400 text-sm mt-2">
-                Your payslips will appear here once they are generated by the payroll system.
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">📄</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Payslips Found</h3>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Your payslips will appear here once they are generated by the payroll system. 
+                Check back after your next payroll cycle.
               </p>
             </div>
           </CardContent>
@@ -382,56 +492,68 @@ export default function PayrollPage() {
       ) : (
         <div className="space-y-4">
           {payslips.map((payslip) => (
-            <Card key={payslip._id}>
+            <Card key={payslip._id} className="hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-300">
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Payslip - {formatDate(payslip.payrollRunId?.payrollPeriod)}
-                      </h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <span className="text-xl">💰</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900">
+                          Payslip - {formatDate(payslip.payrollRunId?.payrollPeriod)}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Run ID: {payslip.payrollRunId?.runId || "N/A"}
+                        </p>
+                      </div>
                       {getStatusBadge(payslip.status, payslip.paymentStatus)}
                     </div>
                     
-                    {/* Status Message */}
-                    <div className={`mb-3 p-2 rounded-md text-sm ${
+                    {/* Enhanced Status Message */}
+                    <div className={`mb-4 p-3 rounded-lg text-sm border-2 ${
                       payslip.status === "paid" 
-                        ? "bg-green-50 text-green-800 border border-green-200"
+                        ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200"
                         : payslip.status === "paid-disputed" || payslip.status === "disputed"
-                        ? "bg-orange-50 text-orange-800 border border-orange-200"
-                        : "bg-yellow-50 text-yellow-800 border border-yellow-200"
+                        ? "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-800 border-orange-200"
+                        : "bg-gradient-to-r from-yellow-50 to-amber-50 text-yellow-800 border-yellow-200"
                     }`}>
-                      <p className="font-medium">{getStatusMessage(payslip)}</p>
+                      <p className="font-semibold flex items-center gap-2">
+                        {payslip.status === "paid" ? "✅" : payslip.status === "disputed" ? "⚠️" : "⏳"}
+                        <span>{getStatusMessage(payslip)}</span>
+                      </p>
                       {payslip.hasActiveDispute && payslip.latestDispute && (
-                        <p className="text-xs mt-1 opacity-90">
-                          Latest dispute: {payslip.latestDispute.description.substring(0, 60)}
-                          {payslip.latestDispute.description.length > 60 ? "..." : ""}
+                        <p className="text-xs mt-2 opacity-90 flex items-center gap-1">
+                          <span>📝</span>
+                          <span>Latest dispute: {payslip.latestDispute.description.substring(0, 60)}
+                          {payslip.latestDispute.description.length > 60 ? "..." : ""}</span>
                         </p>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Gross Salary</p>
-                        <p className="font-semibold text-gray-900">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Gross Salary</p>
+                        <p className="font-bold text-gray-900 text-lg">
                           {formatCurrency(payslip.totalGrossSalary)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Deductions</p>
-                        <p className="font-semibold text-gray-900">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Deductions</p>
+                        <p className="font-bold text-red-600 text-lg">
                           {formatCurrency(payslip.totaDeductions || 0)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Net Pay</p>
-                        <p className="font-semibold text-blue-600 text-lg">
+                      <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Net Pay</p>
+                        <p className="font-bold text-blue-700 text-xl">
                           {formatCurrency(payslip.netPay)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Payment Status</p>
-                        <p className={`font-semibold ${
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Payment Status</p>
+                        <p className={`font-bold text-lg ${
                           payslip.paymentStatus === "PAID" ? "text-green-600" : "text-yellow-600"
                         }`}>
                           {payslip.paymentStatus}
@@ -440,25 +562,31 @@ export default function PayrollPage() {
                     </div>
                     
                     {payslip.hasActiveDispute && (
-                      <div className="mt-2 flex items-center gap-2 text-sm">
-                        <span className="text-orange-600 font-medium">⚠️ Active Dispute</span>
+                      <div className="mt-3 flex items-center gap-2 text-sm p-2 bg-orange-50 rounded-lg border border-orange-200">
+                        <span className="text-orange-600 font-bold">⚠️ Active Dispute</span>
                         {payslip.disputeCount && payslip.disputeCount > 1 && (
-                          <span className="text-gray-500">
+                          <span className="text-gray-600">
                             ({payslip.disputeCount} dispute{payslip.disputeCount > 1 ? "s" : ""})
                           </span>
                         )}
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Link href={`/dashboard/payroll-tracking/${payslip._id}`}>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full sm:w-auto hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                      >
+                        <span className="mr-2">👁️</span>
                         View Details
                       </Button>
                     </Link>
                     <Button
                       variant="primary"
                       size="sm"
+                      className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
                       onClick={async (e) => {
                         try {
                           const employeeId = user?.id || user?.userId;
@@ -470,8 +598,10 @@ export default function PayrollPage() {
                           // Show loading state
                           const button = e.currentTarget;
                           const originalText = button.textContent;
-                          button.disabled = true;
-                          button.textContent = "Downloading...";
+                          if (button) {
+                            button.disabled = true;
+                            button.innerHTML = '<span class="mr-2">⏳</span><span>Downloading...</span>';
+                          }
                           
                           const blob = await payslipsApi.downloadPayslip(
                             employeeId,
@@ -489,19 +619,24 @@ export default function PayrollPage() {
                           document.body.removeChild(a);
                           
                           // Restore button
-                          button.disabled = false;
-                          button.textContent = originalText;
+                          if (button) {
+                            button.disabled = false;
+                            button.innerHTML = '<span class="mr-2">📥</span><span>Download PDF</span>';
+                          }
                         } catch (err: any) {
                           console.error("Error downloading payslip:", err);
                           alert(err.message || "Failed to download payslip. Please try again.");
-                          // Restore button on error
+                          // Restore button on error (check if button still exists)
                           const button = e.currentTarget;
-                          button.disabled = false;
-                          button.textContent = "Download PDF";
+                          if (button) {
+                            button.disabled = false;
+                            button.innerHTML = '<span class="mr-2">📥</span><span>Download PDF</span>';
+                          }
                         }
                       }}
                     >
-                      Download PDF
+                      <span className="mr-2">📥</span>
+                      <span>Download PDF</span>
                     </Button>
                   </div>
                 </div>

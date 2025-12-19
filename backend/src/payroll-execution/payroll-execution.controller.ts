@@ -9,6 +9,8 @@ import {
   Put,
   UseGuards,
   Query,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -165,15 +167,36 @@ export class PayrollExecutionController {
     @Body() processPayrollInitiationDto: ProcessPayrollInitiationDto,
     @CurrentUser() user: any
   ) {
-    // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
-    return this.payrollService.processPayrollInitiation(
-      new Date(processPayrollInitiationDto.payrollPeriod),
-      processPayrollInitiationDto.entity,
-      processPayrollInitiationDto.payrollSpecialistId,
-      processPayrollInitiationDto.currency,
-      user.userId,
-      processPayrollInitiationDto.payrollManagerId
-    );
+    try {
+      // BR 20: Multi-currency support - currency stored in entity field format: "Entity Name|CURRENCY_CODE"
+      return await this.payrollService.processPayrollInitiation(
+        new Date(processPayrollInitiationDto.payrollPeriod),
+        processPayrollInitiationDto.entity,
+        processPayrollInitiationDto.payrollSpecialistId,
+        processPayrollInitiationDto.currency,
+        user.userId,
+        processPayrollInitiationDto.payrollManagerId,
+      );
+    } catch (error) {
+      // Log the error for debugging
+      console.error('Error processing payroll initiation:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      // Convert plain Error objects to BadRequestException with proper message
+      if (error instanceof Error) {
+        throw new BadRequestException(error.message);
+      }
+      
+      // Handle unexpected errors
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : 'Failed to process payroll initiation',
+      );
+    }
   }
 
   // REQ-PY-24: Allow PAYROLL_SPECIALIST to review and approve processed payroll initiation

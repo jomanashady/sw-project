@@ -156,6 +156,36 @@ export const employeeProfileApi = {
   getMyTeam: async () => {
     const response = await api.get("/employee-profile/team/members");
     const data = extractData<TeamMember[]>(response);
-    return Array.isArray(data) ? data : [];
+    // Backend returns EmployeeProfile docs (with `_id`), while some UI expects `id`.
+    const raw = Array.isArray(data) ? data : [];
+
+    const normalized = raw
+      .map((m: any) => {
+        const id = (m?.id || m?._id || m?.employeeProfileId || "").toString();
+        const firstName = m?.firstName ?? "";
+        const lastName = m?.lastName ?? "";
+        const fullName =
+          m?.fullName ||
+          `${firstName} ${lastName}`.trim() ||
+          m?.name ||
+          "Unknown";
+
+        return {
+          ...m,
+          id,
+          firstName,
+          lastName,
+          fullName,
+        } as TeamMember;
+      })
+      .filter((m: any) => !!m.id);
+
+    // Deduplicate by id
+    const seen = new Set<string>();
+    return normalized.filter((m: any) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
   },
 };

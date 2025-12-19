@@ -43,13 +43,24 @@ export default function ApprovedClaimsPage() {
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState<string | null>(null);
 
+  // Helper function to extract error message from API response
+  const getErrorMessage = (err: any): string => {
+    if (err.response?.data?.message) {
+      return err.response.data.message;
+    }
+    if (err.message) {
+      return err.message;
+    }
+    return "An error occurred. Please try again.";
+  };
+
   useEffect(() => {
     const fetchClaims = async () => {
       try {
         const data = await payslipsApi.getApprovedClaimsForFinance();
         setClaims(data || []);
       } catch (err: any) {
-        setError(err.message || "Failed to load approved claims");
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -150,9 +161,15 @@ export default function ApprovedClaimsPage() {
         closeRefundModal();
       }, 2000);
     } catch (err: any) {
-      setRefundError(
-        err.response?.data?.message || err.message || "Failed to generate refund. Please try again."
-      );
+      // Extract specific backend error message
+      const errorMessage = err.response?.data?.message || err.message;
+      
+      // Check if it's a duplicate refund error and show the specific message
+      if (errorMessage && errorMessage.includes("refund already exists")) {
+        setRefundError(errorMessage);
+      } else {
+        setRefundError(errorMessage || "Failed to generate refund. Please try again.");
+      }
     } finally {
       setIsGeneratingRefund(false);
     }

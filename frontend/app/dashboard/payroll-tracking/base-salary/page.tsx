@@ -39,7 +39,8 @@ export default function BaseSalaryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useRequireAuth(SystemRole.DEPARTMENT_EMPLOYEE);
+  // All authenticated users can view their own base salary (all roles are employees)
+  // No need for restrictive useRequireAuth
 
   useEffect(() => {
     const fetchBaseSalary = async () => {

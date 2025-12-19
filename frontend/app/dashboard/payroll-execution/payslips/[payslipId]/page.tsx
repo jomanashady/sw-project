@@ -309,7 +309,7 @@ export default function PayslipDetailPage() {
 
     try {
       // Dynamically import jsPDF to avoid SSR issues
-      const jsPDFModule = await import("jspdf");
+      const jsPDFModule = await import("jspdf") as any;
       const jsPDF = jsPDFModule.default;
       const doc = new jsPDF();
 

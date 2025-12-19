@@ -106,7 +106,7 @@ export default function PayrollManagerDashboardPage() {
           Payroll Configuration Management
         </h2>
         <p className="text-white mb-4">
-           Approve payroll module configuration changes (edit and approve any configuration, delete except insurance)
+           Approve payroll module configuration changes. View, Edit, Approve/Reject, and Delete any configuration (except insurance brackets which require HR Manager approval). Once approved, configurations cannot be edited - only deleted to create new ones.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Approval Dashboard - Primary Action */}
@@ -254,7 +254,7 @@ export default function PayrollManagerDashboardPage() {
           Payroll Execution Approval
         </h2>
         <p className="text-gray-600 mb-4">
-           Approve payroll runs so that validation is ensured at the managerial level prior to distribution
+           Review payroll draft, resolve escalated irregularities, and approve payroll runs so that validation is ensured at the managerial level prior to distribution. After approval, payroll can be locked/frozen to prevent unauthorized changes.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-blue-200">
@@ -317,7 +317,7 @@ export default function PayrollManagerDashboardPage() {
           Exception Resolution
         </h2>
         <p className="text-white mb-4">
-           Resolve escalated irregularities reported by Payroll Specialists so that payroll exceptions are addressed at a higher decision level
+           Resolve escalated irregularities reported by Payroll Specialists. Review payroll draft and view exceptions. Resolve by clearing exception strings so that payroll exceptions are addressed at a higher decision level.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-red-200">
@@ -380,7 +380,7 @@ export default function PayrollManagerDashboardPage() {
           Payroll Lock Management
         </h2>
         <p className="text-white mb-4">
-           Lock or freeze finalized payroll runs to prevent unauthorized retroactive changes. Unfreeze payrolls under exceptional circumstances with reason.
+           Lock or freeze finalized payroll runs to prevent unauthorized retroactive changes. View and manage locked payrolls. Unfreeze payrolls under exceptional circumstances by entering a detailed reason.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-red-200">
@@ -475,7 +475,7 @@ export default function PayrollManagerDashboardPage() {
           Payroll Tracking
         </h2>
         <p className="text-white mb-4">
-          Review and approve employee disputes and claims
+          Confirm approval of disputes and expense claims that were approved by Payroll Specialists. Multi-step approval: Only approved disputes/claims from specialists reach here. You can accept or reject them, and approved items will notify Finance Staff.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow border-2 border-red-200">
@@ -484,7 +484,7 @@ export default function PayrollManagerDashboardPage() {
                 <AlertCircle className="h-7 w-7 text-red-600" />
                 <CardTitle className="text-xl font-bold">Pending Disputes</CardTitle>
               </div>
-              <CardDescription> Confirm approval of disputes so that finance staff can be notified (multi-step approval)</CardDescription>
+              <CardDescription> Confirm approval of disputes approved by Payroll Specialists. Accept or reject them so that finance staff can be notified (multi-step approval)</CardDescription>
             </CardHeader>
             <CardContent>
               <Link
@@ -502,7 +502,7 @@ export default function PayrollManagerDashboardPage() {
                 <FileCheck className="h-7 w-7 text-orange-600" />
                 <CardTitle className="text-xl font-bold">Pending Claims</CardTitle>
               </div>
-              <CardDescription> Confirm approval of expense claims so that finance staff can be notified (multi-step approval)</CardDescription>
+              <CardDescription> Confirm approval of expense claims approved by Payroll Specialists. Accept or reject them so that finance staff can be notified (multi-step approval)</CardDescription>
             </CardHeader>
             <CardContent>
               <Link

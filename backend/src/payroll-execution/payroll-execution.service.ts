@@ -61,10 +61,10 @@ import { employeePenalties, employeePenaltiesDocument } from './models/employeeP
 import { ConfigStatus } from '../payroll-configuration/enums/payroll-configuration-enums';
 import { EmployeeStatus, SystemRole } from '../employee-profile/enums/employee-profile.enums';
 import { TerminationStatus } from '../recruitment/enums/termination-status.enum';
-import {
-  EmployeeSystemRole,
-  EmployeeSystemRoleDocument,
-} from '../employee-profile/models/employee-system-role.schema';
+import { EmployeeSystemRole, EmployeeSystemRoleDocument } from '../employee-profile/models/employee-system-role.schema';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
+import { ExtendedNotification } from '../notifications/models/extended-notification.schema';
 
 /**
  * ====================================================================================
@@ -139,6 +139,7 @@ export class PayrollExecutionService {
     @InjectModel(EmployeeSystemRole.name)
     private employeeSystemRoleModel: Model<EmployeeSystemRoleDocument>,
     @InjectModel(EmployeeProfile.name) private employeeProfileModel: Model<EmployeeProfile>,
+    @InjectModel('ExtendedNotification') private notificationLogModel: Model<any>,
     // PayrollConfigurationService is exported from PayrollConfigurationModule - inject directly
     private readonly payrollConfigurationService: PayrollConfigurationService,
     // PayrollTrackingService uses forwardRef due to potential circular dependency
@@ -147,8 +148,52 @@ export class PayrollExecutionService {
     // EmployeeProfileService is exported from EmployeeProfileModule - inject directly
     private readonly employeeProfileService: EmployeeProfileService,
     // LeavesService is exported from LeavesModule - inject directly
-    private readonly leavesService: LeavesService
+    private readonly leavesService: LeavesService,
+    // NotificationsService is exported from NotificationsModule - inject directly
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  // ====================================================================================
+  // NOTIFICATION HELPER METHODS
+  // ====================================================================================
+  /**
+   * Helper method to send payroll notifications
+   * @param type - Notification type
+   * @param recipientId - Employee ID to notify
+   * @param message - Notification message
+   * @param data - Additional data for notification
+   * @param title - Optional title for notification
+   */
+  /**
+   * Helper method to send payroll notifications
+   * @param type - Notification type
+   * @param recipientId - Employee ID to notify
+   * @param message - Notification message
+   * @param data - Additional data for notification
+   * @param title - Optional title for notification
+   */
+  private async sendPayrollNotification(
+    type: NotificationType,
+    recipientId: string,
+    message: string,
+    data?: any,
+    title?: string,
+  ): Promise<void> {
+    try {
+      await this.notificationLogModel.create({
+        to: new mongoose.Types.ObjectId(recipientId),
+        type: type,
+        message: message,
+        data: data || {},
+        title: title,
+        isRead: false,
+      });
+    } catch (error) {
+      // Log error but don't fail the operation
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Failed to send notification to ${recipientId}:`, errorMessage);
+    }
+  }
 
   // ====================================================================================
   // PHASE 0: PRE-RUN REVIEWS & APPROVALS
@@ -728,8 +773,17 @@ export class PayrollExecutionService {
         // Don't fail the lock if payslip generation fails - log and continue
       }
     } else {
-      console.log(
-        `[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked but payment status is not PAID yet. Payslips will be auto-generated when Finance approves.`
+      console.log(`[Auto-Generate Payslips] Payroll run ${savedPayrollRun._id} is locked but payment status is not PAID yet. Payslips will be auto-generated when Finance approves.`);
+    }
+
+    // Notify Payroll Specialist
+    if (payrollRun.payrollSpecialistId) {
+      await this.sendPayrollNotification(
+        NotificationType.PAYROLL_LOCKED,
+        payrollRun.payrollSpecialistId.toString(),
+        `Payroll run ${payrollRun.runId} has been locked`,
+        { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+        'Payroll Locked',
       );
     }
 
@@ -770,7 +824,20 @@ export class PayrollExecutionService {
     payrollRun.status = PayRollStatus.UNLOCKED;
     payrollRun.unlockReason = unlockReason.trim();
     (payrollRun as any).updatedBy = currentUserId;
-    return await payrollRun.save();
+    const savedPayrollRun = await payrollRun.save();
+
+    // Notify Payroll Specialist
+    if (payrollRun.payrollSpecialistId) {
+      await this.sendPayrollNotification(
+        NotificationType.PAYROLL_UNLOCKED,
+        payrollRun.payrollSpecialistId.toString(),
+        `Payroll run ${payrollRun.runId} has been unlocked. Reason: ${unlockReason}`,
+        { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId, reason: unlockReason },
+        'Payroll Unlocked',
+      );
+    }
+
+    return savedPayrollRun;
   }
 
   // REQ-PY-7: Freeze finalized payroll (alias for lockPayroll to match requirement terminology)
@@ -1091,7 +1158,25 @@ export class PayrollExecutionService {
       updatedBy: currentUserId,
     });
 
-    return await payrollRun.save();
+    const savedPayrollRun = await payrollRun.save();
+
+    // Notify Payroll Manager
+    if (finalPayrollManagerId) {
+      await this.sendPayrollNotification(
+        NotificationType.PAYROLL_INITIATION_CREATED,
+        finalPayrollManagerId.toString(),
+        `New payroll initiation created: ${savedPayrollRun.runId} for period ${payrollPeriod.toISOString().split('T')[0]}`,
+        { 
+          payrollRunId: savedPayrollRun._id.toString(), 
+          runId: savedPayrollRun.runId, 
+          payrollPeriod: payrollPeriod.toISOString(),
+          entity: entityWithCurrency,
+        },
+        'New Payroll Initiation Created',
+      );
+    }
+
+    return savedPayrollRun;
   }
 
   // Helper: Find a default payroll manager from the system
@@ -1126,7 +1211,11 @@ export class PayrollExecutionService {
   // BR 1: Employment contract requirements - Active contract with defined role, type, dates, and salary basis
   // BR 2: Contract terms validation
   // Egyptian Labor Law 2025 compliance
-  private async validatePayrollPeriodAgainstContracts(payrollPeriod: Date): Promise<void> {
+  // Modified to only validate employees eligible for the payroll period
+  // and allow payroll to proceed with warnings for employees with incomplete contracts
+  private async validatePayrollPeriodAgainstContracts(
+    payrollPeriod: Date,
+  ): Promise<void> {
     const year = payrollPeriod.getFullYear();
     const month = payrollPeriod.getMonth();
     const periodStart = new Date(year, month, 1);
@@ -1142,19 +1231,78 @@ export class PayrollExecutionService {
 
     const contractViolations: string[] = [];
     const missingFields: string[] = [];
+    const eligibleEmployees: any[] = [];
+    const employeesWithIssues = new Set<string>(); // Track unique employees with issues
 
     for (const employee of activeEmployees) {
-      const employeeData = employee;
+      const employeeData = employee as any;
+      
+      // Check if employee is eligible for this payroll period
+      // Employee is eligible if:
+      // 1. Contract start date is before or during the period, AND
+      // 2. Contract end date is after or during the period (or null for indefinite)
+      const contractStartDate = employeeData.contractStartDate;
+      const contractEndDate = employeeData.contractEndDate;
+      const dateOfHire = employeeData.dateOfHire;
+      
+      // Determine effective start date (contract start or hire date)
+      const effectiveStartDate = contractStartDate 
+        ? new Date(contractStartDate)
+        : dateOfHire 
+          ? new Date(dateOfHire)
+          : null;
+      
+      // Determine effective end date (contract end or null for indefinite)
+      const effectiveEndDate = contractEndDate ? new Date(contractEndDate) : null;
+      
+      // Check eligibility: employee should be active during the payroll period
+      let isEligible = false;
+      if (effectiveStartDate) {
+        effectiveStartDate.setHours(0, 0, 0, 0);
+        if (effectiveEndDate) {
+          effectiveEndDate.setHours(23, 59, 59, 999);
+          // Employee is eligible if period overlaps with contract period
+          isEligible = periodStart <= effectiveEndDate && periodEnd >= effectiveStartDate;
+        } else {
+          // Indefinite contract - eligible if start date is before or during period
+          isEligible = effectiveStartDate <= periodEnd;
+        }
+      } else {
+        // No start date - not eligible but we'll still validate to show the issue
+        isEligible = false;
+      }
+      
+      // Only validate employees that are eligible for this payroll period
+      // or employees with missing critical data that would prevent payroll processing
+      if (!isEligible && contractStartDate && contractEndDate) {
+        // Employee not eligible for this period - skip validation
+        continue;
+      }
+      
+      // Track eligible employees for validation
+      if (isEligible) {
+        eligibleEmployees.push(employeeData);
+      }
+      
       const employeeNumber =
         employeeData.employeeNumber || employeeData._id?.toString() || 'Unknown';
       const employeeName =
         employeeData.fullName ||
         `${employeeData.firstName || ''} ${employeeData.lastName || ''}`.trim() ||
         employeeNumber;
+      
+      // Only validate employees eligible for this payroll period
+      if (!isEligible) {
+        continue;
+      }
 
       // BR 1: Check for active employment contract with all required fields
+      // Track if this employee has any issues
+      let hasIssues = false;
+      
       // 1. Check for defined role (primaryPositionId)
       if (!employeeData.primaryPositionId) {
+        hasIssues = true;
         missingFields.push(
           `Employee ${employeeNumber} (${employeeName}): Missing defined role (primaryPositionId). Egyptian Labor Law 2025 requires a defined role in the employment contract.`
         );
@@ -1162,14 +1310,15 @@ export class PayrollExecutionService {
 
       // 2. Check for contract type (full-time, part-time, hourly, commission-based, etc.)
       if (!employeeData.contractType) {
+        hasIssues = true;
         missingFields.push(
           `Employee ${employeeNumber} (${employeeName}): Missing contract type. Egyptian Labor Law 2025 requires contract type (full-time, part-time, hourly, commission-based, etc.) to be defined.`
         );
       }
 
-      // 3. Check for contract start date
-      const contractStartDate = employeeData.contractStartDate;
+      // 3. Check for contract start date (already declared above, just check if missing)
       if (!contractStartDate) {
+        hasIssues = true;
         missingFields.push(
           `Employee ${employeeNumber} (${employeeName}): Missing contract start date. Egyptian Labor Law 2025 requires employment contracts to have a defined start date.`
         );
@@ -1177,14 +1326,19 @@ export class PayrollExecutionService {
 
       // 4. Check for contract end date (can be null for indefinite contracts, but must be explicitly set)
       // Note: For indefinite contracts, contractEndDate can be null, but we validate that it's a conscious decision
-      const contractEndDate = employeeData.contractEndDate;
-      // contractEndDate is optional for indefinite contracts, so we don't require it
+      // contractEndDate is already declared above and is optional for indefinite contracts, so we don't require it
 
       // 5. Check for salary basis (payGradeId)
       if (!employeeData.payGradeId) {
+        hasIssues = true;
         missingFields.push(
           `Employee ${employeeNumber} (${employeeName}): Missing salary basis (payGradeId). Egyptian Labor Law 2025 requires employment contracts to specify the salary basis.`
         );
+      }
+      
+      // Track this employee if they have issues
+      if (hasIssues) {
+        employeesWithIssues.add(employeeNumber);
       }
 
       // BR 2: Validate contract dates against payroll period
@@ -1194,6 +1348,8 @@ export class PayrollExecutionService {
 
         // Check if payroll period is before contract start date
         if (periodEnd < contractStart) {
+          hasIssues = true;
+          employeesWithIssues.add(employeeNumber);
           contractViolations.push(
             `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before contract start date (${contractStart.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed before contract start date.`
           );
@@ -1206,6 +1362,8 @@ export class PayrollExecutionService {
 
         // Check if payroll period is after contract end date
         if (periodStart > contractEnd) {
+          hasIssues = true;
+          employeesWithIssues.add(employeeNumber);
           contractViolations.push(
             `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is after contract end date (${contractEnd.toISOString().split('T')[0]}). Egyptian Labor Law 2025: Payroll cannot be processed after contract expiration.`
           );
@@ -1218,6 +1376,8 @@ export class PayrollExecutionService {
           hireDate.setHours(0, 0, 0, 0);
 
           if (periodEnd < hireDate) {
+            hasIssues = true;
+            employeesWithIssues.add(employeeNumber);
             contractViolations.push(
               `Employee ${employeeNumber} (${employeeName}): Payroll period (${year}-${String(month + 1).padStart(2, '0')}) is before date of hire (${hireDate.toISOString().split('T')[0]}).`
             );
@@ -1238,6 +1398,8 @@ export class PayrollExecutionService {
         maxFutureStartDate.setDate(maxFutureStartDate.getDate() + 30);
 
         if (contractStart > maxFutureStartDate) {
+          hasIssues = true;
+          employeesWithIssues.add(employeeNumber);
           contractViolations.push(
             `Employee ${employeeNumber} (${employeeName}): Contract start date (${contractStart.toISOString().split('T')[0]}) is more than 30 days in the future. This may violate Egyptian Labor Law 2025 contract validity requirements.`
           );
@@ -1250,6 +1412,8 @@ export class PayrollExecutionService {
         const contractEnd = new Date(contractEndDate);
 
         if (contractEnd < contractStart) {
+          hasIssues = true;
+          employeesWithIssues.add(employeeNumber);
           contractViolations.push(
             `Employee ${employeeNumber} (${employeeName}): Contract end date (${contractEnd.toISOString().split('T')[0]}) is before contract start date (${contractStart.toISOString().split('T')[0]}). This violates Egyptian Labor Law 2025 contract validity requirements.`
           );
@@ -1260,19 +1424,41 @@ export class PayrollExecutionService {
     // Combine all violations and missing fields
     const allIssues: string[] = [...missingFields, ...contractViolations];
 
-    // If there are any issues, throw error with details
+    // Never block payroll - only log warnings
+    // Employees with incomplete contracts will be excluded from payroll processing automatically
+    // This allows payroll to proceed even if some or all employees have incomplete contract data
     if (allIssues.length > 0) {
       const issueCount = allIssues.length;
+      const eligibleCount = eligibleEmployees.length;
+      const uniqueEmployeesWithIssues = employeesWithIssues.size;
       const issueDetails = allIssues.slice(0, 10).join('; '); // Show first 10 issues
       const moreIssues = issueCount > 10 ? ` and ${issueCount - 10} more` : '';
 
-      const errorMessage =
-        `Payroll processing blocked: ${issueCount} employee(s) have contract validation issues. ` +
-        `Egyptian Labor Law 2025 requires active employment contracts with defined role, type, start/end dates, and salary basis before payroll can be processed. ` +
-        `Details: ${issueDetails}${moreIssues}. ` +
-        `Please ensure all employees have complete and valid employment contracts before processing payroll.`;
+      // Always log warnings but never block
+      console.warn(
+        `[Payroll Validation] ${uniqueEmployeesWithIssues} employee(s) eligible for payroll period have contract validation issues. ` +
+        `These employees will be excluded from payroll processing. ` +
+        `Details: ${issueDetails}${moreIssues}`
+      );
 
-      throw new Error(errorMessage);
+      const validEmployeesCount = eligibleCount - uniqueEmployeesWithIssues;
+      if (validEmployeesCount > 0) {
+        console.log(
+          `[Payroll Validation] Proceeding with payroll processing. ` +
+          `${validEmployeesCount} employee(s) have valid contracts and will be included. ` +
+          `${uniqueEmployeesWithIssues} employee(s) will be excluded due to incomplete contract data.`
+        );
+      } else {
+        console.warn(
+          `[Payroll Validation] WARNING: All ${eligibleCount} eligible employee(s) have contract validation issues. ` +
+          `Payroll will proceed but no employees will be included in this payroll run. ` +
+          `Please ensure employees have complete contract data (primaryPositionId, payGradeId, contractStartDate) for future payroll runs.`
+        );
+      }
+      
+      // Never throw error - always allow payroll to proceed
+      // The payroll processing logic will automatically exclude employees with incomplete contracts
+      return;
     }
   }
 
@@ -1291,13 +1477,22 @@ export class PayrollExecutionService {
     if (!isFirstDayOfMonth) {
       // Calculate the first day of the month for the given period
       const firstDayOfMonth = new Date(periodDate.getFullYear(), periodDate.getMonth(), 1);
-
+      firstDayOfMonth.setHours(0, 0, 0, 0);
+      
+      // Format dates in local time to avoid timezone issues
+      const formatLocalDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       throw new Error(
         `Payroll cycle validation failed: Payroll period must be aligned to monthly cycles (first day of month). ` +
-          `Egyptian Labor Law 2025 requires payroll to be processed monthly. ` +
-          `Provided period: ${periodDate.toISOString().split('T')[0]}, ` +
-          `Expected period: ${firstDayOfMonth.toISOString().split('T')[0]} (first day of ${periodDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}). ` +
-          `Please use the first day of the target month as the payroll period.`
+        `Egyptian Labor Law 2025 requires payroll to be processed monthly. ` +
+        `Provided period: ${formatLocalDate(periodDate)}, ` +
+        `Expected period: ${formatLocalDate(firstDayOfMonth)} (first day of ${periodDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}). ` +
+        `Please use the first day of the target month as the payroll period.`
       );
     }
 
@@ -1452,6 +1647,18 @@ export class PayrollExecutionService {
 
       // Ensure the payroll run is saved with all updates (exceptions, totalnetpay, etc.)
       // The generateDraftDetailsForPayrollRun already saved these, but we reload to ensure consistency
+      
+      // Notify Payroll Specialist
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_INITIATION_APPROVED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll initiation ${runId} has been approved. Draft generation started.`,
+          { payrollRunId: payrollRun._id.toString(), runId },
+          'Payroll Initiation Approved',
+        );
+      }
+      
       return updatedPayrollRun;
     } else {
       // Validate status transition (DRAFT → REJECTED)
@@ -1467,7 +1674,20 @@ export class PayrollExecutionService {
       await this.employeePayrollDetailsModel.deleteMany({ payrollRunId: payrollRun._id }).exec();
 
       (payrollRun as any).updatedBy = currentUserId;
-      return await payrollRun.save();
+      const savedPayrollRun = await payrollRun.save();
+      
+      // Notify Payroll Specialist about rejection
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_INITIATION_REJECTED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll initiation ${runId} has been rejected. Reason: ${rejectionReason || 'No reason provided'}`,
+          { payrollRunId: payrollRun._id.toString(), runId, rejectionReason },
+          'Payroll Initiation Rejected',
+        );
+      }
+      
+      return savedPayrollRun;
     }
   }
 
@@ -1627,23 +1847,12 @@ export class PayrollExecutionService {
     const ContractModel = this.payrollRunModel.db.model('Contract');
     const OnboardingModel = this.payrollRunModel.db.model('Onboarding');
 
-    // Get all active employees using EmployeeProfileService
+    // Calculate the date 30 days ago
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
-    const employeesResult = await this.employeeProfileService.findAll({
-      status: EmployeeStatus.ACTIVE,
-      page: 1,
-      limit: 10000, // Get all active employees
-    } as any);
-    const allEmployees = Array.isArray(employeesResult)
-      ? employeesResult
-      : (employeesResult as any).data || [];
-
-    // Filter employees hired within last 30 days
-    const recentEmployees = allEmployees.filter((emp: any) => {
-      return emp.dateOfHire && new Date(emp.dateOfHire) >= thirtyDaysAgo;
-    });
+    console.log(`[processSigningBonuses] Looking for employees hired after: ${thirtyDaysAgo.toISOString()}`);
 
     // Get all approved signing bonuses using PayrollConfigurationService
     const signingBonusesResult = await this.payrollConfigurationService.findAllSigningBonuses({
@@ -1651,81 +1860,362 @@ export class PayrollExecutionService {
       limit: 1000, // Get all approved signing bonuses
     });
     const approvedSigningBonuses = signingBonusesResult?.data || [];
+    console.log(`[processSigningBonuses] Found ${approvedSigningBonuses.length} approved signing bonus configurations`);
+
+    // APPROACH: Query employees directly by dateOfHire OR contractStartDate (last 30 days)
+    // This catches all new hires regardless of status (ACTIVE, PROBATION, etc.)
+    // Check both dateOfHire and contractStartDate to catch all new hires
+    // Then check their contracts via onboarding records
+    const recentEmployees = await this.employeeProfileModel
+      .find({
+        $or: [
+          { dateOfHire: { $gte: thirtyDaysAgo } },
+          { contractStartDate: { $gte: thirtyDaysAgo } },
+        ],
+      })
+      .lean()
+      .exec();
+
+    console.log(`[processSigningBonuses] Found ${recentEmployees.length} employees hired in the last 30 days`);
+    
+    // Log all found employees for debugging
+    recentEmployees.forEach((emp: any) => {
+      const empName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.employeeNumber || 'Unknown';
+      console.log(`[processSigningBonuses] Found employee: ${empName} (ID: ${emp._id}, dateOfHire: ${emp.dateOfHire}, status: ${emp.status})`);
+    });
+
+    if (recentEmployees.length === 0) {
+      return []; // No employees hired in the last 30 days
+    }
 
     const processedBonuses: employeeSigningBonus[] = [];
+    // Convert all employee IDs to ObjectId for proper querying
+    const employeeIds = recentEmployees.map((emp: any) => {
+      if (emp._id instanceof Types.ObjectId) {
+        return emp._id;
+      }
+      return new Types.ObjectId(emp._id.toString());
+    });
 
+    // Find onboarding records for these employees
+    const onboardingRecords = await OnboardingModel.find({
+      employeeId: { $in: employeeIds },
+    })
+      .populate('contractId')
+      .lean()
+      .exec();
+
+    console.log(`[processSigningBonuses] Found ${onboardingRecords.length} onboarding records for recent employees`);
+    
+    // Log onboarding records found
+    onboardingRecords.forEach((onboarding: any) => {
+      const empId = onboarding.employeeId?._id?.toString() || onboarding.employeeId?.toString() || 'Unknown';
+      const contractId = onboarding.contractId?._id?.toString() || onboarding.contractId?.toString() || 'None';
+      console.log(`[processSigningBonuses] Onboarding record: employeeId=${empId}, contractId=${contractId}`);
+    });
+
+    // Create a map of employeeId -> onboarding for quick lookup
+    // Use normalized string IDs for both keys and lookups
+    const onboardingMap = new Map();
+    onboardingRecords.forEach((onboarding: any) => {
+      if (onboarding.employeeId) {
+        // Normalize employeeId to string for consistent lookup
+        let empId: string;
+        if (onboarding.employeeId._id) {
+          empId = onboarding.employeeId._id.toString();
+        } else if (onboarding.employeeId instanceof Types.ObjectId) {
+          empId = onboarding.employeeId.toString();
+        } else {
+          empId = onboarding.employeeId.toString();
+        }
+        if (!onboardingMap.has(empId)) {
+          onboardingMap.set(empId, onboarding);
+        }
+      }
+    });
+
+    // FALLBACK: Also find contracts directly by looking for contracts with acceptanceDate in last 30 days
+    // This catches cases where onboarding might not exist or contractId isn't set
+    const recentContracts = await ContractModel.find({
+      acceptanceDate: { $gte: thirtyDaysAgo },
+      signingBonus: { $exists: true, $ne: null, $gt: 0 },
+    })
+      .populate('offerId')
+      .lean()
+      .exec();
+
+    console.log(`[processSigningBonuses] Found ${recentContracts.length} contracts with signing bonuses accepted in last 30 days`);
+
+    // Create a map of contractId -> contract for fallback lookup
+    const contractMap = new Map();
+    recentContracts.forEach((contract: any) => {
+      if (contract._id) {
+        contractMap.set(contract._id.toString(), contract);
+      }
+    });
+
+    // Also try to map contracts to employees via offers -> candidates -> employees
+    // This is a fallback if onboarding doesn't have the link
+    const contractToEmployeeMap = new Map<string, string>(); // contractId -> employeeId
+    for (const contract of recentContracts) {
+      if (contract.offerId) {
+        try {
+          // Try to find employee via offer -> candidate -> employee email match
+          const offer = contract.offerId;
+          if (offer && (offer as any).candidateId) {
+            const candidate = await this.employeeProfileModel.db.model('Candidate').findById((offer as any).candidateId).lean().exec();
+            if (candidate && (candidate as any).personalEmail) {
+              const employee = await this.employeeProfileModel.findOne({
+                personalEmail: (candidate as any).personalEmail,
+              }).lean().exec();
+              if (employee && employee._id) {
+                contractToEmployeeMap.set(contract._id.toString(), employee._id.toString());
+              }
+            }
+          }
+        } catch (e) {
+          // Skip if can't resolve
+        }
+      }
+    }
+
+    let skippedNoOnboarding = 0;
+    let skippedNoContract = 0;
+    let skippedNoSigningBonus = 0;
+    let skippedNoPosition = 0;
+    let skippedNoConfig = 0;
+    let skippedAlreadyExists = 0;
+
+    // Process each recent employee
     for (const employee of recentEmployees) {
+      const employeeId: any = employee._id;
+      // Normalize employeeId to string for consistent lookup
+      const employeeIdString = employeeId instanceof Types.ObjectId 
+        ? employeeId.toString() 
+        : (employeeId ? new Types.ObjectId(employeeId.toString()).toString() : '');
+      const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.employeeNumber || employeeIdString;
+
+      console.log(`[processSigningBonuses] Processing employee: ${employeeName} (ID: ${employeeIdString})`);
+
       // Check if signing bonus already exists for this employee
       const existingBonus = await this.employeeSigningBonusModel.findOne({
-        employeeId: employee._id,
+        employeeId: employeeId instanceof Types.ObjectId ? employeeId : new Types.ObjectId(employeeIdString),
       });
 
       if (existingBonus) {
+        skippedAlreadyExists++;
+        console.log(`[processSigningBonuses] Skipping ${employeeName}: Signing bonus already exists (ID: ${existingBonus._id})`);
         continue; // Skip if already processed
       }
 
-      // BR 24: Check if employee is eligible for signing bonus according to their contract
-      // Find contract via Onboarding (employeeId -> contractId)
-      const onboarding = await OnboardingModel.findOne({
-        employeeId: employee._id,
-      });
-      let isEligible = false;
-      let contractSigningBonus: number | undefined = undefined;
+      // Get contract for this employee - try multiple methods
+      let contract: any = null;
+      let contractSource = '';
 
+      // Method 1: Try onboarding record first
+      const onboarding = onboardingMap.get(employeeIdString);
       if (onboarding && onboarding.contractId) {
-        const contract = await ContractModel.findById(onboarding.contractId);
-        if (
-          contract &&
-          contract.signingBonus !== undefined &&
-          contract.signingBonus !== null &&
-          contract.signingBonus > 0
-        ) {
-          isEligible = true;
-          contractSigningBonus = contract.signingBonus;
+        if (typeof onboarding.contractId === 'object' && onboarding.contractId._id) {
+          // Already populated - use it directly
+          contract = onboarding.contractId;
+          contractSource = 'onboarding';
+        } else if (typeof onboarding.contractId === 'object' && !onboarding.contractId._id) {
+          // It's an ObjectId object, need to fetch
+          const contractId = onboarding.contractId.toString();
+          contract = await ContractModel.findById(contractId).lean().exec();
+          contractSource = 'onboarding';
+        } else {
+          // It's a string ID, need to fetch
+          contract = await ContractModel.findById(onboarding.contractId).lean().exec();
+          contractSource = 'onboarding';
         }
       }
 
-      // If contract doesn't have signingBonus or employee doesn't have onboarding, skip
-      if (!isEligible) {
-        continue; // Employee not eligible according to contract (BR 24)
+      // Method 2: Fallback - try to find contract via contractToEmployeeMap
+      if (!contract) {
+        for (const [contractId, empId] of contractToEmployeeMap.entries()) {
+          if (empId === employeeIdString) {
+            contract = contractMap.get(contractId);
+            if (contract) {
+              contractSource = 'contract-fallback';
+              break;
+            }
+          }
+        }
       }
 
-      // Get employee's position
-      if (!employee.primaryPositionId) {
-        continue;
+      // Method 3: Last resort - try to find contract by employee email via offer -> candidate
+      if (!contract) {
+        try {
+          if (employee.personalEmail) {
+            const candidate = await this.employeeProfileModel.db.model('Candidate').findOne({
+              personalEmail: employee.personalEmail,
+            }).lean().exec();
+            if (candidate && (candidate as any)._id) {
+              const offer = await this.employeeProfileModel.db.model('Offer').findOne({
+                candidateId: (candidate as any)._id,
+              }).lean().exec();
+              if (offer && (offer as any)._id) {
+                const foundContract = await ContractModel.findOne({
+                  offerId: (offer as any)._id,
+                  signingBonus: { $exists: true, $ne: null, $gt: 0 },
+                }).lean().exec();
+                if (foundContract) {
+                  contract = foundContract;
+                  contractSource = 'email-lookup';
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Skip if lookup fails
+        }
       }
 
-      const position = await PositionModel.findById(employee.primaryPositionId);
-      if (!position) {
-        continue;
+      if (!contract) {
+        skippedNoContract++;
+        console.log(`[processSigningBonuses] Skipping ${employeeName}: No contract found via any method (onboarding, fallback, or email lookup)`);
+        continue; // Contract not found
       }
 
-      // Find matching signing bonus configuration by position title
-      const signingBonusConfig = approvedSigningBonuses.find(
-        (bonus: any) => bonus.positionName === position.title
-      );
+      console.log(`[processSigningBonuses] Found contract for ${employeeName} via: ${contractSource}`);
 
-      if (signingBonusConfig) {
-        const bonusData = signingBonusConfig as any;
-        // Use contract signingBonus amount if available, otherwise use configuration amount
-        // Priority: contract signingBonus > configuration amount
-        const finalAmount =
-          contractSigningBonus !== undefined ? contractSigningBonus : bonusData.amount;
-
-        // Create employee signing bonus record
-        const employeeBonus = new this.employeeSigningBonusModel({
-          employeeId: employee._id,
-          signingBonusId: bonusData._id,
-          givenAmount: finalAmount, // Use contract amount if available (BR 24), otherwise configuration amount
-          status: BonusStatus.PENDING,
-          createdBy: currentUserId,
-          updatedBy: currentUserId,
-        });
-
-        await employeeBonus.save();
-        processedBonuses.push(employeeBonus);
+      // BR 24: Check if employee is eligible for signing bonus
+      // Priority: contract.signingBonus > 0 (if exists), otherwise check position config
+      let contractSigningBonus: number | undefined = undefined;
+      if (
+        contract.signingBonus !== undefined &&
+        contract.signingBonus !== null &&
+        contract.signingBonus > 0
+      ) {
+        contractSigningBonus = contract.signingBonus;
+        console.log(`[processSigningBonuses] Contract has signingBonus: ${contractSigningBonus}`);
+      } else {
+        console.log(`[processSigningBonuses] Contract doesn't have signingBonus (${contract.signingBonus}), will use position config amount if match found`);
       }
+
+      // Get employee's position (if available)
+      // FLEXIBLE: Allow processing even if position is missing, as long as contract has signingBonus
+      let positionTitle: string | null = null;
+      let position: any = null;
+
+      if (employee.primaryPositionId) {
+        position = await PositionModel.findById(employee.primaryPositionId);
+        if (position) {
+          positionTitle = (position as any).title;
+          console.log(`[processSigningBonuses] Employee ${employeeName} has position: "${positionTitle}"`);
+        } else {
+          console.log(`[processSigningBonuses] ⚠ Employee ${employeeName} has primaryPositionId (${employee.primaryPositionId}) but position not found in database`);
+        }
+      } else {
+        console.log(`[processSigningBonuses] ⚠ Employee ${employeeName} has no primaryPositionId (incomplete contract data). Will process if contract has signingBonus.`);
+      }
+
+      console.log(`[processSigningBonuses] Processing ${employeeName} with position: "${positionTitle || 'N/A (incomplete contract)'}", contract signingBonus: ${contractSigningBonus}`);
+
+      // Find matching signing bonus configuration by position title (if position exists)
+      let signingBonusConfig: any = null;
+      
+      if (positionTitle) {
+        // Use case-insensitive matching and trim whitespace for flexibility
+        const normalizedPositionTitle = positionTitle.trim().toLowerCase();
+        console.log(`[processSigningBonuses] Normalized position title: "${normalizedPositionTitle}"`);
+        console.log(`[processSigningBonuses] Available configs: ${approvedSigningBonuses.map((b: any) => `"${b.positionName}"`).join(', ')}`);
+        
+        signingBonusConfig = approvedSigningBonuses.find(
+          (bonus: any) => {
+            const normalizedConfigName = (bonus.positionName || '').trim().toLowerCase();
+            const matches = normalizedConfigName === normalizedPositionTitle;
+            if (matches) {
+              console.log(`[processSigningBonuses] ✓ Exact match found: "${bonus.positionName}" matches "${positionTitle}"`);
+            }
+            return matches;
+          }
+        );
+
+        // If no exact match, try partial matching (contains)
+        if (!signingBonusConfig && normalizedPositionTitle) {
+          console.log(`[processSigningBonuses] No exact match, trying partial matching...`);
+          signingBonusConfig = approvedSigningBonuses.find(
+            (bonus: any) => {
+              const normalizedConfigName = (bonus.positionName || '').trim().toLowerCase();
+              const matches = normalizedConfigName.includes(normalizedPositionTitle) || 
+                     normalizedPositionTitle.includes(normalizedConfigName);
+              if (matches) {
+                console.log(`[processSigningBonuses] ✓ Partial match found: "${bonus.positionName}" partially matches "${positionTitle}"`);
+              }
+              return matches;
+            }
+          );
+        }
+      } else {
+        console.log(`[processSigningBonuses] No position title available, will use fallback config if contract has signingBonus`);
+      }
+
+      // Fallback logic: Process even with incomplete data if contract has signingBonus
+      if (!signingBonusConfig) {
+        if (contractSigningBonus !== undefined && contractSigningBonus > 0 && approvedSigningBonuses.length > 0) {
+          // Contract has signingBonus - use first config as fallback (even if no position or no match)
+          const fallbackReason = positionTitle 
+            ? `No match for position "${positionTitle}"`
+            : `No position assigned (incomplete contract data - missing primaryPositionId)`;
+          console.log(`[processSigningBonuses] ⚠ ${fallbackReason}, but contract has signingBonus (${contractSigningBonus}). Using first available config "${approvedSigningBonuses[0].positionName}" as fallback`);
+          signingBonusConfig = approvedSigningBonuses[0];
+        } else if (approvedSigningBonuses.length === 0) {
+          skippedNoConfig++;
+          console.log(`[processSigningBonuses] ❌ Skipping ${employeeName}: No signing bonus configs available in system. Contract signingBonus: ${contractSigningBonus}`);
+          continue;
+        } else if (!positionTitle && (!contractSigningBonus || contractSigningBonus <= 0)) {
+          skippedNoConfig++;
+          console.log(`[processSigningBonuses] ❌ Skipping ${employeeName}: No position assigned (incomplete contract) and contract has no signingBonus. Cannot determine bonus amount.`);
+          continue;
+        } else {
+          skippedNoConfig++;
+          console.log(`[processSigningBonuses] ❌ Skipping ${employeeName}: No matching config for position "${positionTitle || 'N/A'}" and contract has no signingBonus. Available configs: ${approvedSigningBonuses.map((b: any) => b.positionName).join(', ')}`);
+          continue;
+        }
+      }
+
+      const bonusData = signingBonusConfig as any;
+      // Use contract signingBonus amount if available, otherwise use configuration amount
+      // Priority: contract signingBonus > configuration amount (BR 24)
+      const finalAmount =
+        contractSigningBonus !== undefined && contractSigningBonus > 0
+          ? contractSigningBonus
+          : bonusData.amount;
+
+      console.log(`[processSigningBonuses] Creating signing bonus for ${employeeName}: Amount=${finalAmount}, Config=${bonusData.positionName} (matched from position: ${positionTitle || 'N/A - using fallback'})`);
+
+      // Create employee signing bonus record
+      // Ensure employeeId is properly formatted as ObjectId
+      const employeeIdForBonus = employeeId instanceof Types.ObjectId 
+        ? employeeId 
+        : new Types.ObjectId(employeeIdString);
+      
+      const employeeBonus = new this.employeeSigningBonusModel({
+        employeeId: employeeIdForBonus as any,
+        signingBonusId: bonusData._id as any,
+        givenAmount: finalAmount, // Use contract amount if available (BR 24), otherwise configuration amount
+        status: BonusStatus.PENDING,
+        createdBy: currentUserId,
+        updatedBy: currentUserId,
+      });
+
+      await employeeBonus.save();
+      processedBonuses.push(employeeBonus);
     }
+
+    console.log(`[processSigningBonuses] ========== SUMMARY ==========`);
+    console.log(`[processSigningBonuses] Total employees found: ${recentEmployees.length}`);
+    console.log(`[processSigningBonuses] Onboarding records found: ${onboardingRecords.length}`);
+    console.log(`[processSigningBonuses] Processed successfully: ${processedBonuses.length}`);
+    console.log(`[processSigningBonuses] Skipped - Already exists: ${skippedAlreadyExists}`);
+    console.log(`[processSigningBonuses] Skipped - No onboarding: ${skippedNoOnboarding}`);
+    console.log(`[processSigningBonuses] Skipped - No contract: ${skippedNoContract}`);
+    console.log(`[processSigningBonuses] Skipped - No signing bonus in contract: ${skippedNoSigningBonus}`);
+    console.log(`[processSigningBonuses] Skipped - No position: ${skippedNoPosition}`);
+    console.log(`[processSigningBonuses] Skipped - No matching config: ${skippedNoConfig}`);
+    console.log(`[processSigningBonuses] =============================`);
 
     return processedBonuses;
   }
@@ -2668,7 +3158,7 @@ export class PayrollExecutionService {
         .find(query)
         .populate('employeeId', 'firstName lastName employeeNumber _id')
         .populate('benefitId', 'name amount')
-        .populate('terminationId', 'reason type')
+        .populate('terminationId', 'reason initiator')
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
@@ -2697,7 +3187,7 @@ export class PayrollExecutionService {
       .findById(id)
       .populate('employeeId', 'firstName lastName employeeNumber _id')
       .populate('benefitId', 'name amount')
-      .populate('terminationId', 'reason type')
+      .populate('terminationId', 'reason initiator')
       .exec();
 
     if (!terminationBenefit) {
@@ -5731,7 +6221,27 @@ export class PayrollExecutionService {
     payrollRun.financeStaffId = new mongoose.Types.ObjectId(financeStaffId) as any;
     (payrollRun as any).updatedBy = currentUserId;
 
-    return await payrollRun.save();
+    const savedPayrollRun = await payrollRun.save();
+
+    // Notify Payroll Manager
+    await this.sendPayrollNotification(
+      NotificationType.PAYROLL_SENT_FOR_APPROVAL,
+      managerId,
+      `Payroll run ${payrollRun.runId} has been sent for your approval`,
+      { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+      'Payroll Pending Manager Approval',
+    );
+
+    // Notify Finance Staff
+    await this.sendPayrollNotification(
+      NotificationType.PAYROLL_SENT_FOR_APPROVAL,
+      financeStaffId,
+      `Payroll run ${payrollRun.runId} has been sent for finance approval`,
+      { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+      'Payroll Pending Finance Approval',
+    );
+
+    return savedPayrollRun;
   }
 
   // Helper: Validate that an employee has a specific system role
@@ -5839,6 +6349,28 @@ export class PayrollExecutionService {
       (payrollRun as any).updatedBy = currentUserId;
       const savedPayrollRun = await payrollRun.save();
 
+      // Notify Payroll Manager
+      if (payrollRun.payrollManagerId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_FINANCE_APPROVED,
+          payrollRun.payrollManagerId.toString(),
+          `Payroll run ${payrollRun.runId} has been approved by finance. Please lock the payroll.`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+          'Finance Approval Received',
+        );
+      }
+      
+      // Notify Payroll Specialist
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_FINANCE_APPROVED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll run ${payrollRun.runId} has been approved by finance`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+          'Finance Approval Received',
+        );
+      }
+
       // REQ-PY-8: Automatically generate and distribute payslips after Finance approval (REQ-PY-15)
       // Check if payroll is already locked - if yes, auto-generate payslips
       if (savedPayrollRun.status === PayRollStatus.LOCKED) {
@@ -5877,7 +6409,20 @@ export class PayrollExecutionService {
       payrollRun.rejectionReason = financeDecisionDto.reason || 'Rejected by Finance';
 
       (payrollRun as any).updatedBy = currentUserId;
-      return await payrollRun.save();
+      const savedPayrollRun = await payrollRun.save();
+      
+      // Notify Payroll Specialist about rejection
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_FINANCE_REJECTED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll run ${payrollRun.runId} has been rejected by finance. Reason: ${financeDecisionDto.reason || 'No reason provided'}`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId, reason: financeDecisionDto.reason },
+          'Finance Rejection',
+        );
+      }
+      
+      return savedPayrollRun;
     }
   }
 
@@ -5931,17 +6476,24 @@ export class PayrollExecutionService {
     let exceptionFound = false;
     for (const exception of exceptionsData.exceptionMessages) {
       if (exception.code === exceptionCode && exception.status === 'active') {
+        // Store exception data for history before clearing
+        const exceptionForHistory = {
+          ...exception,
+          action: 'resolved',
+        };
+        
+        // Clear exception message string when resolving (requirement simplification)
+        // As per requirement: "for simplicity just make exception string empty when resolving"
+        exception.message = ''; // Clear message as per requirement
+        exception.code = ''; // Clear code as per requirement
         exception.status = 'resolved';
         exception.resolvedBy = managerId;
         exception.resolvedAt = new Date().toISOString();
         exception.resolution = resolution;
         exceptionFound = true;
 
-        // Add to history
-        exceptionsData.exceptionHistory.push({
-          ...exception,
-          action: 'resolved',
-        });
+        // Add to history (with original data before clearing)
+        exceptionsData.exceptionHistory.push(exceptionForHistory);
         break;
       }
     }
@@ -5952,15 +6504,26 @@ export class PayrollExecutionService {
       );
     }
 
-    // Update the exceptions field
-    payrollDetails.exceptions = JSON.stringify(exceptionsData);
+    // Clear exception string when resolving (as per requirement)
+    // Remove the exception from active list and clear the string
+    const activeExceptions = exceptionsData.exceptionMessages.filter(
+      (e: any) => e.status === 'active',
+    );
+
+    // If no active exceptions remain, clear the exceptions field
+    if (activeExceptions.length === 0) {
+      payrollDetails.exceptions = ''; // Clear exception string as per requirement
+    } else {
+      // Keep only active exceptions in the string
+      exceptionsData.exceptionMessages = activeExceptions;
+      payrollDetails.exceptions = JSON.stringify(exceptionsData);
+    }
+
     (payrollDetails as any).updatedBy = currentUserId;
     await payrollDetails.save();
 
     // Decrement exceptions count when resolved (only if there are no more active exceptions for this employee)
-    const activeExceptions = exceptionsData.exceptionMessages.filter(
-      (e: any) => e.status === 'active'
-    );
+    // Reuse activeExceptions variable calculated above
     if (activeExceptions.length === 0 && payrollRun.exceptions > 0) {
       // Check if this was the last exception for this employee
       // Note: This is a simplified approach - in production, you might want to track per-employee exception counts
@@ -6232,7 +6795,45 @@ export class PayrollExecutionService {
     }
 
     (payrollRun as any).updatedBy = currentUserId;
-    return await payrollRun.save();
+    const savedPayrollRun = await payrollRun.save();
+
+    // Send notifications based on decision
+    if (managerApprovalDto.managerDecision === PayRollStatus.APPROVED) {
+      // Notify Finance Staff
+      if (payrollRun.financeStaffId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_MANAGER_APPROVED,
+          payrollRun.financeStaffId.toString(),
+          `Payroll run ${payrollRun.runId} has been approved by manager. Awaiting finance approval.`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+          'Manager Approval Received',
+        );
+      }
+      
+      // Notify Payroll Specialist
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_MANAGER_APPROVED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll run ${payrollRun.runId} has been approved by manager`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId },
+          'Manager Approval Received',
+        );
+      }
+    } else {
+      // Notify Payroll Specialist about rejection
+      if (payrollRun.payrollSpecialistId) {
+        await this.sendPayrollNotification(
+          NotificationType.PAYROLL_MANAGER_REJECTED,
+          payrollRun.payrollSpecialistId.toString(),
+          `Payroll run ${payrollRun.runId} has been rejected by manager. Reason: ${managerApprovalDto.managerComments || 'No reason provided'}`,
+          { payrollRunId: payrollRun._id.toString(), runId: payrollRun.runId, reason: managerApprovalDto.managerComments },
+          'Manager Rejection',
+        );
+      }
+    }
+
+    return savedPayrollRun;
   }
 
   // Get all payroll runs with optional filtering

@@ -14,6 +14,18 @@ import { ShiftAssignmentSchema, ShiftAssignment } from './models/shift-assignmen
 import { OvertimeRuleSchema, OvertimeRule } from './models/overtime-rule.schema';
 import { latenessRuleSchema, LatenessRule } from './models/lateness-rule.schema';
 import { HolidaySchema, Holiday } from './models/holiday.schema';
+import {
+  EmployeeProfileSchema,
+  EmployeeProfile,
+} from '../employee-profile/models/employee-profile.schema';
+import {
+  EmployeeSystemRoleSchema,
+  EmployeeSystemRole,
+} from '../employee-profile/models/employee-system-role.schema';
+import {
+  LeaveRequestSchema,
+  LeaveRequest,
+} from '../leaves/models/leave-request.schema';
 
 // ===== CONSOLIDATED CONTROLLERS =====
 import { TimeManagementController } from './controllers/time-management.controller';
@@ -30,6 +42,7 @@ import { SyncSchedulerService } from './services/sync-scheduler.service';
 import { LeavesModule } from '../leaves/leaves.module';
 import { PayrollExecutionModule } from '../payroll-execution/payroll-execution.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PayrollConfigurationModule } from '../payroll-configuration/payroll-configuration.module';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
@@ -37,6 +50,7 @@ import { forwardRef } from '@nestjs/common';
     forwardRef(() => LeavesModule),
     forwardRef(() => PayrollExecutionModule),
     NotificationsModule,
+    PayrollConfigurationModule,
     MongooseModule.forFeature([
       { name: NotificationLog.name, schema: NotificationLogSchema },
       {
@@ -52,6 +66,9 @@ import { forwardRef } from '@nestjs/common';
       { name: OvertimeRule.name, schema: OvertimeRuleSchema },
       { name: LatenessRule.name, schema: latenessRuleSchema },
       { name: Holiday.name, schema: HolidaySchema },
+      { name: EmployeeProfile.name, schema: EmployeeProfileSchema },
+      { name: EmployeeSystemRole.name, schema: EmployeeSystemRoleSchema },
+      { name: LeaveRequest.name, schema: LeaveRequestSchema },
     ]),
   ],
   controllers: [

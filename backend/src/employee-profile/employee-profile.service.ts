@@ -174,12 +174,41 @@ export class EmployeeProfileService {
 
     const savedEmployee = await employee.save();
 
-    // Create default system role
+    // =============================================================================
+    // SYSTEM ROLE ASSIGNMENT FOR NEW EMPLOYEES
+    // =============================================================================
+    // When creating an employee, we assign them a system role that determines
+    // what dashboards and features they can access in the system.
+    // 
+    // The role can be specified in the DTO (e.g., when creating from recruitment
+    // where the job template indicates what role the hired person should have).
+    // If no role is specified, defaults to DEPARTMENT_EMPLOYEE.
+    //
+    // Available roles (from SystemRole enum):
+    // - DEPARTMENT_EMPLOYEE: Default role for regular employees
+    // - DEPARTMENT_HEAD: Department management and team oversight
+    // - HR_MANAGER: Full HR access, can manage all HR operations
+    // - HR_EMPLOYEE: HR operations, limited management capabilities
+    // - HR_ADMIN: HR administrative functions
+    // - PAYROLL_MANAGER: Full payroll management access
+    // - PAYROLL_SPECIALIST: Payroll operations
+    // - SYSTEM_ADMIN: Full system administration
+    // - LEGAL_POLICY_ADMIN: Legal and policy management
+    // - RECRUITER: Recruitment operations
+    // - FINANCE_STAFF: Finance operations
+    //
+    // Note: JOB_CANDIDATE role is NOT used here - it's only for candidates
+    // who haven't been hired yet.
+    // =============================================================================
+    const assignedRole = createEmployeeDto.systemRole || SystemRole.DEPARTMENT_EMPLOYEE;
+    
     await this.systemRoleModel.create({
       employeeProfileId: savedEmployee._id,
-      roles: [SystemRole.DEPARTMENT_EMPLOYEE],
+      roles: [assignedRole],
       isActive: true,
     });
+    
+    console.log(`✅ Created employee ${savedEmployee._id} with system role: ${assignedRole}`);
 
     // Update candidate status if candidateId was provided
     if (candidateToUpdate) {
