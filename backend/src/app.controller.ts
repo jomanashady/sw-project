@@ -20,6 +20,8 @@ export class AppController {
   @Public()
   @Get('health')
   healthCheck() {
+    // Always return quickly - don't wait for database
+    // Railway needs fast health check responses
     try {
       const dbStatus = this.connection?.readyState === 1 ? 'connected' : 'disconnected';
       return {
@@ -33,7 +35,7 @@ export class AppController {
         },
       };
     } catch (error) {
-      // Health check should always return, even if there's an error
+      // Health check should always return quickly, even if there's an error
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -42,5 +44,16 @@ export class AppController {
         error: 'Health check error',
       };
     }
+  }
+
+  @Public()
+  @Get('ready')
+  readinessCheck() {
+    // Simple readiness check - responds immediately
+    // Railway uses this to verify service is ready
+    return {
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+    };
   }
 }

@@ -49,6 +49,11 @@ async function bootstrap() {
     // Get Express app FIRST - before any NestJS configuration
     const expressApp = app.getHttpAdapter().getInstance();
 
+    // Simple root handler so platform health checks to "/" succeed
+    expressApp.get('/', (_req: Express.Request, res: Express.Response) => {
+      res.status(200).send('ok');
+    });
+
     // CRITICAL: Handle OPTIONS requests FIRST with explicit error handling
     // This ensures OPTIONS never crashes the server and always responds quickly
     expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -144,6 +149,8 @@ async function bootstrap() {
     // Bind to 0.0.0.0 to accept connections from Railway
     await app.listen(port, '0.0.0.0');
 
+    // CRITICAL: Log immediately after listen() to confirm server is ready
+    // Railway health checks need to see the server is listening
     console.log('='.repeat(50));
     console.log(`🚀 HR System API`);
     console.log('='.repeat(50));
@@ -159,6 +166,8 @@ async function bootstrap() {
     console.log(`✅ Ready to handle requests on port ${port}`);
     console.log(`✅ CORS configured for: ${allowedOrigins.length} origins`);
     console.log(`✅ Health endpoint: http://0.0.0.0:${port}/api/v1/health`);
+    console.log(`✅ Readiness endpoint: http://0.0.0.0:${port}/api/v1/ready`);
+    console.log('✅ Server is READY - Railway can now health check');
 
   } catch (error) {
     console.error('❌ Error starting application:', error);
