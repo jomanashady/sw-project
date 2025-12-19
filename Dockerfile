@@ -16,8 +16,8 @@ COPY backend/ ./
 # Build the application
 RUN npm run build
 
-# Expose port (Railway will set PORT env var)
-EXPOSE 10000
+# Expose the port the app listens on (Railway sets PORT, currently 8080)
+EXPOSE 8080
 
 # Start the application
 CMD ["npm", "run", "start:prod"]
