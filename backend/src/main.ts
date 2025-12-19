@@ -13,16 +13,20 @@ async function bootstrap() {
     // -----------------------------------
     // CORS CONFIGURATION - MUST BE FIRST
     // -----------------------------------
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000' || 'http://localhost:5000';
-
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    
     // Build allowed origins list - explicitly include all Netlify domains
     const allowedOrigins = [
       frontendUrl,
-      'http://localhost:5000',
       'http://localhost:3000',
-      //'https://hr-systemm.netlify.app',  // ensure this is correct
-      'https://hr-syst.netlify.app',     // ensure this is correct
+      'http://localhost:3001',
+      'http://localhost:5000',
+      'https://hr-systemm.netlify.app',
+      'https://hr-syst.netlify.app',
     ].filter(Boolean);
+    
+    console.log('🌐 CORS Allowed Origins:', allowedOrigins);
+    console.log('🌐 Frontend URL from env:', frontendUrl);
 
     // Function to check if origin should be allowed
     const isOriginAllowed = (origin: string | undefined): boolean => {
@@ -99,6 +103,8 @@ async function bootstrap() {
     // START SERVER
     // -----------------------------------
     const port = process.env.PORT || 3001;
+    
+    // Bind to 0.0.0.0 to accept connections from Railway
     await app.listen(port, '0.0.0.0');
 
     console.log('='.repeat(50));
@@ -112,12 +118,36 @@ async function bootstrap() {
       `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
     );
     console.log('='.repeat(50));
+    console.log('✅ Server started successfully and listening for requests');
 
   } catch (error) {
     console.error('❌ Error starting application:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     process.exit(1);
   }
 }
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection:', reason);
+  // Don't exit - keep the server running, but log the error
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error.message);
+  console.error('Stack:', error.stack);
+  // Don't exit - keep the server running
+});
+
+// Handle SIGTERM gracefully (Railway sends this to stop containers)
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  process.exit(0);
+});
 
 // Start the application
 bootstrap();
