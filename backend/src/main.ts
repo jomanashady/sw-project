@@ -49,17 +49,54 @@ async function bootstrap() {
     // Get Express app FIRST - before any NestJS configuration
     const expressApp = app.getHttpAdapter().getInstance();
 
+    // CRITICAL: Handle OPTIONS requests FIRST with explicit error handling
+    // This ensures OPTIONS never crashes the server and always responds quickly
+    expressApp.use((req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+      if (req.method === 'OPTIONS') {
+        try {
+          const origin = req.headers.origin as string | undefined;
+          const isAllowed = isOriginAllowed(origin);
+          
+          if (isAllowed && origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            res.setHeader('Access-Control-Max-Age', '86400');
+            res.setHeader('Access-Control-Expose-Headers', 'Authorization');
+            console.log(`✅ OPTIONS Preflight: ${origin} - ALLOWED`);
+            return res.status(204).end();
+          } else {
+            console.log(`❌ OPTIONS Preflight: ${origin || 'no origin'} - BLOCKED`);
+            return res.status(403).json({ message: 'CORS policy: Origin not allowed' });
+          }
+        } catch (error) {
+          // Never let OPTIONS crash the server - always return a response
+          console.error('❌ Error handling OPTIONS:', error);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+      }
+      next();
+    });
+
     // Use cors package for reliable CORS handling at Express level
+    // This handles non-OPTIONS requests
     expressApp.use(cors({
       origin: (origin, callback) => {
-        const isAllowed = isOriginAllowed(origin);
-        if (isAllowed) {
-          if (origin) {
-            console.log(`✅ Express CORS: Allowing origin: ${origin}`);
+        try {
+          const isAllowed = isOriginAllowed(origin);
+          if (isAllowed) {
+            if (origin) {
+              console.log(`✅ Express CORS: Allowing origin: ${origin}`);
+            }
+            callback(null, true);
+          } else {
+            console.log(`❌ Express CORS: Blocking origin: ${origin || 'no origin'}`);
+            callback(null, false);
           }
-          callback(null, true);
-        } else {
-          console.log(`❌ Express CORS: Blocking origin: ${origin || 'no origin'}`);
+        } catch (error) {
+          // Never let CORS callback crash
+          console.error('❌ Error in CORS callback:', error);
           callback(null, false);
         }
       },
@@ -119,6 +156,9 @@ async function bootstrap() {
     );
     console.log('='.repeat(50));
     console.log('✅ Server started successfully and listening for requests');
+    console.log(`✅ Ready to handle requests on port ${port}`);
+    console.log(`✅ CORS configured for: ${allowedOrigins.length} origins`);
+    console.log(`✅ Health endpoint: http://0.0.0.0:${port}/api/v1/health`);
 
   } catch (error) {
     console.error('❌ Error starting application:', error);
