@@ -222,13 +222,34 @@ export class PayrollExecutionController {
     @Body() reviewPayrollInitiationDto: ReviewPayrollInitiationDto,
     @CurrentUser() user: any,
   ) {
-    return this.payrollService.reviewPayrollInitiation(
-      runId,
-      reviewPayrollInitiationDto.approved,
-      reviewPayrollInitiationDto.reviewerId,
-      reviewPayrollInitiationDto.rejectionReason,
-      user.userId,
-    );
+    try {
+      return await this.payrollService.reviewPayrollInitiation(
+        runId,
+        reviewPayrollInitiationDto.approved,
+        reviewPayrollInitiationDto.reviewerId,
+        reviewPayrollInitiationDto.rejectionReason,
+        user.userId,
+      );
+    } catch (error) {
+      // Log the error for debugging
+      console.error('Error reviewing payroll initiation:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      // Convert plain Error objects to BadRequestException with proper message
+      if (error instanceof Error) {
+        throw new BadRequestException(error.message);
+      }
+      
+      // Handle unexpected errors
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : 'Failed to review payroll initiation',
+      );
+    }
   }
 
   // REQ-PY-26: Allow PAYROLL_SPECIALIST to manually edit payroll initiation when needed
@@ -361,12 +382,41 @@ export class PayrollExecutionController {
     @Body() calculatePayrollDto: CalculatePayrollDto,
     @CurrentUser() user: any,
   ) {
-    return this.payrollService.calculatePayroll(
-      calculatePayrollDto.employeeId,
-      calculatePayrollDto.payrollRunId,
-      calculatePayrollDto.baseSalary,
-      user.userId,
-    );
+    try {
+      return await this.payrollService.calculatePayroll(
+        calculatePayrollDto.employeeId,
+        calculatePayrollDto.payrollRunId,
+        calculatePayrollDto.baseSalary,
+        user.userId,
+      );
+    } catch (error) {
+      // Log the error for debugging
+      console.error('Error calculating payroll:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Error details:', {
+        employeeId: calculatePayrollDto.employeeId,
+        payrollRunId: calculatePayrollDto.payrollRunId,
+        baseSalary: calculatePayrollDto.baseSalary,
+        userId: user.userId,
+      });
+      
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      // Convert plain Error objects to InternalServerErrorException with proper message
+      if (error instanceof Error) {
+        throw new InternalServerErrorException(
+          `Failed to calculate payroll: ${error.message}`,
+        );
+      }
+      
+      // Handle unexpected errors
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while calculating payroll',
+      );
+    }
   }
 
   // REQ-PY-2: Calculate prorated salaries for mid-month hires, terminations
