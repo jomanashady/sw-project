@@ -82,9 +82,9 @@ async function bootstrap() {
     // -----------------------------------
     // START SERVER
     // -----------------------------------
-    const port = process.env.PORT || 3001;
-
+    const port = process.env.PORT || 8080;
     await app.listen(port, '0.0.0.0');
+
 
     console.log('='.repeat(50));
     console.log(`🚀 HR System API`);
