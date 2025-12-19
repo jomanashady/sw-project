@@ -13,18 +13,16 @@ async function bootstrap() {
     // -----------------------------------
     // CORS CONFIGURATION - MUST BE FIRST
     // -----------------------------------
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000' || 'http://localhost:5000';
+
     // Build allowed origins list - explicitly include all Netlify domains
     const allowedOrigins = [
       frontendUrl,
+      'http://localhost:5000',
       'http://localhost:3000',
-      'http://localhost:3001',
-      'https://hr-systemm.netlify.app',
-      'https://hr-syst.netlify.app',
+      //'https://hr-systemm.netlify.app',  // ensure this is correct
+      'https://hr-syst.netlify.app',     // ensure this is correct
     ].filter(Boolean);
-
-    console.log('🌐 CORS Allowed Origins:', allowedOrigins);
-    console.log('🌐 Frontend URL from env:', frontendUrl);
 
     // Function to check if origin should be allowed
     const isOriginAllowed = (origin: string | undefined): boolean => {
@@ -46,9 +44,8 @@ async function bootstrap() {
 
     // Get Express app FIRST - before any NestJS configuration
     const expressApp = app.getHttpAdapter().getInstance();
-    
+
     // Use cors package for reliable CORS handling at Express level
-    // This MUST run before NestJS processes anything
     expressApp.use(cors({
       origin: (origin, callback) => {
         const isAllowed = isOriginAllowed(origin);
@@ -74,9 +71,9 @@ async function bootstrap() {
         'Access-Control-Request-Headers',
       ],
       exposedHeaders: ['Authorization'],
-      maxAge: 86400, // Cache preflight response for 24 hours
+      maxAge: 86400,
       preflightContinue: false,
-      optionsSuccessStatus: 204, // Success status for preflight OPTIONS request
+      optionsSuccessStatus: 204,
     }));
 
     // -----------------------------------
@@ -101,7 +98,6 @@ async function bootstrap() {
     // -----------------------------------
     // START SERVER
     // -----------------------------------
-    
     const port = process.env.PORT || 3001;
     await app.listen(port);
 
@@ -116,29 +112,12 @@ async function bootstrap() {
       `🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✓' : 'NOT SET!'}`,
     );
     console.log('='.repeat(50));
+
   } catch (error) {
     console.error('❌ Error starting application:', error);
     process.exit(1);
   }
 }
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection:', reason);
-  // Don't exit - keep the server running
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error.message);
-  console.error('Stack:', error.stack);
-  // Don't exit - keep the server running
-});
-
-// Handle SIGTERM gracefully
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  process.exit(0);
-});
-
+// Start the application
 bootstrap();
